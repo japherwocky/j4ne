@@ -17,7 +17,7 @@ def chatparse(ServerConnection, Event):
 	#print Event.target() # #channel
 
 	if 'suck' in Event.arguments()[0]:
-		time.sleep(.5)
+		time.sleep(.5) #timing is everything
 		ServerConnection.privmsg( Event.target(), propagandize())
 
 	#ServerConnection.privmsg(Event.target(), 'haaayyy, you said %s'%Event.arguments())
