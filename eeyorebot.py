@@ -36,10 +36,11 @@ def strip_tags(value):
 	"Return the given HTML with all tags stripped."
 	return re.sub(r'<[^>]*?>', '', value)
 
+if __name__ == '__main__':
 
-Eeyore = SingleServerIRCBot([('pearachute.net', 6668)], 'Eeyore', 'I AM A ROBOT')
-Eeyore.connection.add_global_handler('invite', invited, -10)
-Eeyore.connection.add_global_handler('pubmsg', chatparse, -10)
-#join/part/privmsg/pubmsg/privnotice/pubnotice
-Eeyore.start()
+    Eeyore = SingleServerIRCBot([('pearachute.net', 6668)], 'Eeyore', 'I AM A ROBOT')
+    Eeyore.connection.add_global_handler('invite', invited, -10)
+    Eeyore.connection.add_global_handler('pubmsg', chatparse, -10)
+    #join/part/privmsg/pubmsg/privnotice/pubnotice
+    Eeyore.start()
 
