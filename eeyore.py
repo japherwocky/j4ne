@@ -11,8 +11,108 @@ import tornado.web
 from tornado.web import HTTPError
 from markdown import markdown
 
+from eeyorebot import propagandize
 
-class App (tornado.web.Application):
+
+# because of EFnet, per Joel Rosdahl's irclib
+import re
+_linesep_regexp = re.compile("\r?\n")
+
+
+class IRC(object):
+
+    def connect_irc(self, host, port, ssl=False):
+        import socket
+        from tornado import iostream
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+
+        if ssl:
+            self._stream = iostream.SSLIOStream(s)
+        else:
+            self._stream = iostream.IOStream(s)
+
+        self._stream.connect((host, port), self._handle_connect)
+
+    def _handle_connect(self):
+        # Send nick and channels
+
+        self._write(('NICK', 'TestBot'))
+        self._write(('USER', 'TestBot', '+iw', 'TestBot'), 'TestBot')
+        self._write(('JOIN',), '#test')
+
+        self._stream.read_until_regex(_linesep_regexp, self._on_read)
+
+    def _write(self, args, text=None):
+        if text is not None:
+            self._stream.write('%s :%s\r\n' % (' '.join(args), text))
+        else:
+            self._stream.write('%s\r\n' % ' '.join(args))
+
+    RE_ORIGIN = re.compile(r'([^!]*)!?([^@]*)@?(.*)')
+
+    def _on_read(self, data):
+        debug(data.strip())
+
+        # Split source from data
+        if data.startswith(':'):
+            source, data = data[1:].split(' ', 1)
+        else:
+            source = None
+
+        # Split arguments from message
+        if ' :' in data:
+            args, data = data.split(' :', 1)
+        else:
+            args, data = data, ''
+        args = args.split()
+
+        def parse_origin(raw_origin):
+            """Parse a string similar to 'FSX!~FSX@hostname'
+            into 'FSX', '~FSX' and 'hostname'"""
+
+            match = self.RE_ORIGIN.match(raw_origin or '')
+
+            return match.groups()  # Nickname, username, hostname
+
+        # Parse the source (where the data comes from)
+        nickname, username, hostname = parse_origin(source)
+
+        # Respond to server ping to keep connection alive
+        if args[0] == 'PING':
+            self._write(('PONG', data))
+
+        elif args[0] == 'INVITE':
+            self.on_invite(nickname, username, data.strip())
+
+        elif args[0] == 'PRIVMSG':
+            # this is where we should hook in plugins
+            self.on_msg(nickname, args[1], data.strip())
+
+            if 'suck' in data:
+                self.on_triggered(args[1])
+
+        self._stream.read_until('\r\n', self._on_read)
+
+    def on_invite(self, nickname, username, channel):
+
+        info('Received invitation to %s from %s' % (channel, nickname))
+        # check that it's from owner.. but this is moot on twitch
+        self._write(('JOIN',), channel)
+
+    def on_msg(self, from_nick, channel, msg):
+        info('[%s] < %s> %s' % (channel, from_nick, msg))
+        # self.say(channel, 'ACK')
+
+    def say(self, channel, msg):
+        self._write(('PRIVMSG', channel), msg)
+
+    def on_triggered(self, channel):
+        ''' someone said the magic word! '''
+        msg = propagandize()  # extremely legacy naming here
+        self.say(channel, str(msg))
+
+
+class App (tornado.web.Application, IRC):
     def __init__(self, app_debug=False):
         """
         Settings for our application
@@ -37,6 +137,9 @@ class App (tornado.web.Application):
         ]
 
         tornado.web.Application.__init__(self, handlers, **settings)
+
+        # connect to whatever IRC network
+        self.connect_irc('pearachute.net', 6667)
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -88,7 +191,7 @@ def main():
         unittest.main('tests')
         return
 
-    http_server = tornado.httpserver.HTTPServer(App(debug=options.debug))
+    http_server = tornado.httpserver.HTTPServer(App(app_debug=options.debug))
     http_server.listen(options.port)
     info('Serving on port %d' % options.port)
     tornado.ioloop.IOLoop.instance().start()
