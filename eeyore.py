@@ -36,8 +36,8 @@ class IRC(object):
     def _handle_connect(self):
         # Send nick and channels
 
-        self._write(('NICK', 'TestBot'))
-        self._write(('USER', 'TestBot', '+iw', 'TestBot'), 'TestBot')
+        self._write(('NICK', self.botname))
+        self._write(('USER', self.botname, '+iw', self.botname), self.botname)
         self._write(('JOIN',), '#test')
 
         self._stream.read_until_regex(_linesep_regexp, self._on_read)
@@ -113,7 +113,7 @@ class IRC(object):
 
 
 class App (tornado.web.Application, IRC):
-    def __init__(self, app_debug=False):
+    def __init__(self, botname, app_debug=False):
         """
         Settings for our application
         """
@@ -140,6 +140,7 @@ class App (tornado.web.Application, IRC):
 
         # connect to whatever IRC network
         self.connect_irc('pearachute.net', 6667)
+        self.botname = botname  # should maybe just snag this out of options globally?
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -179,6 +180,7 @@ def main():
     define("port", default=8888, help="run on the given port", type=int)
     define("debug", default=False, help="run server in debug mode", type=bool)
     define("runtests", default=False, help="run tests", type=bool)
+    define("botname", default='Test Bot', help="name of the bot")
 
     tornado.options.parse_command_line()
 
@@ -191,7 +193,7 @@ def main():
         unittest.main('tests')
         return
 
-    http_server = tornado.httpserver.HTTPServer(App(app_debug=options.debug))
+    http_server = tornado.httpserver.HTTPServer(App(options.botname, app_debug=options.debug))
     http_server.listen(options.port)
     info('Serving on port %d' % options.port)
     tornado.ioloop.IOLoop.instance().start()
