@@ -12,8 +12,6 @@ import tornado.web
 from tornado.web import HTTPError
 from markdown import markdown
 
-from eeyorebot import propagandize
-
 
 # because of EFnet, per Joel Rosdahl's irclib
 import re
