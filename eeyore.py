@@ -1,8 +1,9 @@
 import os
-import json
 join = os.path.join
 exists = os.path.exists
-
+import json
+import feedparser
+from random import choice
 from logging import info, debug
 import tornado.httpserver
 import tornado.ioloop
@@ -108,8 +109,12 @@ class IRC(object):
 
     def on_triggered(self, channel):
         ''' someone said the magic word! '''
-        msg = propagandize()  # extremely legacy naming here
-        self.say(channel, str(msg))
+
+        posts = feedparser.parse('http://feeds2.feedburner.com/fmylife')
+        post = choice(posts.entries)
+        post = re.sub(r'<[^>]*?>', '', post.description).replace('FML', '')
+
+        self.say(channel, str(post))
 
 
 class App (tornado.web.Application, IRC):
