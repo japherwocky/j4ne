@@ -1,0 +1,51 @@
+{% extends index.html %}
+
+{% block js_includes %}
+
+<script src="https://ttv-api.s3.amazonaws.com/twitch.min.js"></script>
+
+<script>
+  Twitch.init({clientId: '{{ twitch_key }}'}, function(error, status) {
+    // the sdk is now loaded
+
+    $('.twitch-connect').click(function() {
+        Twitch.login({
+            scope: ['user_read', 'channel_read']
+        });
+    })
+
+
+    console.log('status:', status)
+
+    if (status.authenticated) {
+        // stash a copy of whatever we're logged in as, with the OAUTH key
+        Twitch.api( {method:'user'}, function(err, user) {
+
+            user.token = status.token;
+
+            console.log(user);
+            $.post('/auth', user, function(response) {console.log('ok')} )
+
+        })
+    }
+
+
+
+  });
+</script>
+
+{% end %}
+
+
+{% block content %}
+<!-- Begin page content -->
+<div class="container">
+
+<img src="http://ttv-api.s3.amazonaws.com/assets/connect_dark.png" class="twitch-connect" href="#" />
+
+<p>hayyy</p>
+
+</div>
+<!-- END content -->
+{% end %}
+

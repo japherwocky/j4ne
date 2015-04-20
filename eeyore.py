@@ -136,6 +136,7 @@ class App (tornado.web.Application, IRC):
 
         handlers = [
             (r"/", MainHandler),
+            (r"/auth/?", AuthHandler),
             (r"(?!\/static.*)(.*)/?", DocHandler),
         ]
 
@@ -152,6 +153,20 @@ class MainHandler(tornado.web.RequestHandler):
         txt = open('docs/hello.txt').read()
         doc = markdown(txt)
         self.render('index.html', doc=doc)
+
+class AuthHandler(tornado.web.RequestHandler):
+    def get(self):
+
+        self.render('auth.html', twitch_key='2jgz7axdvzidve3ipaa3gggig3zaj0t')
+
+    def post(self):
+
+        token = self.get_argument('token')
+        username = self.get_argument('name')
+
+        info('got token %s for user %s' % (token, username))
+
+        self.redirect('/')
 
 
 class DocHandler(tornado.web.RequestHandler):
