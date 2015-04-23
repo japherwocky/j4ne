@@ -154,10 +154,11 @@ class MainHandler(tornado.web.RequestHandler):
         doc = markdown(txt)
         self.render('index.html', doc=doc)
 
+
 class AuthHandler(tornado.web.RequestHandler):
     def get(self):
-
-        self.render('auth.html', twitch_key='2jgz7axdvzidve3ipaa3gggig3zaj0t')
+        from keys import twitch_key
+        self.render('auth.html', twitch_key=twitch_key)
 
     def post(self):
 
