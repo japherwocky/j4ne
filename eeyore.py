@@ -35,17 +35,21 @@ class IRC(object):
     def _handle_connect(self):
         # Send nick and channels
 
+        self._write(('PASS', 'oauth:%s' % self.twitchtoken ))
         self._write(('NICK', self.botname))
-        self._write(('USER', self.botname, '+iw', self.botname), self.botname)
-        self._write(('JOIN',), '#test')
+        # self._write(('USER', self.botname, '+iw', self.botname), self.botname)
+        self._write(('JOIN',), '#%s' % self.botname)
 
         self._stream.read_until_regex(_linesep_regexp, self._on_read)
 
     def _write(self, args, text=None):
         if text is not None:
-            self._stream.write('%s :%s\r\n' % (' '.join(args), text))
+            out = '%s :%s' % (' '.join(args), text)
         else:
-            self._stream.write('%s\r\n' % ' '.join(args))
+            out = '%s' % ' '.join(args)
+
+        debug('> %s' % out )
+        self._stream.write(out + '\r\n')
 
     RE_ORIGIN = re.compile(r'([^!]*)!?([^@]*)@?(.*)')
 
@@ -143,8 +147,8 @@ class App (tornado.web.Application, IRC):
         tornado.web.Application.__init__(self, handlers, **settings)
 
         # connect to whatever IRC network
-        self.connect_irc('pearachute.net', 6667)
-        self.botname = botname  # should maybe just snag this out of options globally?
+        # self.connect_irc('pearachute.net', 6667)
+        # self.botname = botname  # should maybe just snag this out of options globally?
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -166,6 +170,10 @@ class AuthHandler(tornado.web.RequestHandler):
         username = self.get_argument('name')
 
         info('got token %s for user %s' % (token, username))
+
+        self.application.botname = str(username)
+        self.application.twitchtoken = str(token)
+        self.application.connect_irc('irc.twitch.tv', 6667)
 
         self.redirect('/')
 
