@@ -10,7 +10,7 @@
 
     $('.twitch-connect').click(function() {
         Twitch.login({
-            scope: ['user_read', 'channel_read']
+            scope: ['user_read', 'channel_read', 'chat_login']
         });
     })
 
@@ -23,8 +23,11 @@
 
             user.token = status.token;
 
-            console.log(user);
-            $.post('/auth', user, function(response) {console.log('ok')} )
+            
+            $.post('/auth', user, function(response) {
+                // then redirect to a main screen or something
+                
+            } )
 
         })
     }
