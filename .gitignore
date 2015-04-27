@@ -1,4 +1,5 @@
 *.py[o|c|d]
 *.swp
 
+keys.py
 env/
