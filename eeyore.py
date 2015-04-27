@@ -9,7 +9,7 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.options
 import tornado.web
-from tornado.web import HTTPError
+from tornado.web import HTTPError, authenticated
 from markdown import markdown
 
 
@@ -140,7 +140,8 @@ class App (tornado.web.Application, IRC):
 
         handlers = [
             (r"/", MainHandler),
-            (r"/auth/?", AuthHandler),
+            (r"/login/?", LoginHandler),
+            (r"/logout/?", LogoutHandler),
             (r"(?!\/static.*)(.*)/?", DocHandler),
         ]
 
@@ -151,7 +152,18 @@ class App (tornado.web.Application, IRC):
         # self.botname = botname  # should maybe just snag this out of options globally?
 
 
-class MainHandler(tornado.web.RequestHandler):
+class AuthMixin(object):
+    def get_current_user(self):
+        return self.get_secure_cookie("user")
+
+    @property
+    def user(self):
+        return self.get_current_user()
+
+
+class MainHandler(AuthMixin, tornado.web.RequestHandler):
+
+    @authenticated
     def get(self):
 
         txt = open('docs/hello.txt').read()
@@ -159,7 +171,7 @@ class MainHandler(tornado.web.RequestHandler):
         self.render('index.html', doc=doc)
 
 
-class AuthHandler(tornado.web.RequestHandler):
+class LoginHandler(tornado.web.RequestHandler):
     def get(self):
         from keys import twitch_key
         self.render('auth.html', twitch_key=twitch_key)
@@ -175,7 +187,21 @@ class AuthHandler(tornado.web.RequestHandler):
         self.application.twitchtoken = str(token)
         self.application.connect_irc('irc.twitch.tv', 6667)
 
+        self.set_secure_cookie('user', self.application.botname)
+
         self.redirect('/')
+
+
+class LogoutHandler(tornado.web.RequestHandler):
+    def get(self):
+        """ this is slightly weird, because we'll log the user out of this app
+        but _not_ out of twitch.  If they (or anyone) hits a route with
+        with @authenticated, and they're still signed into twitch, it will
+        auto sign them back in.  yolo.
+        """
+        self.clear_cookie('user')
+
+        self.finish('o/')
 
 
 class DocHandler(tornado.web.RequestHandler):
