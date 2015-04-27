@@ -1,7 +1,6 @@
 import os
 join = os.path.join
 exists = os.path.exists
-import json
 import feedparser
 from random import choice
 from logging import info, debug
@@ -35,9 +34,8 @@ class IRC(object):
     def _handle_connect(self):
         # Send nick and channels
 
-        self._write(('PASS', 'oauth:%s' % self.twitchtoken ))
+        self._write(('PASS', 'oauth:%s' % self.twitchtoken))
         self._write(('NICK', self.botname))
-        # self._write(('USER', self.botname, '+iw', self.botname), self.botname)
         self._write(('JOIN',), '#%s' % self.botname)
 
         self._stream.read_until_regex(_linesep_regexp, self._on_read)
@@ -48,7 +46,7 @@ class IRC(object):
         else:
             out = '%s' % ' '.join(args)
 
-        debug('> %s' % out )
+        debug('> %s' % out)
         self._stream.write(out + '\r\n')
 
     RE_ORIGIN = re.compile(r'([^!]*)!?([^@]*)@?(.*)')
@@ -147,10 +145,6 @@ class App (tornado.web.Application, IRC):
 
         tornado.web.Application.__init__(self, handlers, **settings)
 
-        # connect to whatever IRC network
-        # self.connect_irc('pearachute.net', 6667)
-        # self.botname = botname  # should maybe just snag this out of options globally?
-
 
 class AuthMixin(object):
     def get_current_user(self):
@@ -246,7 +240,9 @@ def main():
         unittest.main('tests')
         return
 
-    http_server = tornado.httpserver.HTTPServer(App(options.botname, app_debug=options.debug))
+    http_server = tornado.httpserver.HTTPServer(
+        App(options.botname, app_debug=options.debug)
+    )
     http_server.listen(options.port)
     info('Serving on port %d' % options.port)
     tornado.ioloop.IOLoop.instance().start()
