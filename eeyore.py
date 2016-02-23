@@ -13,11 +13,6 @@ from markdown import markdown
 from irc import IRC
 
 
-# because of EFnet, per Joel Rosdahl's irclib
-import re
-_linesep_regexp = re.compile("\r?\n")
-
-
 class App (tornado.web.Application, IRC):
     def __init__(self, botname, app_debug=False):
         """

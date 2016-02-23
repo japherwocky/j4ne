@@ -8,7 +8,8 @@ from logging import info, debug
 
 # because of EFnet, per Joel Rosdahl's irclib
 import re
-_linesep_regexp = re.compile("\r?\n")
+# _linesep_regexp = re.compile("\r?\n")
+_linesep_regexp = "\r?\n"
 
 
 class IRC(object):
@@ -32,7 +33,8 @@ class IRC(object):
         self._write(('NICK', self.botname))
         self._write(('JOIN',), '#%s' % self.botname)
 
-        self._stream.read_until_regex(_linesep_regexp, self._on_read)
+        self._stream.read_until("\r\n".encode('utf-8'), self._on_read)
+        # self._stream.read_until_regex(_linesep_regexp, self._on_read)
 
     def _write(self, args, text=None):
         if text is not None:
@@ -40,12 +42,15 @@ class IRC(object):
         else:
             out = '%s' % ' '.join(args)
 
-        debug('> %s' % out)
-        self._stream.write(out + '\r\n')
+        debug('IRC> %s' % out)
+        
+        self._stream.write( (out + '\r\n').encode('utf-8') )  # python3 required
 
     RE_ORIGIN = re.compile(r'([^!]*)!?([^@]*)@?(.*)')
 
     def _on_read(self, data):
+        data = data.decode('utf-8')
+
         debug(data.strip())
 
         # Split source from data
@@ -95,7 +100,7 @@ class IRC(object):
 
                     self.on_invite(username, channel)
 
-        self._stream.read_until('\r\n', self._on_read)
+        self._stream.read_until('\r\n'.encode('utf-8'), self._on_read)
 
     def on_invite(self, nickname, channel):
 
@@ -108,6 +113,7 @@ class IRC(object):
         # self.say(channel, 'ACK')
 
     def say(self, channel, msg):
+        info('[%s] < %s> %s' % (channel, self.botname, msg))
         self._write(('PRIVMSG', channel), msg)
 
     def on_triggered(self, channel):
