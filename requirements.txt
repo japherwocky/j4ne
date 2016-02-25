@@ -1,3 +1,4 @@
 tornado
 markdown
 feedparser
+git+https://github.com/Rapptz/discord.py@async
