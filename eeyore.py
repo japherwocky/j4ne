@@ -1,4 +1,5 @@
 import os
+import asyncio
 join = os.path.join
 exists = os.path.exists
 import feedparser
@@ -8,12 +9,14 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.options
 import tornado.web
+import tornado.platform.asyncio
 from tornado.web import HTTPError, authenticated
 from markdown import markdown
-from irc import IRC
+from networks.irc import IRC
+from networks.deescord import Discord
 
 
-class App (tornado.web.Application, IRC):
+class App (tornado.web.Application, IRC, Discord):
     def __init__(self, botname, app_debug=False):
         """
         Settings for our application
@@ -36,6 +39,7 @@ class App (tornado.web.Application, IRC):
             (r"/", MainHandler),
             (r"/login/?", LoginHandler),
             (r"/logout/?", LogoutHandler),
+            (r"/godiscord/?", DiscordHandler),
             (r"(?!\/static.*)(.*)/?", DocHandler),
         ]
 
@@ -59,6 +63,12 @@ class MainHandler(AuthMixin, tornado.web.RequestHandler):
         txt = open('docs/hello.txt').read()
         doc = markdown(txt)
         self.render('index.html', doc=doc)
+
+from tornado import gen
+class DiscordHandler(tornado.web.RequestHandler):
+    @gen.coroutine
+    def get(self):
+        yield self.application.go()
 
 
 class LoginHandler(tornado.web.RequestHandler):
@@ -136,11 +146,14 @@ def main():
         unittest.main('tests')
         return
 
-    http_server = tornado.httpserver.HTTPServer(
-        App(options.botname, app_debug=options.debug)
-    )
+    app = App(options.botname, app_debug=options.debug)
+
+    http_server = tornado.httpserver.HTTPServer(app)
+    tornado.platform.asyncio.AsyncIOMainLoop().install()  # uses default asyncio.loop()
+
     http_server.listen(options.port)
     info('Serving on port %d' % options.port)
+
     tornado.ioloop.IOLoop.instance().start()
 
 
