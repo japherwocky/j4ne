@@ -12,10 +12,12 @@ from keys import discord_email, discord_pass
 client = discord.Client()  # loop defaults to asyncio.get_event_loop()
 
 class Discord(object):
+    """ Mixin for the main App """
 
     @gen.coroutine
     def go(self):
         yield client.start(discord_email, discord_pass)
+
 
 
 @client.event
@@ -32,8 +34,11 @@ async def on_triggered(channel):
 
     await client.send_message(channel, str(post))
 
+
 @client.event
 async def on_message(message):
+    info('[{}] <{}> {}'.format( message.channel.name, message.author.name, message.content )) 
+
     if message.content.startswith('!test'):
         counter = 0
         tmp = await client.send_message(message.channel, 'Calculating messages...')
@@ -48,5 +53,13 @@ async def on_message(message):
 
     elif 'eeyore' in message.content:
         await on_triggered(message.channel)
+
+    elif message.content.startswith('|go'):
+       
+        channel = message.author.voice_channel
+ 
+        voice = await client.join_voice_channel(channel)
+        player = await voice.create_ytdl_player('https://www.youtube.com/watch?v=as68y7xmjr8')
+        player.start()
 
 
