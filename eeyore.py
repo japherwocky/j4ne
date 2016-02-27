@@ -39,7 +39,6 @@ class App (tornado.web.Application, IRC, Discord):
             (r"/", MainHandler),
             (r"/login/?", LoginHandler),
             (r"/logout/?", LogoutHandler),
-            (r"/godiscord/?", DiscordHandler),
             (r"(?!\/static.*)(.*)/?", DocHandler),
         ]
 
@@ -63,12 +62,6 @@ class MainHandler(AuthMixin, tornado.web.RequestHandler):
         txt = open('docs/hello.txt').read()
         doc = markdown(txt)
         self.render('index.html', doc=doc)
-
-from tornado import gen
-class DiscordHandler(tornado.web.RequestHandler):
-    @gen.coroutine
-    def get(self):
-        yield self.application.go()
 
 
 class LoginHandler(tornado.web.RequestHandler):
