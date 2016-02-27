@@ -1,11 +1,13 @@
 from logging import info, debug
-from random import choice
+from random import choice, shuffle
+from array import array
 import asyncio
 import feedparser
 import re
 
 import discord
 from tornado import gen
+import tornado.ioloop
 
 from keys import discord_email, discord_pass
 
@@ -15,7 +17,7 @@ class Discord(object):
     """ Mixin for the main App """
 
     @gen.coroutine
-    def go(self):
+    def discord_connect(self):
         self.DiscordParser = DiscordParser()  # not sure what magic actually hooks up the handlers
 
         @client.event
@@ -29,9 +31,54 @@ class Discord(object):
         info('Logged in as {} {}'.format(client.user.id, client.user.name) )
 
 
+
+class VolumeBuff(object):
+    """
+        Kind of a volume aware buffer mixin.
+    """
+
+    def __init__(self, player, buff):
+        self.player = player
+        self.buff = buff
+        self.frame_count = 0
+
+    def read(self, frame_size):
+        self.frame_count += 1
+        frame = self.buff.read(frame_size)
+
+        volume = self.player.volume
+        # Only make volume go down. Never up.
+        if volume < 1.0:
+            # Ffmpeg returns s16le pcm frames.
+            frame_array = array('h', frame)
+
+            for i in range(len(frame_array)):
+                frame_array[i] = int(frame_array[i] * volume)
+
+            frame = frame_array.tobytes()
+
+        return frame
+
+
+
+
+
+
 class DiscordParser(object):
     voice = None
     voicechan = None
+    player = None
+
+    keep_playing = True
+
+    _volume = 13  # store this as 1-100 
+    playlist = []  # seeded with __init__
+
+    def __init__(self):
+        with open('playlist.txt') as f:
+            self.playlist = f.readlines()
+            shuffle(self.playlist)
+
 
     async def say(self, channel, message):
         msg = await client.send_message(channel, message)
@@ -47,7 +94,7 @@ class DiscordParser(object):
         await self.say(channel, str(post))
 
 
-    async def on_summon(self, message):
+    async def summon(self, message):
         ''' Try to join the author's voice channel '''
         authorchan = message.author.voice_channel
 
@@ -70,12 +117,73 @@ class DiscordParser(object):
         self.voice = await client.join_voice_channel(authorchan)
 
 
-    async def on_banish(self, message):
+    async def banish(self, message):
         ''' Clear out any pre-existing voice connections '''
         if client.is_voice_connected():
             await self.voice.disconnect()
 
         self.voicechan = self.voice = None
+
+
+    async def play(self, channel):
+        if not (self.voice and self.voicechan):
+            return await self.say(channel, 'I am not in a voice channel, {}'.format(message.author.name))
+
+        self.keep_playing = True
+
+        self.playchan = channel
+
+        next_song = self.playlist.pop()
+    
+        # instantiate player, hack in volume controls   
+        player = await self.voice.create_ytdl_player(next_song, after=self.on_end)
+        player.buff = VolumeBuff(player, player.buff)  # so awkward
+        player.volume = self._volume / 100.0  # not to be confused with the command
+
+        self.player = player
+        player.start()
+        await self.say(channel, 'Now playing {}'.format(player.title))
+        self.playlist.insert(0,next_song)  # put it back in the end of the list
+
+
+    def on_end(self):
+        if self.keep_playing:
+            tornado.ioloop.IOLoop.instance().add_callback( lambda: self.play(self.playchan) )
+
+ 
+    async def stop(self, message):
+
+        self.keep_playing = False
+
+        if self.player:
+            self.player.stop()
+            self.player = None
+
+
+
+    async def skip(self, message):
+        if self.player:
+            self.player.stop()
+
+
+    async def volume(self, message):
+
+        txt = message.content.strip('|volume')
+
+        if txt:
+            try:
+                vol = int(txt)
+            except ValueError:
+                return await self.say(message.channel, 'Please try a number between 1 and 100, {}'.format(message.author.name))
+
+            self._volume = vol
+
+        if self.player:
+            self.player.volume = self._volume / 100.0
+
+        return await self.say(message.channel, 'The volume is set at {}'.format(self._volume))
+
+
     
     
     async def on_message(self, message):
@@ -97,18 +205,22 @@ class DiscordParser(object):
         elif 'eeyore' in message.content:
             await self.on_triggered(message.channel)
     
-        elif message.content.startswith('|go'):
-           
-            channel = message.author.voice_channel
-     
-            voice = await client.join_voice_channel(channel)
-            player = await voice.create_ytdl_player('https://www.youtube.com/watch?v=as68y7xmjr8')
-            player.start()
 
         elif message.content.startswith('|summon'):
-            await self.on_summon(message)
+            await self.summon(message)
 
         elif message.content.startswith('|banish'):
-            await self.on_banish(message)
+            await self.banish(message)
     
+        elif message.content.startswith('|play'):
+            await self.play(message.channel)
+
+        elif message.content.startswith('|skip'):
+            await self.skip(message)
+
+        elif message.content.startswith('|stop'):
+            await self.stop(message)
+
+        elif message.content.startswith('|volume'):
+            await self.volume(message)
     
