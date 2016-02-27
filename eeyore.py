@@ -154,6 +154,7 @@ def main():
     http_server.listen(options.port)
     info('Serving on port %d' % options.port)
 
+    tornado.ioloop.IOLoop.instance().add_callback(app.discord_connect)  # connect to discord 
     tornado.ioloop.IOLoop.instance().start()
 
 
