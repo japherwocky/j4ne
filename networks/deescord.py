@@ -2,16 +2,19 @@ from logging import info, debug
 from random import choice, shuffle
 from array import array
 import asyncio
-import feedparser
 import re
 
 import discord
+from youtube_dl.utils import DownloadError
+import feedparser
+
 from tornado import gen
 import tornado.ioloop
 
 from keys import discord_email, discord_pass
 
 client = discord.Client()  # loop defaults to asyncio.get_event_loop()
+
 
 class Discord(object):
     """ Mixin for the main App """
@@ -60,10 +63,6 @@ class VolumeBuff(object):
         return frame
 
 
-
-
-
-
 class DiscordParser(object):
     voice = None
     voicechan = None
@@ -73,6 +72,7 @@ class DiscordParser(object):
 
     _volume = 13  # store this as 1-100 
     playlist = []  # seeded with __init__
+    requests = []
 
     def __init__(self):
         with open('playlist.txt') as f:
@@ -125,34 +125,77 @@ class DiscordParser(object):
         self.voicechan = self.voice = None
 
 
-    async def play(self, channel):
+    async def request(self, message):
+        req = message.content.strip('|request ')
+
+        # they didn't manage to request a song
+        if not req:
+            await self.say(message.channel, "What would you like to request, {}?".format(message.author.name))
+            return
+
+        if not self.voice:
+            await self.say(message.channel, "I am not in a voice channel, {}".format(message.author.name))
+            return
+
+        # let's see if it works
+        try:
+            player = await self.voice.create_ytdl_player(req, ytdl_options={'default-search':'ytsearch'}, after=self.on_end)
+        except DownloadError as exc:
+            await self.say(message.channel, "I could not find that, {}".format(message.author.name))
+        
+        await self.say(message.channel, '{} has been added to the queue.'.format(player.title))
+
+        self.requests.append(player)
+
+
+    async def play(self, message):
+
         if not (self.voice and self.voicechan):
-            return await self.say(channel, 'I am not in a voice channel, {}'.format(message.author.name))
+            await self.say(message.channel, 'I am not in a voice channel, {}'.format(message.author.name))
+            return 
 
         self.keep_playing = True
 
-        self.playchan = channel
+        self.playchan = message.channel  # reset the channel we want to talk in
+        await self.playsong()
 
-        next_song = self.playlist.pop()
-    
+
+    async def nextsong(self):
+        """ 
+        Get the next song, whether from a request or the stock playlist
+        """
+        if not self.requests:
+            url = self.playlist.pop()
+            player = await self.voice.create_ytdl_player(url, after=self.on_end)
+            self.playlist.insert(0, url)  # put it back in the end of the list
+        else:
+            player = self.requests.pop(0)
+
+        return player
+
+
+    async def playsong(self):
+
+        player = await self.nextsong()
+ 
         # instantiate player, hack in volume controls   
-        player = await self.voice.create_ytdl_player(next_song, after=self.on_end)
         player.buff = VolumeBuff(player, player.buff)  # so awkward
         player.volume = self._volume / 100.0  # not to be confused with the command
 
         self.player = player
         player.start()
-        await self.say(channel, 'Now playing {}'.format(player.title))
-        self.playlist.insert(0,next_song)  # put it back in the end of the list
+
+        await self.say(self.playchan, 'Now playing {}'.format(player.title))
 
 
     def on_end(self):
         if self.keep_playing:
-            tornado.ioloop.IOLoop.instance().add_callback( lambda: self.play(self.playchan) )
+            tornado.ioloop.IOLoop.instance().add_callback(lambda: self.playsong())
 
  
     async def stop(self, message):
 
+        # set this before calling .stop(), the end callback will check for it
         self.keep_playing = False
 
         if self.player:
@@ -160,8 +203,8 @@ class DiscordParser(object):
             self.player = None
 
 
-
     async def skip(self, message):
+
         if self.player:
             self.player.stop()
 
@@ -213,7 +256,10 @@ class DiscordParser(object):
             await self.banish(message)
     
         elif message.content.startswith('|play'):
-            await self.play(message.channel)
+            await self.play(message)
+
+        elif message.content.startswith('|request'):
+            await self.request(message)
 
         elif message.content.startswith('|skip'):
             await self.skip(message)
