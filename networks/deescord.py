@@ -154,6 +154,10 @@ class DiscordParser(object):
             await self.say(message.channel, 'I am not in a voice channel, {}'.format(message.author.name))
             return 
 
+        # check if we are already playing something
+        if self.player and self.player.is_playing():
+            await self.say(message.channel, 'I am already playing, {}'.format(message.author.name))
+
         self.keep_playing = True
 
         self.playchan = message.channel  # reset the channel we want to talk in
@@ -164,10 +168,18 @@ class DiscordParser(object):
         """ 
         Get the next song, whether from a request or the stock playlist
         """
+        player = False
+
         if not self.requests:
-            url = self.playlist.pop()
-            player = await self.voice.create_ytdl_player(url, after=self.on_end)
-            self.playlist.insert(0, url)  # put it back in the end of the list
+            while not player:
+                url = self.playlist.pop()
+                try:
+                    player = await self.voice.create_ytdl_player(url, after=self.on_end)
+                    self.playlist.insert(0, url)  # put it back in the end of the list
+                except DownloadError as exc:
+                    info('{} was invalid, discarding from list'.format(url))
+                    continue
+
         else:
             player = self.requests.pop(0)
 
@@ -227,7 +239,14 @@ class DiscordParser(object):
         return await self.say(message.channel, 'The volume is set at {}'.format(self._volume))
 
 
-    
+    async def queue(self, message):
+
+        if not self.requests:
+            await self.say(message.channel, 'There are no requests right now, {}'.format(message.author.name))
+
+        else:
+            await self.say(message.channel, 'There are {} requests, next up is {}'.format(len(self.requests), self.requests[0].title))
+
     
     async def on_message(self, message):
         info('[{}] <{}> {}'.format( message.channel.name, message.author.name, message.content )) 
@@ -261,11 +280,15 @@ class DiscordParser(object):
         elif message.content.startswith('|request'):
             await self.request(message)
 
+        elif message.content.startswith('|queue'):
+            await self.queue(message)
+
         elif message.content.startswith('|skip'):
             await self.skip(message)
 
         elif message.content.startswith('|stop'):
             await self.stop(message)
+
 
         elif message.content.startswith('|volume'):
             await self.volume(message)
