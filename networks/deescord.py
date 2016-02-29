@@ -157,6 +157,7 @@ class DiscordParser(object):
         # check if we are already playing something
         if self.player and self.player.is_playing():
             await self.say(message.channel, 'I am already playing, {}'.format(message.author.name))
+            return
 
         self.keep_playing = True
 
