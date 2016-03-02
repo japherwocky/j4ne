@@ -139,7 +139,7 @@ class DiscordParser(object):
 
         # let's see if it works
         try:
-            player = await self.voice.create_ytdl_player(req, ytdl_options={'default-search':'ytsearch'}, after=self.on_end)
+            player = await self.voice.create_ytdl_player(req, options='-bufsize 520k', after=self.on_end)
         except DownloadError as exc:
             await self.say(message.channel, "I could not find that, {}".format(message.author.name))
         
@@ -175,7 +175,7 @@ class DiscordParser(object):
             while not player:
                 url = self.playlist.pop()
                 try:
-                    player = await self.voice.create_ytdl_player(url, after=self.on_end)
+                    player = await self.voice.create_ytdl_player(url, options='-bufsize 520k', after=self.on_end)
                     self.playlist.insert(0, url)  # put it back in the end of the list
                 except DownloadError as exc:
                     info('{} was invalid, discarding from list'.format(url))
@@ -265,9 +265,11 @@ class DiscordParser(object):
             await asyncio.sleep(5)
             await client.send_message(message.channel, 'Done sleeping')
     
-        elif 'eeyore' in message.content:
+        elif 'j4ne' in message.content and 'day' in message.content:
             await self.on_triggered(message.channel)
-    
+   
+        elif message.content.startswith('|shrug'):
+            await self.say(message.channel, '`¯\_(ツ)_/¯`')
 
         elif message.content.startswith('|summon'):
             await self.summon(message)
