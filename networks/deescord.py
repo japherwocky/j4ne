@@ -70,7 +70,7 @@ class DiscordParser(object):
 
     keep_playing = True
 
-    _volume = 13  # store this as 1-100 
+    _volume = 69  # store this as 1-100 
     playlist = []  # seeded with __init__
     requests = []
 
@@ -80,8 +80,12 @@ class DiscordParser(object):
             shuffle(self.playlist)
 
 
-    async def say(self, channel, message):
+    async def say(self, channel, message, destroy=0):
         msg = await client.send_message(channel, message)
+
+        if destroy:
+            await asyncio.sleep(destroy)
+            await client.delete_message(msg)
 
 
     async def on_triggered(self, channel):
@@ -126,7 +130,7 @@ class DiscordParser(object):
 
 
     async def request(self, message):
-        req = message.content.strip('|request ')
+        req = message.content.split('|request ')[1]
 
         # they didn't manage to request a song
         if not req:
@@ -198,7 +202,15 @@ class DiscordParser(object):
         self.player = player
         player.start()
 
-        await self.say(self.playchan, 'Now playing {}'.format(player.title))
+        # update our status 
+        await client.change_status( discord.Game(name = player.title[:128]) )
+
+    async def song(self, message):
+        if not (self.player and self.player.is_playing()):
+            return await self.say(message.channel, 'I am not playing right now.')
+
+        await self.say(message.channel, 'Now playing **{}**'.format(self.player.title))
+       
 
 
     def on_end(self):
@@ -214,6 +226,8 @@ class DiscordParser(object):
         if self.player:
             self.player.stop()
             self.player = None
+
+        await client.change_status(None)
 
 
     async def skip(self, message):
@@ -271,6 +285,22 @@ class DiscordParser(object):
         elif message.content.startswith('|shrug'):
             await self.say(message.channel, '`¯\_(ツ)_/¯`')
 
+        elif message.content.startswith('|shame'):
+            await self.say('`ಠ_ಠ`')
+
+        elif message.content.startswith('|wizard'):
+
+            wizards = [
+                '`(∩｀-´)⊃━☆ﾟ.･｡ﾟ`',
+                '`(⊃｡•́‿•̀｡)⊃━☆ﾟ.･｡ﾟ`',
+                '`(∩ ͡° ͜ʖ ͡°)⊃━☆ﾟ . * ･ ｡ﾟ`',
+                '`(∩ ͡°╭͜ʖ╮͡ ͡°)⊃━☆ﾟ. * ･ ｡ﾟ`',
+                '`( ✿ ⊙ ͜ʖ ⊙ ✿ )━☆ﾟ.*･｡ﾟ`',
+                '`( ∩ ✿⊙ ͜ʖ ⊙✿)⊃ ━☆ﾟ.*･｡ ﾟ`',
+            ]
+
+            await self.say(message.channel, choice(wizards))
+
         elif message.content.startswith('|summon'):
             await self.summon(message)
 
@@ -279,6 +309,9 @@ class DiscordParser(object):
     
         elif message.content.startswith('|play'):
             await self.play(message)
+
+        elif message.content.startswith('|song'):
+            await self.song(message)
 
         elif message.content.startswith('|request'):
             await self.request(message)
