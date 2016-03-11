@@ -1,4 +1,4 @@
-from logging import info, debug
+from logging import info, debug, error
 from random import choice, shuffle
 from array import array
 import asyncio
@@ -10,6 +10,8 @@ import feedparser
 
 from tornado import gen
 import tornado.ioloop
+
+from websockets.exceptions import InvalidState
 
 from keys import discord_email, discord_pass
 
@@ -27,7 +29,14 @@ class Discord(object):
         async def on_message(message):
             await self.DiscordParser.on_message(message)
 
-        yield client.start(discord_email, discord_pass)
+        while True:
+            try:
+                yield client.start(discord_email, discord_pass)
+            except InvalidState:
+                error('websocket closed, will try to reconnect')
+                self.DiscordParser.stop()
+                continue
+    
 
     @client.event
     async def on_ready():
@@ -144,6 +153,7 @@ class DiscordParser(object):
         # let's see if it works
         try:
             player = await self.voice.create_ytdl_player(req, options='-bufsize 520k', after=self.on_end)
+            player._url = req
         except DownloadError as exc:
             await self.say(message.channel, "I could not find that, {}".format(message.author.name))
         
@@ -188,22 +198,29 @@ class DiscordParser(object):
         else:
             player = self.requests.pop(0)
 
+            # re-init the player, we get TLS errors if it has been in the request list for too long
+            player = await self.voice.create_ytdl_player(player._url, options='-bufsize 520k', after=self.on_end)
+
         return player
 
 
     async def playsong(self):
 
-        player = await self.nextsong()
+        try:
+            player = await self.nextsong()
  
-        # instantiate player, hack in volume controls   
-        player.buff = VolumeBuff(player, player.buff)  # so awkward
-        player.volume = self._volume / 100.0  # not to be confused with the command
+            # instantiate player, hack in volume controls   
+            player.buff = VolumeBuff(player, player.buff)  # so awkward
+            player.volume = self._volume / 100.0  # not to be confused with the command
 
-        self.player = player
-        player.start()
+            self.player = player
+            player.start()
 
-        # update our status 
-        await client.change_status( discord.Game(name = player.title[:128]) )
+            # update our status 
+            await client.change_status( discord.Game(name = player.title[:128]) )
+        except InvalidState:
+            # eep, we got disconnected mid song
+            await self.stop()
 
     async def song(self, message):
         if not (self.player and self.player.is_playing()):
@@ -329,3 +346,8 @@ class DiscordParser(object):
         elif message.content.startswith('|volume'):
             await self.volume(message)
     
+        elif message.content.startswith('|feelsbadfam'):
+            await self.say(message.channel, 'http://j4ne.pearachute.net/feelsbadfam.png')
+
+        elif message.content.startswith('|youropinion'):
+            await self.say(message.channel, 'http://j4ne.pearachute.net/youropinion.png')
