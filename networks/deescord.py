@@ -246,6 +246,8 @@ class DiscordParser(object):
 
         await client.change_status(None)
 
+        await self.say( message.channel, ':hammer: time')
+
 
     async def skip(self, message):
 
