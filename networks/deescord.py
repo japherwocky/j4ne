@@ -235,7 +235,7 @@ class DiscordParser(object):
             tornado.ioloop.IOLoop.instance().add_callback(lambda: self.playsong())
 
  
-    async def stop(self, message):
+    async def stop(self, message=None):
 
         # set this before calling .stop(), the end callback will check for it
         self.keep_playing = False
@@ -246,7 +246,8 @@ class DiscordParser(object):
 
         await client.change_status(None)
 
-        await self.say( message.channel, ':hammer: time')
+        if message:
+            await self.say( message.channel, ':hammer: time')
 
 
     async def skip(self, message):
