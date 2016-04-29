@@ -45,3 +45,12 @@ async def lewd(client, message):
 @command('blush')
 async def blush(client, message):
     await client.send_file(message.channel, 'static/anneBlush.png')
+
+
+@command('help')
+@command('halp')
+async def help(client, message):
+    from commands import Commands
+    cmds = ', '.join(['|{}'.format(k) for k in Commands.keys()])
+
+    await client.send_message(message.channel, 'I am programmed to respond to the following commands: `{}`'.format(cmds))
