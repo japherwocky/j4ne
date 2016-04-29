@@ -119,6 +119,27 @@ async def shrug(client, message):
     await client.send_message(message.channel, '`ಠ_ಠ`')
 
 
+@command('feelsbadfam')
+async def feelsbadfam(client, message):
+    await client.send_file(message.channel, 'static/feelsbadfam.png')
+
+
+@command('youropinion')
+async def youropinion(client, message):
+    await client.send_file(message.channel, 'static/youropinion.png')
+
+
+@command('lewd')
+async def lewd(client, message):
+    lewds = ['anneLewd1.jpg','anneLewd2.gif','anneLewd3.png']  # TODO get some randint() action in here
+    await client.send_file(message.channel, 'static/{}'.format(choice(lewds)))
+
+
+@command('blush')
+async def blush(client, message):
+    await client.send_file(message.channel, 'static/anneBlush.png')
+
+
 class DiscordParser(object):
     voice = None
     voicechan = None
@@ -362,12 +383,6 @@ class DiscordParser(object):
 
         elif message.content.startswith('|volume'):
             await self.volume(message)
-    
-        elif message.content.startswith('|feelsbadfam'):
-            await self.say(message.channel, 'http://j4ne.pearachute.net/feelsbadfam.png')
-
-        elif message.content.startswith('|youropinion'):
-            await self.say(message.channel, 'http://j4ne.pearachute.net/youropinion.png')
 
         elif message.content.startswith('|retweet'):
             await self.retweet(message)
