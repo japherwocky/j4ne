@@ -16,6 +16,8 @@ import tornado.ioloop
 from websockets.exceptions import InvalidState
 
 from keys import discord_email, discord_pass
+from commands import Commands, command
+import commands.deescord
 
 # instantiate this here to use decorators
 client = discord.Client()  # loop defaults to asyncio.get_event_loop()
@@ -77,67 +79,6 @@ class VolumeBuff(object):
             frame = frame_array.tobytes()
 
         return frame
-
-
-commands = {}
-
-
-def command(name):
-    """
-    Decorator for registering commands
-    """
-
-    def __decorator(func):
-        commands[name] = func
-        return func
-
-    return __decorator
-
-
-@command('wizard')
-async def wizard(client, message):
-
-    wizards = [
-        '`(∩｀-´)⊃━☆ﾟ.･｡ﾟ`',
-        '`(⊃｡•́‿•̀｡)⊃━☆ﾟ.･｡ﾟ`',
-        '`(∩ ͡° ͜ʖ ͡°)⊃━☆ﾟ . * ･ ｡ﾟ`',
-        '`(∩ ͡°╭͜ʖ╮͡ ͡°)⊃━☆ﾟ. * ･ ｡ﾟ`',
-        '`( ✿ ⊙ ͜ʖ ⊙ ✿ )━☆ﾟ.*･｡ﾟ`',
-        '`( ∩ ✿⊙ ͜ʖ ⊙✿)⊃ ━☆ﾟ.*･｡ ﾟ`',
-    ]
-
-    await client.send_message(message.channel, choice(wizards))
-
-
-@command('shrug')
-async def shrug(client, message):
-    await client.send_message(message.channel, '`¯\_(ツ)_/¯`')
-
-
-@command('shame')
-async def shrug(client, message):
-    await client.send_message(message.channel, '`ಠ_ಠ`')
-
-
-@command('feelsbadfam')
-async def feelsbadfam(client, message):
-    await client.send_file(message.channel, 'static/feelsbadfam.png')
-
-
-@command('youropinion')
-async def youropinion(client, message):
-    await client.send_file(message.channel, 'static/youropinion.png')
-
-
-@command('lewd')
-async def lewd(client, message):
-    lewds = ['anneLewd1.jpg','anneLewd2.gif','anneLewd3.png']  # TODO get some randint() action in here
-    await client.send_file(message.channel, 'static/{}'.format(choice(lewds)))
-
-
-@command('blush')
-async def blush(client, message):
-    await client.send_file(message.channel, 'static/anneBlush.png')
 
 
 class DiscordParser(object):
@@ -380,7 +321,6 @@ class DiscordParser(object):
         elif message.content.startswith('|stop'):
             await self.stop(message)
 
-
         elif message.content.startswith('|volume'):
             await self.volume(message)
 
@@ -389,8 +329,8 @@ class DiscordParser(object):
 
         elif '|' in message.content:
             cmd = message.content.split('|')[1].split(' ')[0]
-            if cmd in commands:
-                await commands[cmd](client, message)
+            if cmd in Commands:
+                await Commands[cmd](client, message)
 
 
     async def retweet(self, message):
