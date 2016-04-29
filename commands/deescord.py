@@ -1,5 +1,6 @@
 from commands import command
 from random import choice
+import asyncio
 
 @command('wizard')
 async def wizard(client, message):
@@ -59,6 +60,44 @@ async def neat(client, message):
 
     out = choice(templates).format(choice(verbs))
     await client.send_message(message.channel, out)
+
+
+@command('wgaff')
+async def wgaff(client, message):
+    await client.send_message(message.channel, '┏(--)┓┏(--)┛┗(--﻿ )┓ WGAFF! ┏(--)┓┏(--)┛┗(--﻿ )┓')
+
+
+@command('8ball')
+async def magicball(client, message):
+    responses = [
+        'It is certain',
+        'It is decidedly so',
+        'Without a doubt',
+        'Yes, definitely',
+        'You may rely on it',
+        'As I see it, yes',
+        'Most likely',
+        'Outlook good',
+        'Yes',
+        'Signs point to yes',
+        'Reply hazy try again',
+        'Ask again later',
+        'Better not tell you now',
+        'Cannot predict now',
+        'Concentrate and ask again',
+        "Don't count on it",
+        "My reply is no",
+        "My sources say no",
+        "Outlook not so good",
+        "Very doubtful",
+    ]
+
+    if not message.content.split('8ball')[1]:
+        return await client.send_message(message.channel, 'What do you want me to ask the magic 8 ball?')
+
+    msg = await client.send_message(message.channel, '_shakes the magic 8 ball_')
+    await asyncio.sleep(3)
+    await client.edit_message(msg, choice(responses))
 
 
 @command('help')
