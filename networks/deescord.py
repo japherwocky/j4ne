@@ -27,7 +27,7 @@ class Discord(object):
 
     @gen.coroutine
     def discord_connect(self):
-        self.DiscordParser = parser # not sure what magic actually hooks up the handlers
+        self.DiscordParser = parser  # not sure what magic actually hooks up the handlers
 
         @client.event
         async def on_message(message):
@@ -79,6 +79,46 @@ class VolumeBuff(object):
         return frame
 
 
+commands = {}
+
+
+def command(name):
+    """
+    Decorator for registering commands
+    """
+
+    def __decorator(func):
+        commands[name] = func
+        return func
+
+    return __decorator
+
+
+@command('wizard')
+async def wizard(client, message):
+
+    wizards = [
+        '`(∩｀-´)⊃━☆ﾟ.･｡ﾟ`',
+        '`(⊃｡•́‿•̀｡)⊃━☆ﾟ.･｡ﾟ`',
+        '`(∩ ͡° ͜ʖ ͡°)⊃━☆ﾟ . * ･ ｡ﾟ`',
+        '`(∩ ͡°╭͜ʖ╮͡ ͡°)⊃━☆ﾟ. * ･ ｡ﾟ`',
+        '`( ✿ ⊙ ͜ʖ ⊙ ✿ )━☆ﾟ.*･｡ﾟ`',
+        '`( ∩ ✿⊙ ͜ʖ ⊙✿)⊃ ━☆ﾟ.*･｡ ﾟ`',
+    ]
+
+    await client.send_message(message.channel, choice(wizards))
+
+
+@command('shrug')
+async def shrug(client, message):
+    await client.send_message(message.channel, '`¯\_(ツ)_/¯`')
+
+
+@command('shame')
+async def shrug(client, message):
+    await client.send_message(message.channel, '`ಠ_ಠ`')
+
+
 class DiscordParser(object):
     voice = None
     voicechan = None
@@ -86,7 +126,7 @@ class DiscordParser(object):
 
     keep_playing = True
 
-    _volume = 69  # store this as 1-100 
+    _volume = 69  # store this as 1-100
     playlist = []  # seeded with __init__
     requests = []
 
@@ -94,7 +134,6 @@ class DiscordParser(object):
         with open('playlist.txt') as f:
             self.playlist = f.readlines()
             shuffle(self.playlist)
-
 
     async def say(self, channel, message, destroy=0):
         msg = await client.send_message(channel, message)
@@ -106,11 +145,11 @@ class DiscordParser(object):
 
     async def on_triggered(self, channel):
         ''' someone said the magic word! '''
-    
+
         posts = feedparser.parse('http://feeds2.feedburner.com/fmylife')
         post = choice(posts.entries)
         post = re.sub(r'<[^>]*?>', '', post.description).replace('FML', '')
-    
+
         await self.say(channel, str(post))
 
 
@@ -293,40 +332,8 @@ class DiscordParser(object):
     async def on_message(self, message):
         info('[{}] <{}> {}'.format( message.channel.name, message.author.name, message.content )) 
     
-        if message.content.startswith('!test'):
-            counter = 0
-            tmp = await client.send_message(message.channel, 'Calculating messages...')
-            async for log in client.logs_from(message.channel, limit=100):
-                if log.author == message.author:
-                    counter += 1
-    
-            await client.edit_message(tmp, 'You have {} messages.'.format(counter))
-
-        elif message.content.startswith('!sleep'):
-            await asyncio.sleep(5)
-            await client.send_message(message.channel, 'Done sleeping')
-    
-        elif 'j4ne' in message.content.lower() and 'day' in message.content.lower():
+        if 'j4ne' in message.content.lower() and 'day' in message.content.lower():
             await self.on_triggered(message.channel)
-   
-        elif message.content.startswith('|shrug '):
-            await self.say(message.channel, '`¯\_(ツ)_/¯`')
-
-        elif message.content.startswith('|shame '):
-            await self.say('`ಠ_ಠ`')
-
-        elif message.content.startswith('|wizard '):
-
-            wizards = [
-                '`(∩｀-´)⊃━☆ﾟ.･｡ﾟ`',
-                '`(⊃｡•́‿•̀｡)⊃━☆ﾟ.･｡ﾟ`',
-                '`(∩ ͡° ͜ʖ ͡°)⊃━☆ﾟ . * ･ ｡ﾟ`',
-                '`(∩ ͡°╭͜ʖ╮͡ ͡°)⊃━☆ﾟ. * ･ ｡ﾟ`',
-                '`( ✿ ⊙ ͜ʖ ⊙ ✿ )━☆ﾟ.*･｡ﾟ`',
-                '`( ∩ ✿⊙ ͜ʖ ⊙✿)⊃ ━☆ﾟ.*･｡ ﾟ`',
-            ]
-
-            await self.say(message.channel, choice(wizards))
 
         elif message.content.startswith('|summon'):
             await self.summon(message)
@@ -365,6 +372,10 @@ class DiscordParser(object):
         elif message.content.startswith('|retweet'):
             await self.retweet(message)
 
+        elif '|' in message.content:
+            cmd = message.content.split('|')[1].split(' ')[0]
+            if cmd in commands:
+                await commands[cmd](client, message)
 
 
     async def retweet(self, message):
@@ -415,7 +426,6 @@ class DiscordParser(object):
             out = json.dumps(out, sort_keys=True, indent=4)
 
             f.write(out)
-
 
 
     async def load_twitter_config(self):
@@ -477,4 +487,4 @@ class DiscordParser(object):
         await self.save_twitter_config()
 
 
-parser = DiscordParser()  # not sure what magic actually hooks up the handlers
+parser = DiscordParser()
