@@ -2,4 +2,5 @@
 *.swp
 
 keys.py
+twitterconf.json
 env/
