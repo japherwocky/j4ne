@@ -38,13 +38,27 @@ async def youropinion(client, message):
 
 @command('lewd')
 async def lewd(client, message):
-    lewds = ['anneLewd1.jpg','anneLewd2.gif','anneLewd3.png']  # TODO get some randint() action in here
+    lewds = ['anneLewd1.jpg', 'anneLewd2.gif', 'anneLewd3.png']  # TODO get some randint() action in here
     await client.send_file(message.channel, 'static/{}'.format(choice(lewds)))
 
 
 @command('blush')
 async def blush(client, message):
     await client.send_file(message.channel, 'static/anneBlush.png')
+
+
+@command('neat')
+async def neat(client, message):
+    verbs = ['dandy', 'glorious', 'hunky-dory', 'keen', 'marvelous', 'neat', 'nifty', 'sensational', 'swell', 'spiffy']
+
+    templates = [
+        '{}!',
+        'what a {} thing!',
+        'that sure is {}!'
+    ]
+
+    out = choice(templates).format(choice(verbs))
+    await client.send_message(message.channel, out)
 
 
 @command('help')
