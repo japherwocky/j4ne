@@ -1,6 +1,8 @@
 from commands import command
 from random import choice
 import asyncio
+import giphypop
+G = giphypop.Giphy()
 
 @command('wizard')
 async def wizard(client, message):
@@ -117,6 +119,17 @@ async def magicball(client, message):
     msg = await client.send_message(message.channel, '_shakes the magic 8 ball_')
     await asyncio.sleep(3)
     await client.edit_message(msg, choice(responses))
+
+
+@command('giphy')
+async def giphy(client, message):
+    if not message.content.split('giphy')[1]:
+        return await client.send_message(message.channel, 'What kind of GIF were you looking for?')
+
+    results = G.search(message.content.split('giphy')[1])
+    result = results.__next__()  # pop one off the iterator
+
+    await client.send_message(message.channel, result)
 
 
 @command('help')
