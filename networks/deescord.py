@@ -148,15 +148,17 @@ class DiscordParser(object):
             for servstring in [k for k in conf.keys()]:
                 debug('Loading server {}'.format(servstring))
 
-                servobj = servers[servstring]
-                conf[servobj] = conf[servstring]
-                del conf[servstring]
+                if servstring in servers:
 
-                for chanstring in [k for k in conf[servobj].keys()]:
-                    channels = {channel.name:channel for channel in servers[servstring].channels}
-                    chanobj = channels[chanstring]
-                    conf[servobj][chanobj] = conf[servobj][chanstring]
-                    del conf[servobj][chanstring]
+                    servobj = servers[servstring]
+                    conf[servobj] = conf[servstring]
+                    del conf[servstring]
+
+                    for chanstring in [k for k in conf[servobj].keys()]:
+                        channels = {channel.name:channel for channel in servers[servstring].channels}
+                        chanobj = channels[chanstring]
+                        conf[servobj][chanobj] = conf[servobj][chanstring]
+                        del conf[servobj][chanstring]
 
             self._twitter_conf = conf
 
