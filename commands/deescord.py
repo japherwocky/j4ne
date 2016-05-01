@@ -67,6 +67,25 @@ async def wgaff(client, message):
     await client.send_message(message.channel, '┏(--)┓┏(--)┛┗(--﻿ )┓ WGAFF! ┏(--)┓┏(--)┛┗(--﻿ )┓')
 
 
+@command('invite')
+async def bot_invite(client, message):
+    perms = [
+        '0x0000400',  # READ_MESSAGES
+        '0x0000800',  # SEND_MESSAGES
+        '0x0002000',  # DELETE_MESSAGES
+        '0x0008000',  # ATTACH_FILES
+        '0x0004000',  # EMBED_LINKS ?
+        '0x0100000',  # CONNECT (to voice)
+        '0x0200000',  # SPEAK
+        '0x2000000',  # DETECT VOICE
+    ]
+
+    perm_int = sum([int(perm, 0) for perm in perms])
+
+    link = 'https://discordapp.com/oauth2/authorize?&client_id=176104440372133888&scope=bot&permissions={}'.format(perm_int)
+    await client.send_message(message.channel, 'Invite me to your server here: {}'.format(link))
+
+
 @command('8ball')
 async def magicball(client, message):
     responses = [

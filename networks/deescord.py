@@ -13,7 +13,7 @@ import feedparser
 from tornado import gen
 import tornado.ioloop
 
-from keys import discord_email, discord_pass
+from keys import discord_token
 
 from commands import Commands, command
 import commands.deescord
@@ -37,7 +37,7 @@ class Discord(object):
 
         while True:
             try:
-                yield client.start(discord_email, discord_pass)
+                yield client.start(discord_token)
             except InvalidState:
                 error('websocket closed, will try to reconnect')
                 self.DiscordParser.stop()
