@@ -39,7 +39,7 @@ async def youropinion(client, message):
 
 @command('lewd')
 async def lewd(client, message):
-    lewds = ['anneLewd1.jpg', 'anneLewd2.gif', 'anneLewd3.png']  # TODO get some randint() action in here
+    lewds = ['anneLewd1.jpg', 'anneLewd2.gif', 'anneLewd3.png', 'sledgeLewd.gif', 'beanLewd.gif']  # TODO get some randint() action in here
     await client.send_file(message.channel, 'static/{}'.format(choice(lewds)))
 
 
