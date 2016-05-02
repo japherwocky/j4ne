@@ -131,11 +131,14 @@ async def giphy(client, message):
         return await client.send_message(message.channel, 'What kind of GIF were you looking for?')
 
     results = G.search(message.content.split('giphy')[1])
-    try:
-        result = results.__next__()  # pop one off the iterator
-        await client.send_message(message.channel, result)
-    except StopIteration:
+
+    results = [r for r in results][:5]
+
+    if not results:
         await client.send_message(message.channel, 'I could not find a GIF for that, {}'.format(message.author.name))
+    else:
+        result = choice(results)
+        await client.send_message(message.channel, result)
 
 
 @command('help')
