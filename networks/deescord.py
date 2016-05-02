@@ -1,5 +1,7 @@
 from logging import info, debug, error
 from random import choice, shuffle
+from cleverbot import Cleverbot
+CB = Cleverbot()
 
 import asyncio
 import re
@@ -75,6 +77,16 @@ class DiscordParser(object):
 
         if 'j4ne' in message.content.lower() and 'day' in message.content.lower():
             await self.on_triggered(message.channel)
+
+        elif message.content.lower().startswith('j4ne'):
+            query = message.content.lower().split('j4ne', 1)[1]
+            if not query:
+                return await client.send_message(message.channel, "Yes?")
+
+            reply = CB.ask(query)
+            reply = reply[:1].lower() + reply[1:]
+            reply = '{}, {}'.format(message.author.name, reply)
+            await client.send_message(message.channel, reply)
 
         elif message.content.startswith('|retweet'):
             await self.retweet(message)
