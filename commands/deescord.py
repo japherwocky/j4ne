@@ -1,8 +1,12 @@
 from commands import command
 from random import choice
 import asyncio
+
 import giphypop
 G = giphypop.Giphy()
+
+from keys import discord_app
+
 
 @command('wizard')
 async def wizard(client, message):
@@ -84,7 +88,7 @@ async def bot_invite(client, message):
 
     perm_int = sum([int(perm, 0) for perm in perms])
 
-    link = 'https://discordapp.com/oauth2/authorize?&client_id=176104440372133888&scope=bot&permissions={}'.format(perm_int)
+    link = 'https://discordapp.com/oauth2/authorize?&client_id={}&scope=bot&permissions={}'.format(discord_app, perm_int)
     await client.send_message(message.channel, 'Invite me to your server here: {}'.format(link))
 
 
