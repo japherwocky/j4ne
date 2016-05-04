@@ -16,6 +16,8 @@ from networks.irc import IRC
 from networks.deescord import Discord
 
 
+
+
 class App (tornado.web.Application, IRC, Discord):
     def __init__(self, botname, app_debug=False):
         """
@@ -123,21 +125,17 @@ class DocHandler(tornado.web.RequestHandler):
 
 def main():
     from tornado.options import define, options
-    define("port", default=8888, help="run on the given port", type=int)
+    define("port", default=8888, help="serve web requests from the given port", type=int)
     define("debug", default=False, help="run server in debug mode", type=bool)
-    define("runtests", default=False, help="run tests", type=bool)
     define("botname", default='Test Bot', help="name of the bot")
+    define("mktables", default=False, help="bootstrap a new sqlite database")
 
     tornado.options.parse_command_line()
 
-    if options.runtests:
-        """ put tests in the tests folder """
-        import tests
-        import unittest
-        import sys
-        sys.argv = ['pearachute.py', ]  # unittest messes with argv
-        unittest.main('tests')
-        return
+    if options.mktables:
+        from loggers.models import db, Message
+        db.create_tables([Message,])
+
 
     app = App(options.botname, app_debug=options.debug)
 
