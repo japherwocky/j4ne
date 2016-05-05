@@ -24,6 +24,8 @@ import commands.jukebox
 from loggers.handlers import Discord as Dlogger
 Dlogger = Dlogger()
 
+from websockets.exceptions import ConnectionClosed
+
 # instantiate this here to use decorators
 client = discord.Client()  # loop defaults to asyncio.get_event_loop()
 
@@ -43,7 +45,7 @@ class Discord(object):
         while True:
             try:
                 yield client.start(discord_token)
-            except InvalidState:
+            except ConnectionClosed:
                 error('websocket closed, will try to reconnect')
                 self.DiscordParser.stop()
                 continue
