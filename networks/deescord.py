@@ -21,6 +21,9 @@ from commands import Commands, command
 import commands.deescord
 import commands.jukebox
 
+from loggers.handlers import Discord as Dlogger
+Dlogger = Dlogger()
+
 # instantiate this here to use decorators
 client = discord.Client()  # loop defaults to asyncio.get_event_loop()
 
@@ -73,7 +76,14 @@ class DiscordParser(object):
         await self.say(channel, str(post))
 
     async def on_message(self, message):
-        info('[{}] <{}> {}'.format(message.channel.name, message.author.name, message.content))
+        info('[{}:{}] <{}> {}'.format(
+            message.server.name,
+            message.channel.name,
+            message.author.name,
+            message.content
+            ))
+
+        Dlogger(message)
 
         if 'j4ne' in message.content.lower() and 'day' in message.content.lower():
             await self.on_triggered(message.channel)
