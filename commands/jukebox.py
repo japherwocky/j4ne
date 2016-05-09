@@ -77,7 +77,7 @@ async def summon(client, message):
         return await say(client, message.channel, 'You must join a voice channel first, {}'.format(message.author.name))
 
     # check if this is new or we're moving
-    if client.is_voice_connected():
+    if client.is_voice_connected(message.server):
 
         # already connected somewhere - here?
         if authorchan == J.voicechan:
@@ -95,7 +95,7 @@ async def summon(client, message):
 @command('banish')
 async def banish(client, message):
     ''' Clear out any pre-existing voice connections '''
-    if client.is_voice_connected():
+    if client.is_voice_connected(message.server):
         await J.voice.disconnect()
 
     J.voicechan = J.voice = None
