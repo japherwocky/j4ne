@@ -3,6 +3,8 @@ import tornado
 from tornado.websocket import websocket_connect
 
 from keys import twitch_name, twitch_token
+from loggers.handlers import Twitch as Tlogger
+Tlogger = Tlogger()
 
 class TwitchParser(object):
 
@@ -35,9 +37,13 @@ class TwitchParser(object):
                 
 
     async def on_message(self, msg):
-        print( msg)
+        Tlogger(msg)
 
-
-if __name__=="__main__":
+def main():
     T = TwitchParser()
     tornado.ioloop.IOLoop.instance().run_sync(T.connect)
+
+if __name__=="__main__":
+    main()
+
+
