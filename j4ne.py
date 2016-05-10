@@ -14,6 +14,7 @@ from tornado.web import HTTPError, authenticated
 from markdown import markdown
 from networks.irc import IRC
 from networks.deescord import Discord
+from networks.twitch import TwitchParser
 
 
 
@@ -146,6 +147,11 @@ def main():
     info('Serving on port %d' % options.port)
 
     tornado.ioloop.IOLoop.instance().add_callback(app.discord_connect)  # connect to discord 
+
+    # connect to Twitch ... to mixin or not to mixin
+    app.Twitch = TwitchParser()
+    tornado.ioloop.IOLoop.instance().add_callback(app.Twitch.connect)  
+    
     tornado.ioloop.IOLoop.instance().start()
 
 
