@@ -71,13 +71,6 @@ class DiscordParser(object):
         await self.say(channel, str(post))
 
     async def on_message(self, message):
-        info('[{}:{}] <{}> {}'.format(
-            message.server.name,
-            message.channel.name,
-            message.author.name,
-            message.content
-            ))
-
         Dlogger(message)
 
         if 'j4ne' in message.content.lower() and 'day' in message.content.lower():

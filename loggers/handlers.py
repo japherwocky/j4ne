@@ -3,15 +3,25 @@ from time import time
 
 from loggers.models import Message
 
+
+# the first thought was to bake this into a base class, but maybe that's overengineered
+def echo(msg):
+    """ dump a copy of the chat into the console / stdout """
+    info('[{}:{}] <{}> {}'.format(
+        msg.server,
+        msg.channel,
+        msg.author,
+        msg.content
+        ))
+
+
 class Discord(object):
-    def __init__(self):
-        pass
 
     def __call__(self, message):
         """Take a raw message, break it into fields and insert into our database"""
 
-        # todo - links/embeds/attachments, as URLs? or something?
-        Message.create(
+        # TODO - links/embeds/attachments, as URLs? or something?
+        msg = Message.create(
             network = 'discord',
             author_id = int(message.author.id),
             author = message.author.name,
@@ -23,11 +33,12 @@ class Discord(object):
             content = message.content,
         )
 
+        echo(msg)
+
+
 class Twitch(object):
     def __call__(self, message):
         # break messages down into metadata
-        # @badges=;color=#2970A3;display-name=japherwocky;emotes=;mod=0;room-id=88404785;subscriber=0;turbo=0;user-id=77236393;user-type= :japherwocky!japherwocky@japherwocky.tmi.twitch.tv PRIVMSG #4nnedroid :wat did i do
-        meta, msg = message.split(' ',1)
         meta = meta[1:]  # strip leading @
 
         # hrm, regex might be safer here
@@ -44,4 +55,6 @@ class Twitch(object):
             timestamp = time(),
             content = msg.rsplit(':',1)[1].strip(),
         )
+
+        echo(msg)
 
