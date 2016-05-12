@@ -39,6 +39,7 @@ class Discord(object):
 class Twitch(object):
     def __call__(self, message):
         # break messages down into metadata
+        meta,msg = message.split(' ',1)
         meta = meta[1:]  # strip leading @
 
         # hrm, regex might be safer here

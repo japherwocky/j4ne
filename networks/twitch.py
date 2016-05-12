@@ -33,7 +33,7 @@ class TwitchParser(object):
 
             # server status messages, and who knows what else?
             else:
-                print(msg)
+                logging.warning(msg.strip())
                 
 
     async def on_message(self, msg):

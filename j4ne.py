@@ -19,7 +19,7 @@ from networks.twitch import TwitchParser
 
 
 
-class App (tornado.web.Application, IRC, Discord):
+class App (tornado.web.Application, IRC):
     def __init__(self, botname, app_debug=False):
         """
         Settings for our application
@@ -68,6 +68,10 @@ class MainHandler(AuthMixin, tornado.web.RequestHandler):
 
 
 class LoginHandler(tornado.web.RequestHandler):
+    """
+    super awkward naming now, basically a util to auth with twitch 
+    and spit the oauth token out to stdout
+    """
     def get(self):
         from keys import twitch_key
         self.render('auth.html', twitch_key=twitch_key)
@@ -79,6 +83,7 @@ class LoginHandler(tornado.web.RequestHandler):
 
         info('got token %s for user %s' % (token, username))
 
+        """
         self.application.botname = str(username)
         self.application.twitchtoken = str(token)
         self.application.connect_irc('irc.twitch.tv', 6667)
@@ -86,6 +91,7 @@ class LoginHandler(tornado.web.RequestHandler):
         self.set_secure_cookie('user', self.application.botname)
 
         self.redirect('/')
+        """
 
 
 class LogoutHandler(tornado.web.RequestHandler):
@@ -146,7 +152,9 @@ def main():
     http_server.listen(options.port)
     info('Serving on port %d' % options.port)
 
-    tornado.ioloop.IOLoop.instance().add_callback(app.discord_connect)  # connect to discord 
+    # connect to discord 
+    app.Discord = Discord()
+    tornado.ioloop.IOLoop.instance().add_callback(app.Discord.connect)  
 
     # connect to Twitch ... to mixin or not to mixin
     app.Twitch = TwitchParser()

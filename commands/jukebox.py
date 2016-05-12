@@ -1,4 +1,4 @@
-from commands import command
+from commands import discord_command as command
 from random import shuffle
 from array import array
 from logging import info, debug, error

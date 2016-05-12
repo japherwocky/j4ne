@@ -17,7 +17,8 @@ import tornado.ioloop
 
 from keys import discord_token
 
-from commands import Commands, command
+from commands import Discord_commands as Commands
+from commands import discord_command as command
 import commands.deescord
 import commands.jukebox
 
@@ -32,26 +33,27 @@ class Discord(object):
     """ Mixin for the main App """
     _Twitter = None
 
-    @gen.coroutine
-    def discord_connect(self):
-        self.DiscordParser = parser  # not sure what magic actually hooks up the handlers
+    async def connect(self):
+
+        """
+        @client.event
+        async def on_message(message):
+            await self.on_message(message)
+        """
+
+        # this lived in a while True loop for a bit, to handle restarting
+        await client.start(discord_token)
+
+        @client.event
+        async def on_ready():
+            info('Logged in as {} {}'.format(client.user.id, client.user.name) )
+
+            # try to load tweeters if they exist
+            await self.load_twitter_config()
 
         @client.event
         async def on_message(message):
-            await self.DiscordParser.on_message(message)
-
-        while True:
-            yield client.start(discord_token)
-
-    @client.event
-    async def on_ready():
-        info('Logged in as {} {}'.format(client.user.id, client.user.name) )
-
-        # try to load tweeters if they exist
-        await parser.load_twitter_config()
-
-
-class DiscordParser(object):
+            await self.on_message(message)
 
     async def say(self, channel, message, destroy=0):
         msg = await client.send_message(channel, message)
@@ -59,7 +61,6 @@ class DiscordParser(object):
         if destroy:
             await asyncio.sleep(destroy)
             await client.delete_message(msg)
-
 
     async def on_triggered(self, channel):
         ''' someone said the magic word! '''
@@ -81,6 +82,7 @@ class DiscordParser(object):
             if not query:
                 return await client.send_message(message.channel, "Yes?")
 
+            debug(query)
             reply = CB.ask(query)
             reply = reply[:1].lower() + reply[1:]
             reply = '{}, {}'.format(message.author.name, reply)
@@ -204,6 +206,3 @@ class DiscordParser(object):
                         tooter['last'] = tweet['id']
 
         await self.save_twitter_config()
-
-
-parser = DiscordParser()
