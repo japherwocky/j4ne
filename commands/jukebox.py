@@ -45,7 +45,7 @@ class Jukebox:
 
     keep_playing = True
 
-    _volume = 69  # store this as 1-100
+    _volume = 13  # store this as 1-100
     playlist = []  # seeded with __init__
     requests = []
 
@@ -69,19 +69,19 @@ async def say(client, channel, message, destroy=0):
 
 
 @command('summon')
-async def summon(client, message):
+async def summon(network, channel, message):
     ''' Try to join the author's voice channel '''
     authorchan = message.author.voice_channel
 
     if not authorchan:
-        return await say(client, message.channel, 'You must join a voice channel first, {}'.format(message.author.name))
+        return await network.send_message(channel, 'You must join a voice channel first, {}'.format(message.author.name))
 
     # check if this is new or we're moving
-    if client.is_voice_connected(message.server):
+    if network.client.is_voice_connected(message.server):
 
         # already connected somewhere - here?
         if authorchan == J.voicechan:
-            return await say(client, message.channel, 'I am already in your channel, {}'.format(message.author.name))
+            return await network.send_message(channel, 'I am already in your channel, {}'.format(message.author.name))
 
         # or leave so we can join the new channel
         else:
@@ -89,29 +89,29 @@ async def summon(client, message):
 
     # join the author's voice channel
     J.voicechan = authorchan
-    J.voice = await client.join_voice_channel(authorchan)
+    J.voice = await network.client.join_voice_channel(authorchan)
 
 
 @command('banish')
-async def banish(client, message):
+async def banish(network, channel, message):
     ''' Clear out any pre-existing voice connections '''
-    if client.is_voice_connected(message.server):
+    if network.client.is_voice_connected(message.server):
         await J.voice.disconnect()
 
     J.voicechan = J.voice = None
 
 
 @command('request')
-async def request(client, message):
+async def request(network, channel, message):
     req = message.content.split('|request ')[1]
 
     # they didn't manage to request a song
     if not req:
-        await say(client, message.channel, "What would you like to request, {}?".format(message.author.name))
+        await network.send_message(channel, "What would you like to request, {}?".format(message.author.name))
         return
 
     if not J.voice:
-        await say(client, message.channel, "I am not in a voice channel, {}".format(message.author.name))
+        await network.send_message(channel, "I am not in a voice channel, {}".format(message.author.name))
         return
 
     # let's see if it works
@@ -119,42 +119,42 @@ async def request(client, message):
         player = await J.voice.create_ytdl_player(req, options='-bufsize 520k', after=on_end)
         player._url = req
     except DownloadError as exc:
-        await say(client, message.channel, "I could not find that, {}".format(message.author.name))
+        await network.send_message(channel, "I could not find that, {}".format(message.author.name))
 
-    await say(client, message.channel, '{} has been added to the queue.'.format(player.title))
+    await network.send_message(channel, '{} has been added to the queue.'.format(player.title))
 
     J.requests.append(player)
 
 
 @command('play')
-async def play(client, message):
+async def play(network, channel, message):
 
     if not (J.voice and J.voicechan):
-        await say(client, message.channel, 'I am not in a voice channel, {}'.format(message.author.name))
+        await network.send_message(channel, 'I am not in a voice channel, {}'.format(message.author.name))
         return
 
     # check if we are already playing something
     if J.player and J.player.is_playing():
-        await say(client, message.channel, 'I am already playing, {}'.format(message.author.name))
+        await network.send_message(channel, 'I am already playing, {}'.format(message.author.name))
         return
 
     J.keep_playing = True
 
     J.playchan = message.channel  # reset the channel we want to talk in
-    J.client = client
+    J.client = network.client
     await playsong()
 
 
 @command('song')
-async def song(client, message):
+async def song(network, channel, message):
     if not (J.player and J.player.is_playing()):
-        return await say(client, message.channel, 'I am not playing right now.')
+        return await network.send_message(channel, 'I am not playing right now.')
 
-    await say(client, message.channel, 'Now playing **{}**'.format(J.player.title))
+    await network.send_message(channel, 'Now playing **{}**'.format(J.player.title))
 
 
 @command('stop')
-async def stop(client=None, message=None):  # defaults, sometimes we call this directly
+async def stop(network=None, channel=None, message=None):  # defaults, sometimes we call this directly
 
     # set this before calling .stop(), the end callback will check for it
     J.keep_playing = False
@@ -167,11 +167,11 @@ async def stop(client=None, message=None):  # defaults, sometimes we call this d
     J.client = None
 
     if message:
-        await say(client, message.channel, ':hammer: time')
+        await network.send_message(channel, ':hammer: time')
 
 
 @command('skip')
-async def skip(client, message):
+async def skip(network, channel, message):
     """ Skip whatever is playing right now - TODO, votes? """
 
     if J.player:
@@ -179,7 +179,7 @@ async def skip(client, message):
 
 
 @command('volume')
-async def volume(client, message):
+async def volume(network, channel, message):
     """ Set the volume """
 
     txt = message.content.strip('|volume')
@@ -188,24 +188,24 @@ async def volume(client, message):
         try:
             vol = int(txt)
         except ValueError:
-            return await say(client, message.channel, 'Please try a number between 1 and 100, {}'.format(message.author.name))
+            return await network.send_message(channel, 'Please try a number between 1 and 100, {}'.format(message.author.name))
 
         J._volume = vol
 
     if J.player:
         J.player.volume = J._volume / 100.0
 
-    return await say(client, message.channel, 'The volume is set at {}'.format(J._volume))
+    return await network.send_message(channel, 'The volume is set at {}'.format(J._volume))
 
 
 @command('queue')
-async def queue(client, message):
+async def queue(network, channel, message):
 
     if not J.requests:
-        await say(client, message.channel, 'There are no requests right now, {}'.format(message.author.name))
+        await network.send_message(channel, 'There are no requests right now, {}'.format(message.author.name))
 
     else:
-        await say(client, message.channel, 'There are {} requests, next up is {}'.format(len(J.requests), J.requests[0].title))
+        await network.send_message(channel, 'There are {} requests, next up is {}'.format(len(J.requests), J.requests[0].title))
 
 
 # maybe put these on the Jukebox class
@@ -251,6 +251,7 @@ async def playsong():
 
         # update our status
         await J.client.change_status(discord.Game(name=player.title[:128]))
+
     except InvalidState:
         # eep, we got disconnected mid song
         await stop()

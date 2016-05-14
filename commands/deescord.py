@@ -9,7 +9,7 @@ from keys import discord_app
 
 
 @command('wizard')
-async def wizard(client, message):
+async def wizard(network, channel, message):
 
     wizards = [
         '`(∩｀-´)⊃━☆ﾟ.･｡ﾟ`',
@@ -20,42 +20,42 @@ async def wizard(client, message):
         '`( ∩ ✿⊙ ͜ʖ ⊙✿)⊃ ━☆ﾟ.*･｡ ﾟ`',
     ]
 
-    await client.send_message(message.channel, choice(wizards))
+    await network.send_message(channel, choice(wizards))
 
 
 @command('shrug')
-async def shrug(client, message):
-    await client.send_message(message.channel, '`¯\_(ツ)_/¯`')
+async def shrug(network, channel, message):
+    await network.send_message(channel, '`¯\_(ツ)_/¯`')
 
 
 @command('shame')
-async def shrug(client, message):
-    await client.send_message(message.channel, '`ಠ_ಠ`')
+async def shrug(network, channel, message):
+    await network.send_message(channel, '`ಠ_ಠ`')
 
 
 @command('feelsbadfam')
-async def feelsbadfam(client, message):
-    await client.send_file(message.channel, 'static/feelsbadfam.png')
+async def feelsbadfam(network, channel, message):
+    await network.send_file(channel, 'static/feelsbadfam.png')
 
 
 @command('youropinion')
-async def youropinion(client, message):
-    await client.send_file(message.channel, 'static/youropinion.png')
+async def youropinion(network, channel, message):
+    await network.send_file(channel, 'static/youropinion.png')
 
 
 @command('lewd')
-async def lewd(client, message):
+async def lewd(network, channel, message):
     lewds = ['anneLewd1.jpg', 'anneLewd2.gif', 'anneLewd3.png', 'sledgeLewd.gif', 'beanLewd.gif']  # TODO get some randint() action in here
-    await client.send_file(message.channel, 'static/{}'.format(choice(lewds)))
+    await network.send_file(channel, 'static/{}'.format(choice(lewds)))
 
 
 @command('blush')
-async def blush(client, message):
-    await client.send_file(message.channel, 'static/anneBlush.png')
+async def blush(network, channel, message):
+    await network.send_file(channel, 'static/anneBlush.png')
 
 
 @command('neat')
-async def neat(client, message):
+async def neat(network, channel, message):
     verbs = ['dandy', 'glorious', 'hunky-dory', 'keen', 'marvelous', 'neat', 'nifty', 'sensational', 'swell', 'spiffy']
 
     templates = [
@@ -65,16 +65,16 @@ async def neat(client, message):
     ]
 
     out = choice(templates).format(choice(verbs))
-    await client.send_message(message.channel, out)
+    await network.send_message(channel, out)
 
 
 @command('wgaff')
-async def wgaff(client, message):
-    await client.send_message(message.channel, '┏(--)┓┏(--)┛┗(--﻿ )┓ WGAFF! ┏(--)┓┏(--)┛┗(--﻿ )┓')
+async def wgaff(network, channel, message):
+    await network.send_message(channel, '┏(--)┓┏(--)┛┗(--﻿ )┓ WGAFF! ┏(--)┓┏(--)┛┗(--﻿ )┓')
 
 
 @command('invite')
-async def bot_invite(client, message):
+async def bot_invite(network, channel, message):
     perms = [
         '0x0000400',  # READ_MESSAGES
         '0x0000800',  # SEND_MESSAGES
@@ -89,11 +89,11 @@ async def bot_invite(client, message):
     perm_int = sum([int(perm, 0) for perm in perms])
 
     link = 'https://discordapp.com/oauth2/authorize?&client_id={}&scope=bot&permissions={}'.format(discord_app, perm_int)
-    await client.send_message(message.channel, 'Invite me to your server here: {}'.format(link))
+    await network.send_message(channel, 'Invite me to your server here: {}'.format(link))
 
 
 @command('8ball')
-async def magicball(client, message):
+async def magicball(network, channel, message):
     responses = [
         'It is certain',
         'It is decidedly so',
@@ -118,33 +118,31 @@ async def magicball(client, message):
     ]
 
     if not message.content.split('8ball')[1]:
-        return await client.send_message(message.channel, 'What do you want me to ask the magic 8 ball?')
+        return await network.send_message(channel, 'What do you want me to ask the magic 8 ball?')
 
-    msg = await client.send_message(message.channel, '_shakes the magic 8 ball_')
-    await asyncio.sleep(3)
-    await client.edit_message(msg, choice(responses))
+    await network.send_message(channel, choice(responses))
 
 
 @command('giphy')
-async def giphy(client, message):
+async def giphy(network, channel, message):
     if not message.content.split('giphy')[1]:
-        return await client.send_message(message.channel, 'What kind of GIF were you looking for?')
+        return await network.send_message(channel, 'What kind of GIF were you looking for?')
 
     results = G.search(message.content.split('giphy')[1])
 
     results = [r for r in results][:5]
 
     if not results:
-        await client.send_message(message.channel, 'I could not find a GIF for that, {}'.format(message.author.name))
+        await network.send_message(channel, 'I could not find a GIF for that, {}'.format(message.author.name))
     else:
         result = choice(results)
-        await client.send_message(message.channel, result)
+        await network.send_message(channel, result)
 
 
 @command('help')
 @command('halp')
-async def help(client, message):
-    from commands import Commands
+async def help(network, channel, message):
+    from commands import Discord_commands as Commands
     cmds = ', '.join(['|{}'.format(k) for k in Commands.keys()])
 
-    await client.send_message(message.channel, 'I am programmed to respond to the following commands: `{}`'.format(cmds))
+    await network.send_message(channel, 'I am programmed to respond to the following commands: `{}`'.format(cmds))

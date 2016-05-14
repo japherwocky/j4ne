@@ -33,16 +33,17 @@ class Discord(object):
     """ Mixin for the main App """
     _Twitter = None
 
-    async def connect(self):
+    client = client  # so that network specific commands can access lower levels
+
+    @gen.coroutine
+    def connect(self):
 
         """
         @client.event
         async def on_message(message):
             await self.on_message(message)
         """
-
-        # this lived in a while True loop for a bit, to handle restarting
-        await client.start(discord_token)
+        self.client = client
 
         @client.event
         async def on_ready():
@@ -53,7 +54,19 @@ class Discord(object):
 
         @client.event
         async def on_message(message):
+            info(message) 
             await self.on_message(message)
+
+        # this lived in a while True loop for a bit, to handle restarting
+        while True:
+            info('Connecting to Discord..')
+            yield client.start(discord_token)
+
+    async def send_message(self, channel, message):
+        return await client.send_message(channel, message)
+
+    async def send_file(self, channel, filepath):
+        return await client.send_file(channel, filepath)
 
     async def say(self, channel, message, destroy=0):
         msg = await client.send_message(channel, message)
@@ -94,7 +107,7 @@ class Discord(object):
         elif '|' in message.content:
             cmd = message.content.split('|')[1].split(' ')[0]
             if cmd in Commands:
-                await Commands[cmd](client, message)
+                await Commands[cmd](self, message.channel, message)
 
 
     async def retweet(self, message):

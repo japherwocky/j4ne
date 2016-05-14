@@ -159,6 +159,8 @@ def main():
     # connect to Twitch ... to mixin or not to mixin
     app.Twitch = TwitchParser()
     tornado.ioloop.IOLoop.instance().add_callback(app.Twitch.connect)  
+
+    # connect to IRC
     
     tornado.ioloop.IOLoop.instance().start()
 
