@@ -139,8 +139,9 @@ def main():
     tornado.options.parse_command_line()
 
     if options.mktables:
-        from loggers.models import db, Message
-        db.create_tables([Message,])
+        from loggers.models import Message
+        from commands.models import Quote
+        db.create_tables([Message,Quote])
 
 
     app = App(options.botname, app_debug=options.debug)

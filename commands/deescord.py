@@ -1,5 +1,7 @@
 from commands import discord_command as command
+from commands.models import Quote
 from random import choice
+from time import time
 import asyncio
 
 import giphypop
@@ -146,3 +148,36 @@ async def help(network, channel, message):
     cmds = ', '.join(['|{}'.format(k) for k in Commands.keys()])
 
     await network.send_message(channel, 'I am programmed to respond to the following commands: `{}`'.format(cmds))
+
+
+@command('quote')
+async def quote(network, channel, message):
+
+    if not message.content.split('quote')[1]:
+        return await network.send_message(channel, 'Quote who?')
+
+    parts = message.content.split('quote',1)[1].strip().split(' ', 1)
+
+    if len(parts) == 1:
+        author = parts[0]
+        # return a quote from that user
+
+        if author != 'random':
+            pool = [q for q in Quote.filter(author=author)]
+
+        if not pool:
+            return await network.send_message(channel, 'I have no quotes from {}'.format(author))
+
+        out = choice(pool)
+        return await network.send_message(channel, '#{}: "{}" -- {}'.format(out.id, out.content, out.author))
+                
+    else:
+        # add a quote for that user
+        author, quote = parts
+
+        # TODO: guard against malicious quotes, probably?
+        new = Quote(author=author, content=quote, timestamp=time())
+        new.save()
+
+        return await network.send_message(channel, 'Quote {} added: "{}" -- {}'.format(new.id, new.content, new.author))
+
