@@ -54,7 +54,7 @@ class Discord(object):
 
         @client.event
         async def on_message(message):
-            info(message) 
+            # info(message) 
             await self.on_message(message)
 
         # this lived in a while True loop for a bit, to handle restarting

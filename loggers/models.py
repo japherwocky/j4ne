@@ -1,8 +1,6 @@
 from peewee import *
 
-# TODO - put connections elsewhere
-db = SqliteDatabase('logs.db')
-db.connect()  # peewee supports connection pooling, but we are single threaded
+from db import db
 
 
 class Message(Model):
@@ -19,5 +17,5 @@ class Message(Model):
     content = TextField()
 
     class Meta:
-        database = db # This model uses the "people.db" database.
+        database = db
         db_table = 'messages'

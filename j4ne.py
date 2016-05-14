@@ -16,8 +16,7 @@ from networks.irc import IRC
 from networks.deescord import Discord
 from networks.twitch import TwitchParser
 
-
-
+from db import db
 
 class App (tornado.web.Application, IRC):
     def __init__(self, botname, app_debug=False):
