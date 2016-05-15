@@ -6,3 +6,4 @@ youtube-dl
 twython
 giphypop
 cleverbot
+peewee
