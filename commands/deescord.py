@@ -159,25 +159,26 @@ async def quote(network, channel, message):
     parts = message.content.split('quote',1)[1].strip().split(' ', 1)
 
     if len(parts) == 1:
-        author = parts[0]
+        author = parts[0].lower()
         # return a quote from that user
 
         if author != 'random':
             pool = [q for q in Quote.filter(author=author)]
 
         if not pool:
-            return await network.send_message(channel, 'I have no quotes from {}'.format(author))
+            return await network.send_message(channel, 'I have no quotes from {}'.format(author.capitalize() ))
 
         out = choice(pool)
-        return await network.send_message(channel, '#{}: "{}" -- {}'.format(out.id, out.content, out.author))
+        return await network.send_message(channel, '#{}: "{}" -- {}'.format(out.id, out.content, out.author.capitalize()))
                 
     else:
         # add a quote for that user
         author, quote = parts
+        author = author.lower()
 
         # TODO: guard against malicious quotes, probably?
         new = Quote(author=author, content=quote, timestamp=time())
         new.save()
 
-        return await network.send_message(channel, 'Quote {} added: "{}" -- {}'.format(new.id, new.content, new.author))
+        return await network.send_message(channel, 'Quote {} added: "{}" -- {}'.format(new.id, new.content, new.author.capitalize()))
 
