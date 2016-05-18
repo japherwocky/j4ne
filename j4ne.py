@@ -38,10 +38,8 @@ class App (tornado.web.Application, IRC):
         """
 
         handlers = [
-            (r"/", MainHandler),
             (r"/login/?", LoginHandler),
             (r"/logout/?", LogoutHandler),
-            (r"(?!\/static.*)(.*)/?", DocHandler),
         ]
 
         tornado.web.Application.__init__(self, handlers, **settings)
@@ -54,16 +52,6 @@ class AuthMixin(object):
     @property
     def user(self):
         return self.get_current_user()
-
-
-class MainHandler(AuthMixin, tornado.web.RequestHandler):
-
-    @authenticated
-    def get(self):
-
-        txt = open('docs/hello.txt').read()
-        doc = markdown(txt)
-        self.render('index.html', doc=doc)
 
 
 class LoginHandler(tornado.web.RequestHandler):
@@ -82,15 +70,6 @@ class LoginHandler(tornado.web.RequestHandler):
 
         info('got token %s for user %s' % (token, username))
 
-        """
-        self.application.botname = str(username)
-        self.application.twitchtoken = str(token)
-        self.application.connect_irc('irc.twitch.tv', 6667)
-
-        self.set_secure_cookie('user', self.application.botname)
-
-        self.redirect('/')
-        """
 
 
 class LogoutHandler(tornado.web.RequestHandler):
@@ -103,30 +82,6 @@ class LogoutHandler(tornado.web.RequestHandler):
         self.clear_cookie('user')
 
         self.finish('o/')
-
-
-class DocHandler(tornado.web.RequestHandler):
-    """ Main blog post handler.  Look in /docs/ for whatever
-        the request is trying for, render it as markdown
-    """
-
-    def get(self, path):
-
-        path = 'docs/' + path.replace('.', '').strip('/')
-        if exists(path):
-            # a folder
-            lastname = os.path.split(path)[-1]
-            txt = open('%s/%s.txt' % (path, lastname)).read()
-
-        elif exists(path+'.txt'):
-            txt = open(path+'.txt').read()
-
-        else:
-            # does not exist!
-            raise HTTPError(404)
-
-        doc = markdown(unicode(txt, 'utf-8'))
-        self.render('doc.html', doc=doc)
 
 
 def main():
