@@ -101,6 +101,7 @@ class Discord(object):
             reply = '{}, {}'.format(message.author.name, reply)
             await client.send_message(message.channel, reply)
 
+        # TODO refactor this out of here
         elif message.content.startswith('|retweet'):
             await self.retweet(message)
 

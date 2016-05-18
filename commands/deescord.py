@@ -1,4 +1,5 @@
 from commands import discord_command as command
+from commands import twitch_command as tcommand
 from commands.models import Quote
 from random import choice
 from time import time
@@ -11,6 +12,7 @@ from keys import discord_app
 
 
 @command('wizard')
+@tcommand('wizard')
 async def wizard(network, channel, message):
 
     wizards = [
@@ -26,11 +28,13 @@ async def wizard(network, channel, message):
 
 
 @command('shrug')
+@tcommand('shrug')
 async def shrug(network, channel, message):
     await network.send_message(channel, '`¯\_(ツ)_/¯`')
 
 
 @command('shame')
+@tcommand('shame')
 async def shrug(network, channel, message):
     await network.send_message(channel, '`ಠ_ಠ`')
 
@@ -57,6 +61,7 @@ async def blush(network, channel, message):
 
 
 @command('neat')
+@tcommand('neat')
 async def neat(network, channel, message):
     verbs = ['dandy', 'glorious', 'hunky-dory', 'keen', 'marvelous', 'neat', 'nifty', 'sensational', 'swell', 'spiffy']
 
@@ -71,6 +76,7 @@ async def neat(network, channel, message):
 
 
 @command('wgaff')
+@tcommand('wgaff')
 async def wgaff(network, channel, message):
     await network.send_message(channel, '┏(--)┓┏(--)┛┗(--﻿ )┓ WGAFF! ┏(--)┓┏(--)┛┗(--﻿ )┓')
 
@@ -95,6 +101,7 @@ async def bot_invite(network, channel, message):
 
 
 @command('8ball')
+@tcommand('8ball')
 async def magicball(network, channel, message):
     responses = [
         'It is certain',
@@ -126,6 +133,7 @@ async def magicball(network, channel, message):
 
 
 @command('giphy')
+@tcommand('giphy')
 async def giphy(network, channel, message):
     if not message.content.split('giphy')[1]:
         return await network.send_message(channel, 'What kind of GIF were you looking for?')
@@ -151,6 +159,7 @@ async def help(network, channel, message):
 
 
 @command('quote')
+@tcommand('quote')
 async def quote(network, channel, message):
 
     if not message.content.split('quote')[1]:

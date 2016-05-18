@@ -21,3 +21,4 @@ def twitch_command(name):
         return func
 
     return __decorator
+

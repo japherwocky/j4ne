@@ -35,6 +35,8 @@ class Discord(object):
 
         echo(msg)
 
+        return msg
+
 
 class Twitch(object):
     def __call__(self, message):
@@ -58,4 +60,6 @@ class Twitch(object):
         )
 
         echo(msg)
+
+        return msg
 
