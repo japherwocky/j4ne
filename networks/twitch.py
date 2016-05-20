@@ -1,8 +1,10 @@
 import logging
+import json
+
 import tornado
 from tornado.websocket import websocket_connect
 
-from keys import twitch_name, twitch_token
+from keys import twitch_name, twitch_token, twitch_key
 from loggers.handlers import Twitch as Tlogger
 Tlogger = Tlogger()
 
@@ -17,7 +19,10 @@ class TwitchParser(object):
         await self.conn.write_message('CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership')
         await self.conn.write_message('PASS oauth:{}'.format(twitch_token))
         await self.conn.write_message('NICK {}'.format(twitch_name))
+
         await self.conn.write_message('JOIN #{}'.format(twitch_name))
+        for channel in await self.app.TwitchAPI.follows():
+            await self.conn.write_message('JOIN #{}'.format(channel))
 
 
         while True:
@@ -52,4 +57,35 @@ class TwitchParser(object):
 
             if cmd in Commands:
                 await Commands[cmd](self, message.channel, message)
+
+
+# from tornado.httpclient import AsyncHTTPClient
+# client = AsyncHTTPClient()
+class TwitchAPI(object):
+
+    headers = { 
+        'Accept': 'application/vnd.twitchtv.v3+json',  # specify v3, json
+        'Client-ID': twitch_key,  # TODO, not clear why this doesn't work
+        }
+
+
+    async def connect(self):
+
+        data = await self.query('https://api.twitch.tv/kraken')
+
+        # on the extremely off chance that these endpoints actually change
+        self.links = data['_links']
+
+
+    async def follows(self):
+        response = await self.query('https://api.twitch.tv/kraken/users/{}/follows/channels'.format(twitch_name))
+        return [row['channel']['name'] for row in response['follows']]
+
+    async def query(self, path):
+        # util method to make api reqs with the correct headers
+        response = await self.client.fetch(path, headers=self.headers)
+        data = json.loads( response.body.decode('utf-8'))
+
+        return data
+
 

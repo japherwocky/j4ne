@@ -14,7 +14,7 @@ from tornado.web import HTTPError, authenticated
 from markdown import markdown
 from networks.irc import IRC
 from networks.deescord import Discord
-from networks.twitch import TwitchParser
+from networks.twitch import TwitchParser, TwitchAPI
 
 from db import db
 
@@ -91,6 +91,10 @@ def main():
     define("botname", default='Test Bot', help="name of the bot")
     define("mktables", default=False, help="bootstrap a new sqlite database")
 
+    define("twitch", default=True, help="Connect to Twitch chat servers")
+    define("twitchapi", default=True, help="Connect to Twitch API")
+    define("discord", default=True, help="Connect to Discord chat servers")
+
     tornado.options.parse_command_line()
 
     if options.mktables:
@@ -108,14 +112,27 @@ def main():
     info('Serving on port %d' % options.port)
 
     # connect to discord 
-    app.Discord = Discord()
-    tornado.ioloop.IOLoop.instance().add_callback(app.Discord.connect)  
+    if options.discord:
+        app.Discord = Discord()
+        tornado.ioloop.IOLoop.instance().add_callback(app.Discord.connect)  
 
-    # connect to Twitch ... to mixin or not to mixin
-    app.Twitch = TwitchParser()
-    tornado.ioloop.IOLoop.instance().add_callback(app.Twitch.connect)  
+    # connect to Twitch API
+    if options.twitchapi:
+        app.TwitchAPI = TwitchAPI()
+        app.TwitchAPI.app = app
 
-    # connect to IRC
+        from tornado.httpclient import AsyncHTTPClient
+        app.TwitchAPI.client = AsyncHTTPClient()
+
+        tornado.ioloop.IOLoop.instance().add_callback(app.TwitchAPI.connect)  
+
+    # connect to Twitch
+    if options.twitch:
+        app.Twitch = TwitchParser()
+        app.Twitch.app = app
+
+        tornado.ioloop.IOLoop.instance().add_callback(app.Twitch.connect)  
+
     
     tornado.ioloop.IOLoop.instance().start()
 
