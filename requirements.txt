@@ -1,0 +1,10 @@
+cleverbot
+feedparser
+giphypop
+git+https://github.com/Rapptz/discord.py@async
+markdown
+peewee
+requests
+tornado
+twython
+youtube-dl
