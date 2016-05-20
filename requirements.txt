@@ -7,3 +7,4 @@ twython
 giphypop
 cleverbot
 peewee
+requests
