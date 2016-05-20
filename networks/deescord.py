@@ -106,7 +106,7 @@ class Discord(object):
             await self.retweet(message)
 
         elif '|' in message.content:
-            cmd = message.content.split('|')[1].split(' ')[0]
+            cmd = message.content.split('|')[1].split(' ')[0].lower()
             if cmd in Commands:
                 await Commands[cmd](self, message.channel, message)
 
