@@ -40,11 +40,15 @@ class Discord(object):
 
 class Twitch(object):
     def __call__(self, message):
+
+        debug(message)
+
         # break messages down into metadata
         meta,msg = message.split(' ',1)
         meta = meta[1:]  # strip leading @
 
         # hrm, regex might be safer here
+
         meta = {foo:bar for foo,bar in [row.split('=') for row in meta.split(';')]}
 
         msg = Message.create(
@@ -56,10 +60,18 @@ class Twitch(object):
             channel_id = meta['room-id'],
             channel = msg.split('PRIVMSG')[1].split(':')[0].strip(),
             timestamp = time(),
-            content = msg.rsplit(':',1)[1].strip(),
+            content = msg.rsplit(':',1)[1].strip(),  # broken on links / comments with ':' actually
         )
 
         echo(msg)
 
         return msg
 
+# a sub says <3
+# @badges=subscriber/1;color=#FF69B4;display-name=Volpar;emotes=9:0-1;mod=0;room-id=51533859;subscriber=1;turbo=0;user-id=74043437;user-type= :volpar!volpar@volpar.tmi.twitch.tv PRIVMSG #annemunition :<3
+
+# resubs 
+# :twitchnotify!twitchnotify@twitchnotify.tmi.twitch.tv PRIVMSG #2mgovercsquared :raldain subscribed to Anthony_Kongphan for 2 months in a row!
+
+# timeouts
+# @ban-duration=5;ban-reason= :tmi.twitch.tv CLEARCHAT #annemunition :craqzviiper

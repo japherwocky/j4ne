@@ -38,6 +38,9 @@ class TwitchParser(object):
                 # in the case of twitch, I think that's always ':tmi.twitch.tv'
                 await self.conn.write_message('PONG :tmi.twitch.tv')
 
+            elif 'JOIN' in msg or 'PART' in msg:
+                logging.info('{} parts/joins'.format(len(msg.split('\n'))))
+
             # server status messages, and who knows what else?
             else:
                 logging.warning(msg.strip())
@@ -50,7 +53,11 @@ class TwitchParser(object):
                 
 
     async def on_message(self, msg):
-        message = Tlogger(msg)
+        try:
+            message = Tlogger(msg)
+        except Exception as e:
+            logging.error(msg)
+            raise
 
         if '|' in message.content:
             cmd = message.content.split('|')[1].split(' ')[0]
