@@ -43,35 +43,50 @@ class Twitch(object):
 
         debug(message)
 
-        # break messages down into metadata
-        meta,msg = message.split(' ',1)
-        meta = meta[1:]  # strip leading @
-
         # hrm, regex might be safer here
 
-        meta = {foo:bar for foo,bar in [row.split('=') for row in meta.split(';')]}
+        if message.startswith('@'):
 
-        msg = Message.create(
-            network = 'twitch',
-            author_id = int(meta['user-id']),
-            author = msg.split('!',1)[0][1:],
-            server_id = 1, # magic for twitch
-            server = 'tmi.twitch.tv',
-            channel_id = meta['room-id'],
-            channel = msg.split('PRIVMSG')[1].split(':')[0].strip(),
-            timestamp = time(),
-            content = msg.rsplit(':',1)[1].strip(),  # broken on links / comments with ':' actually
-        )
+            # break messages down into metadata
+            meta, user, event, channel, body = message.split(' ',4)
 
-        echo(msg)
+            meta = meta[1:]  # strip leading @
+            meta = {foo:bar for foo,bar in [row.split('=') for row in meta.split(';')]}
 
-        return msg
+
+        else:
+            # resubs.. which are a PRIVMSG but with no meta data :\
+            meta = {}
+            user, event, channel, body = message.split(' ', 3)
+
+        body = body.strip()  # clear endlines
+
+        if meta and event == 'PRIVMSG':
+
+            username = user.split('!')[0][1:]
+
+            msg = Message.create(
+                network = 'twitch',
+                author_id = int(meta['user-id']),
+                author = username,
+                server_id = 1, # magic for twitch
+                server = 'tmi.twitch.tv',
+                channel_id = meta['room-id'],
+                channel = channel,
+                timestamp = time(),
+                content = body,  # broken on links / comments with ':' actually
+            )
+
+            echo(msg)
+
+            return msg
 
 # a sub says <3
 # @badges=subscriber/1;color=#FF69B4;display-name=Volpar;emotes=9:0-1;mod=0;room-id=51533859;subscriber=1;turbo=0;user-id=74043437;user-type= :volpar!volpar@volpar.tmi.twitch.tv PRIVMSG #annemunition :<3
 
+# timeouts
+# @ban-duration=5;ban-reason= :tmi.twitch.tv CLEARCHAT #annemunition :craqzviiper
+
 # resubs 
 # :twitchnotify!twitchnotify@twitchnotify.tmi.twitch.tv PRIVMSG #2mgovercsquared :raldain subscribed to Anthony_Kongphan for 2 months in a row!
 
-# timeouts
-# @ban-duration=5;ban-reason= :tmi.twitch.tv CLEARCHAT #annemunition :craqzviiper
