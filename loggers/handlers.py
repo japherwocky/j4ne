@@ -45,21 +45,13 @@ class Twitch(object):
 
         # hrm, regex might be safer here
 
-        if message.startswith('@'):
+        # break messages down into metadata
+        meta, user, event, channel, body = message.split(' ',4)
 
-            # break messages down into metadata
-            meta, user, event, channel, body = message.split(' ',4)
+        meta = meta[1:]  # strip leading @
+        meta = {foo:bar for foo,bar in [row.split('=') for row in meta.split(';')]}
 
-            meta = meta[1:]  # strip leading @
-            meta = {foo:bar for foo,bar in [row.split('=') for row in meta.split(';')]}
-
-
-        else:
-            # resubs.. which are a PRIVMSG but with no meta data :\
-            meta = {}
-            user, event, channel, body = message.split(' ', 3)
-
-        body = body.strip()  # clear endlines
+        body = body.strip()[1:]  # clear endlines and leading ':'
 
         if meta and event == 'PRIVMSG':
 
@@ -80,6 +72,7 @@ class Twitch(object):
             echo(msg)
 
             return msg
+
 
 # a sub says <3
 # @badges=subscriber/1;color=#FF69B4;display-name=Volpar;emotes=9:0-1;mod=0;room-id=51533859;subscriber=1;turbo=0;user-id=74043437;user-type= :volpar!volpar@volpar.tmi.twitch.tv PRIVMSG #annemunition :<3

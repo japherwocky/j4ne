@@ -29,21 +29,24 @@ class TwitchParser(object):
             msg = await self.conn.read_message()
             if msg is None: break
 
-            # chat messages
-            if 'PRIVMSG' in msg:
-                await self.on_message(msg)
-
-            elif msg.startswith('PING'):
+            if msg.startswith('PING'):
                 # i think per the spec we're supposed to reply with whatever comes after the PING
-                # in the case of twitch, I think that's always ':tmi.twitch.tv'
+                # in the case of twitch, it seems to always be ':tmi.twitch.tv'
                 await self.conn.write_message('PONG :tmi.twitch.tv')
 
-            elif 'JOIN' in msg or 'PART' in msg:
-                logging.info('{} parts/joins'.format(len(msg.split('\n'))))
+            # chat messages
+            elif msg.startswith('@') and 'PRIVMSG' in msg:
+                await self.on_message(msg)
 
-            # server status messages, and who knows what else?
             else:
-                logging.warning(msg.strip())
+                for line in msg.split('\r\n'):
+                    if line:
+                        try:
+                            await self.on_event(line)
+                        except:
+                            logging.error(line)
+                            raise
+
 
     async def send_message(self, channel, message):
 
@@ -59,11 +62,31 @@ class TwitchParser(object):
             logging.error(msg)
             raise
 
-        if '|' in message.content:
+        # message == None for events
+        if message and '|' in message.content:
             cmd = message.content.split('|')[1].split(' ')[0]
 
             if cmd in Commands:
                 await Commands[cmd](self, message.channel, message)
+
+    async def on_event(self, msg):
+        msg = msg.strip()  # make sure newlines are gone
+
+        if msg.startswith('@'):
+            meta, msg = msg.split(' ', 1)
+            meta = {foo:bar for foo,bar in [row.split('=') for row in meta.split(';')]}
+
+        else:
+            meta = {}
+
+        parts = msg.split(' ', 3)
+    
+        user = parts[0][1:].split('!')[0]  # strip leading ':' and fake hostname stuff
+        event = parts[1]
+        channel = parts[2] if len(parts) > 2 else ''
+        body = parts[3] if len(parts) > 3 else ''
+
+        # logging.warning('[{}] <{}:{}> {}'.format(event, channel, user, body))
 
 
 # from tornado.httpclient import AsyncHTTPClient
