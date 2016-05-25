@@ -94,6 +94,10 @@ class TwitchParser(object):
         elif event == 'JOIN':
             self.on_join(user, channel, body)
 
+        elif event == 'PRIVMSG':
+            # either a new sub or a resub; we've already filtered out chat messages 
+            self.on_sub(user, channel, body)
+
         else:
             logging.warning('[{}] <{}:{}> {}'.format(event, channel, user, body))
 
@@ -118,6 +122,24 @@ class TwitchParser(object):
             type = 'JOIN',
             timestamp = datetime.now()
         )
+
+        e.save()
+
+    def on_sub(self, user, channel, body):
+
+        e = Event(
+            network = "twitch",
+            channel = channel,
+            user = user,
+            type = 'SUB',
+            timestamp = datetime.now()
+        )
+
+        if 'subscribed for' in body:
+            # wats regex
+            e.length = int(body.split('months')[0].strip().rsplit(' ',1)[1])
+        elif 'just subscribed!' in body:
+            e.length = 1
 
         e.save()
 
