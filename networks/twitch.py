@@ -1,5 +1,6 @@
 import logging
 import json
+from datetime import datetime
 
 import tornado
 from tornado.websocket import websocket_connect
@@ -7,7 +8,7 @@ from tornado.websocket import websocket_connect
 from keys import twitch_name, twitch_token, twitch_key
 from loggers.handlers import Twitch as Tlogger
 Tlogger = Tlogger()
-
+from loggers.models import Event
 from commands import Twitch_commands as Commands
 
 class TwitchParser(object):
@@ -56,6 +57,7 @@ class TwitchParser(object):
                 
 
     async def on_message(self, msg):
+        # kind of silly, TODO refactor the Logger function into here
         try:
             message = Tlogger(msg)
         except Exception as e:
@@ -86,7 +88,38 @@ class TwitchParser(object):
         channel = parts[2] if len(parts) > 2 else ''
         body = parts[3] if len(parts) > 3 else ''
 
-        # logging.warning('[{}] <{}:{}> {}'.format(event, channel, user, body))
+        # this is gross
+        if event == 'PART':
+            self.on_part(user, channel, body)
+        elif event == 'JOIN':
+            self.on_join(user, channel, body)
+
+        else:
+            logging.warning('[{}] <{}:{}> {}'.format(event, channel, user, body))
+
+    def on_part(self, user, channel, body):
+
+        e = Event(
+            network = "twitch",
+            channel = channel,
+            user = user,
+            type = 'PART',
+            timestamp = datetime.now()
+        )
+
+        e.save()
+
+    def on_join(self, user, channel, body):
+
+        e = Event(
+            network = "twitch",
+            channel = channel,
+            user = user,
+            type = 'JOIN',
+            timestamp = datetime.now()
+        )
+
+        e.save()
 
 
 # from tornado.httpclient import AsyncHTTPClient
