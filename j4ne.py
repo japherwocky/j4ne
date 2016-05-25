@@ -4,7 +4,7 @@ join = os.path.join
 exists = os.path.exists
 import feedparser
 from random import choice
-from logging import info, debug
+from logging import info, debug, warning
 import tornado.httpserver
 import tornado.ioloop
 import tornado.options
@@ -98,9 +98,18 @@ def main():
     tornado.options.parse_command_line()
 
     if options.mktables:
-        from loggers.models import Message
+        from loggers.models import Message, Event
         from commands.models import Quote
-        db.create_tables([Message,Quote])
+
+        from peewee import OperationalError
+
+        for table in [Message, Event, Quote]:
+            try:
+                db.create_table(table)
+            except OperationalError as e:
+                # table (probably/hopefully) exists, dump this into the console 
+                warning(e)
+                continue
 
 
     app = App(options.botname, app_debug=options.debug)
