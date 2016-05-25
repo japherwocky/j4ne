@@ -19,3 +19,24 @@ class Message(Model):
     class Meta:
         database = db
         db_table = 'messages'
+
+
+# [PRIVMSG] <#lynxaria:twitchnotify> :Wacsnie subscribed for 5 months in a row!
+# [PRIVMSG] <#annemunition:twitchnotify> :Lahduk just subscribed!
+
+# looking at 
+class Event(Model):
+
+    network = CharField()  # only twitch ?
+    channel = CharField()
+
+    user = CharField()
+
+    type = CharField()  # PARTS / JOINS / BANS / TIMEOUTS and SUBS / RESUBS
+    length = IntegerField(null=True)  # uhh.. minutes or months    
+
+    timestamp = DateTimeField()
+
+    class Meta:
+        database = db
+        db_table = 'events'
