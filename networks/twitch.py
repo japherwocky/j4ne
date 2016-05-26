@@ -130,6 +130,9 @@ class TwitchParser(object):
 
     def on_sub(self, user, channel, body):
 
+        # message is sent as user 'twitchnotify'
+        user =  body[1:].split(' ')[0]
+
         e = Event(
             network = "twitch",
             channel = channel,
@@ -139,6 +142,8 @@ class TwitchParser(object):
         )
 
         if 'subscribed for' in body:
+            import pdb;pdb.set_trace()
+
             # wats regex
             e.length = int(body.split('months')[0].strip().rsplit(' ',1)[1])
         elif 'just subscribed!' in body:
@@ -167,7 +172,7 @@ class TwitchParser(object):
             e.length = 0  # kind of magical, use 0 to represent a ban
             e.save()
 
-            logging.warning('{} PERMABANNED')
+            logging.warning('{} PERMABANNED'.format(user))
 
 
 # from tornado.httpclient import AsyncHTTPClient
