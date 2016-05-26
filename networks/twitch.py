@@ -164,7 +164,7 @@ class TwitchParser(object):
 
         else:
 
-            e.length = 0
+            e.length = 0  # kind of magical, use 0 to represent a ban
             e.save()
 
             logging.warning('{} PERMABANNED')

@@ -9,6 +9,7 @@ import giphypop
 G = giphypop.Giphy()
 
 from keys import discord_app
+from peewee import fn
 
 
 @command('wizard')
@@ -167,17 +168,30 @@ async def quote(network, channel, message):
 
     parts = message.content.split('quote',1)[1].strip().split(' ', 1)
 
+    # exactly one arg
     if len(parts) == 1:
+
+        # check if it's a user, random, or a specific quote
         author = parts[0].lower()
-        # return a quote from that user
 
-        if author != 'random':
-            pool = [q for q in Quote.filter(author=author)]
+        try:
+            # awkward, maybe use regex instead, check if it's an integer
+            quote_id = int(author)
+            Q = Quote.filter(id=quote_id)
 
-        if not pool:
-            return await network.send_message(channel, 'I have no quotes from {}'.format(author.capitalize() ))
+        except ValueError:
+            if author != 'random':
+                Q = Quote.filter(author=author).order_by(fn.Random())
 
-        out = choice(pool)
+            else:
+                # look for a quote from that specific user
+                Q = Quote.select().order_by(fn.Random())
+
+        if not Q.count():
+            return await network.send_message(channel, 'I could not find a quote for {}'.format(author))
+
+        out = Q.get()
+
         return await network.send_message(channel, '#{}: "{}" -- {}'.format(out.id, out.content, out.author.capitalize()))
                 
     else:
