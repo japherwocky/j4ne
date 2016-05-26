@@ -21,8 +21,8 @@ async def wizard(network, channel, message):
         '`(⊃｡•́‿•̀｡)⊃━☆ﾟ.･｡ﾟ`',
         '`(∩ ͡° ͜ʖ ͡°)⊃━☆ﾟ . * ･ ｡ﾟ`',
         '`(∩ ͡°╭͜ʖ╮͡ ͡°)⊃━☆ﾟ. * ･ ｡ﾟ`',
-        '`( ✿ ⊙ ͜ʖ ⊙ ✿ )━☆ﾟ.*･｡ﾟ`',
-        '`( ∩ ✿⊙ ͜ʖ ⊙✿)⊃ ━☆ﾟ.*･｡ ﾟ`',
+         '`( ✿ ⊙ ͜ʖ ⊙ ✿ )━☆ﾟ.*･｡ﾟ`',
+         '`( ∩ ✿⊙ ͜ʖ ⊙✿)⊃ ━☆ﾟ.*･｡ ﾟ`',
     ]
 
     await network.send_message(channel, choice(wizards))
@@ -43,6 +43,10 @@ async def shrug(network, channel, message):
 @command('feelsbadfam')
 async def feelsbadfam(network, channel, message):
     await network.send_file(channel, 'static/feelsbadfam.png')
+
+@command('role')
+async def role(network, channel, message):
+    await network.send_file(channel, 'static/Sledge-Hook.gif')
 
 
 @command('youropinion')
