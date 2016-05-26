@@ -142,10 +142,9 @@ class TwitchParser(object):
         )
 
         if 'subscribed for' in body:
-            import pdb;pdb.set_trace()
-
             # wats regex
             e.length = int(body.split('months')[0].strip().rsplit(' ',1)[1])
+
         elif 'just subscribed!' in body:
             e.length = 1
 
