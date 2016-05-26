@@ -75,7 +75,7 @@ class TwitchParser(object):
         msg = msg.strip()  # make sure newlines are gone
 
         if msg.startswith('@'):
-            meta, msg = msg.split(' ', 1)
+            meta, msg = msg[1:].split(' ', 1)
             meta = {foo:bar for foo,bar in [row.split('=') for row in meta.split(';')]}
 
         else:
@@ -97,6 +97,9 @@ class TwitchParser(object):
         elif event == 'PRIVMSG':
             # either a new sub or a resub; we've already filtered out chat messages 
             self.on_sub(user, channel, body)
+
+        elif event == 'CLEARCHAT':
+            self.on_timeout(user, channel, body, meta)
 
         else:
             logging.warning('[{}] <{}:{}> {}'.format(event, channel, user, body))
@@ -142,6 +145,29 @@ class TwitchParser(object):
             e.length = 1
 
         e.save()
+
+    def on_timeout(self, user, channel, body, meta):
+        
+        e = Event(
+            network = "twitch",
+            channel = channel,
+            user = user,
+            type = 'TIMEOUT',
+            timestamp = datetime.now()
+        )
+
+        if 'ban-duration' in meta:
+            e.length = int(meta['ban-duration'])
+            e.save()
+
+            logging.warning('{} banned from chat for a hot {}'.format(user,e.length))
+
+        else:
+
+            e.length = 0
+            e.save()
+
+            logging.warning('{} PERMABANNED')
 
 
 # from tornado.httpclient import AsyncHTTPClient
