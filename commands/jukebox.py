@@ -118,7 +118,7 @@ async def request(network, channel, message):
     try:
         ytdlopts = {'default_search': 'auto'}
         player = await J.voice.create_ytdl_player(req, options='-bufsize 520k', ytdl_options=ytdlopts, after=on_end)
-        player._url = req
+        player._query = req
     except DownloadError as exc:
         await network.send_message(channel, "I could not find that, {}".format(message.author.name))
 
@@ -230,7 +230,8 @@ async def nextsong():
         player = J.requests.pop(0)
 
         # re-init the player, we get TLS errors if it has been in the request list for too long
-        player = await J.voice.create_ytdl_player(player._url, options='-bufsize 520k', after=on_end)
+        ytdlopts = {'default_search': 'auto'}
+        player = await J.voice.create_ytdl_player(player._query, options='-bufsize 520k', ytdl_options=ytdlopts, after=on_end)
 
     return player
 
