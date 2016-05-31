@@ -131,7 +131,7 @@ class TwitchParser(object):
 
     def on_sub(self, user, channel, body):
 
-        # message is sent as user 'twitchnotify'
+        # message is sent as user 'twitchnotify', pull this out of the body
         user =  body[1:].split(' ')[0]
 
         e = Event(
@@ -144,7 +144,7 @@ class TwitchParser(object):
 
         if 'subscribed for' in body:
             # wats regex
-            e.length = int(body.split('months')[0].strip().rsplit(' ',1)[1])
+            e.length = int(body.split('for')[1].strip().split(' ',1)[0])
 
         elif 'just subscribed!' in body:
             e.length = 1
