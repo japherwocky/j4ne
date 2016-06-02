@@ -107,7 +107,7 @@ class Discord(object):
 
         elif '|' in message.content:
             cmd = message.content.split('|')[1].split(' ')[0].lower()
-            message.content = message.content.lower()
+            # message.clean_content = message.clean_content.lower()
             if cmd in Commands:
                 await Commands[cmd](self, message.channel, message)
 

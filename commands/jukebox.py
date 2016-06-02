@@ -7,6 +7,7 @@ import audioop
 import discord
 import tornado
 
+import youtube_dl as ytdl
 from youtube_dl.utils import DownloadError
 from websockets.exceptions import InvalidState
 
@@ -74,6 +75,11 @@ class FancyVolumeBuff(object):
 
         print(outstr.ljust(tx - 1), end='\r')
 
+    @property
+    def progress(self):
+        # untested
+        return round(buff.frame_count * 0.02)
+
 
 class Jukebox:
     """ music playing commands """
@@ -139,10 +145,18 @@ async def banish(network, channel, message):
 
     J.voicechan = J.voice = None
 
+J.ytdl = ytdl.YoutubeDL(
+    {
+    'format': 'bestaudio/best',
+    'extractaudio': True,
+    'audioformat': 'mp3',
+}
+)
+
 
 @command('request')
 async def request(network, channel, message):
-    req = message.content.split('|request ')[1]
+    req = message.content.split('|request ')[1].strip()
 
     # they didn't manage to request a song
     if not req:
@@ -155,15 +169,26 @@ async def request(network, channel, message):
 
     # let's see if it works
     try:
-        ytdlopts = {'default_search': 'auto'}
-        player = await J.voice.create_ytdl_player(req, options='-bufsize 520k', ytdl_options=ytdlopts, after=on_end)
-        player._query = req
+
+        meta = J.ytdl.extract_info(req, download=False, process=False) 
+
+        if 'playlist' in meta['extractor']:
+            # they've requested a playlist
+            song_urls = [song['url'] for song in meta['entries']]
+        else:
+            song_urls = [meta['webpage_url'],]
+            
+        for song_url in song_urls:
+
+            ytdlopts = {'default_search': 'auto'}
+            player = await J.voice.create_ytdl_player(song_url, options='-bufsize 520k', ytdl_options=ytdlopts, after=on_end)
+            player._query = song_url
+            await network.send_message(channel, '{} has been added to the queue.'.format(player.title))
+            J.requests.append(player)
+
     except DownloadError as exc:
         return await network.send_message(channel, "I could not download that, {}".format(message.author.name))
 
-    await network.send_message(channel, '{} has been added to the queue.'.format(player.title))
-
-    J.requests.append(player)
 
 
 @command('play')
