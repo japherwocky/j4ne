@@ -1,39 +1,78 @@
 from commands import discord_command as command
 from random import shuffle
 from array import array
+from collections import deque
 from logging import info, debug, error
+import audioop
 import discord
 import tornado
 
 from youtube_dl.utils import DownloadError
 from websockets.exceptions import InvalidState
 
-class VolumeBuff(object):
+
+class FancyVolumeBuff(object):
     """
-        Kind of a volume aware buffer mixin.
+        PatchedBuff monkey patches a readable object, allowing you to vary what the volume is as the song is playing.
     """
 
-    def __init__(self, player, buff):
-        self.player = player
+    def __init__(self, buff, *, draw=False):
         self.buff = buff
         self.frame_count = 0
+        self.volume = 1.0
+
+        self.draw = draw
+        self.use_audioop = True
+        self.frame_skip = 2
+        self.rmss = deque([2048], maxlen=90)
+
+    def __del__(self):
+        if self.draw:
+            print(' ' * (get_terminal_size().columns-1), end='\r')
 
     def read(self, frame_size):
         self.frame_count += 1
+
         frame = self.buff.read(frame_size)
 
-        volume = self.player.volume
-        # Only make volume go down. Never up.
-        if volume < 1.0:
-            # Ffmpeg returns s16le pcm frames.
+        if self.volume != 1:
+            frame = self._frame_vol(frame, self.volume, maxv=2)
+
+        if self.draw and not self.frame_count % self.frame_skip:
+            # these should be processed for every frame, but "overhead"
+            rms = audioop.rms(frame, 2)
+            self.rmss.append(rms)
+
+            max_rms = sorted(self.rmss)[-1]
+            meter_text = 'avg rms: {:.2f}, max rms: {:.2f} '.format(self._avg(self.rmss), max_rms)
+            self._pprint_meter(rms / max(1, max_rms), text=meter_text, shift=True)
+
+        return frame
+
+    def _frame_vol(self, frame, mult, *, maxv=2, use_audioop=True):
+        if use_audioop:
+            return audioop.mul(frame, 2, min(mult, maxv))
+        else:
+            # ffmpeg returns s16le pcm frames.
             frame_array = array('h', frame)
 
             for i in range(len(frame_array)):
-                frame_array[i] = int(frame_array[i] * volume)
+                frame_array[i] = int(frame_array[i] * min(mult, min(1, maxv)))
 
-            frame = frame_array.tobytes()
+            return frame_array.tobytes()
 
-        return frame
+    def _avg(self, i):
+        return sum(i) / len(i)
+
+    def _pprint_meter(self, perc, *, char='#', text='', shift=True):
+        tx, ty = get_terminal_size()
+
+        if shift:
+            outstr = text + "{}".format(char * (int((tx - len(text)) * perc) - 1))
+        else:
+            outstr = text + "{}".format(char * (int(tx * perc) - 1))[len(text):]
+
+        print(outstr.ljust(tx - 1), end='\r')
 
 
 class Jukebox:
@@ -45,7 +84,7 @@ class Jukebox:
 
     keep_playing = True
 
-    _volume = 13  # store this as 1-100
+    _volume = 53  # store this as 1-100
     playlist = []  # seeded with __init__
     requests = []
 
@@ -120,7 +159,7 @@ async def request(network, channel, message):
         player = await J.voice.create_ytdl_player(req, options='-bufsize 520k', ytdl_options=ytdlopts, after=on_end)
         player._query = req
     except DownloadError as exc:
-        await network.send_message(channel, "I could not find that, {}".format(message.author.name))
+        return await network.send_message(channel, "I could not download that, {}".format(message.author.name))
 
     await network.send_message(channel, '{} has been added to the queue.'.format(player.title))
 
@@ -194,7 +233,7 @@ async def volume(network, channel, message):
         J._volume = vol
 
     if J.player:
-        J.player.volume = J._volume / 100.0
+        J.player.buff.volume = J._volume / 100.0
 
     return await network.send_message(channel, 'The volume is set at {}'.format(J._volume))
 
@@ -245,8 +284,8 @@ async def playsong():
         player = await nextsong()
 
         # instantiate player, hack in volume controls
-        player.buff = VolumeBuff(player, player.buff)  # so awkward
-        player.volume = J._volume / 100.0  # not to be confused with the command
+        player.buff = FancyVolumeBuff(player.buff)  # so awkward
+        player.buff.volume = J._volume / 100.0  # not to be confused with the command
 
         J.player = player
         player.start()
