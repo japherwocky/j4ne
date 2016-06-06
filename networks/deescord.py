@@ -1,7 +1,6 @@
 from logging import info, debug, error
 from random import choice, shuffle
 from cleverbot import Cleverbot
-CB = Cleverbot()
 
 import asyncio
 import re
@@ -30,8 +29,8 @@ client = discord.Client()  # loop defaults to asyncio.get_event_loop()
 
 
 class Discord(object):
-    """ Mixin for the main App """
     _Twitter = None
+    CB = Cleverbot()
 
     client = client  # so that network specific commands can access lower levels
 
@@ -96,7 +95,7 @@ class Discord(object):
                 return await client.send_message(message.channel, "Yes?")
 
             debug(query)
-            reply = CB.ask(query)
+            reply = self.CB.ask(query)
             reply = reply[:1].lower() + reply[1:]
             reply = '{}, {}'.format(message.author.name, reply)
             await client.send_message(message.channel, reply)

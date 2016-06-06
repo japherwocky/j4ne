@@ -1,8 +1,5 @@
-import os
 import asyncio
 import unittest
-join = os.path.join
-exists = os.path.exists
 import feedparser
 from random import choice
 from logging import info, debug, warning
@@ -14,13 +11,12 @@ import tornado.testing
 import tornado.platform.asyncio
 from tornado.web import HTTPError, authenticated
 from markdown import markdown
-from networks.irc import IRC
-from networks.deescord import Discord
-from networks.twitch import TwitchParser, TwitchAPI
+
+# from networks.irc import IRC
 
 from db import db
 
-class App (tornado.web.Application, IRC):
+class App (tornado.web.Application):
     def __init__(self, app_debug=False):
         """
         Settings for our application
@@ -132,11 +128,14 @@ def main():
 
     # connect to discord 
     if options.discord:
+        from networks.deescord import Discord
         app.Discord = Discord()
         tornado.ioloop.IOLoop.instance().add_callback(app.Discord.connect)  
 
     # connect to Twitch API
     if options.twitchapi:
+        from networks.twitch import TwitchParser, TwitchAPI
+
         app.TwitchAPI = TwitchAPI()
         app.TwitchAPI.app = app
 
