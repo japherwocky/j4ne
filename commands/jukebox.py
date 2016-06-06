@@ -150,6 +150,7 @@ J.ytdl = ytdl.YoutubeDL(
     'format': 'bestaudio/best',
     'extractaudio': True,
     'audioformat': 'mp3',
+    'default_search': 'auto',
 }
 )
 
