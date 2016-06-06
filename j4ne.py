@@ -1,5 +1,6 @@
 import os
 import asyncio
+import unittest
 join = os.path.join
 exists = os.path.exists
 import feedparser
@@ -9,6 +10,7 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.options
 import tornado.web
+import tornado.testing
 import tornado.platform.asyncio
 from tornado.web import HTTPError, authenticated
 from markdown import markdown
@@ -19,7 +21,7 @@ from networks.twitch import TwitchParser, TwitchAPI
 from db import db
 
 class App (tornado.web.Application, IRC):
-    def __init__(self, botname, app_debug=False):
+    def __init__(self, app_debug=False):
         """
         Settings for our application
         """
@@ -84,16 +86,21 @@ class LogoutHandler(tornado.web.RequestHandler):
         self.finish('o/')
 
 
+def all():
+    return unittest.defaultTestLoader.discover('tests')
+
+
 def main():
     from tornado.options import define, options
     define("port", default=8888, help="serve web requests from the given port", type=int)
     define("debug", default=False, help="run server in debug mode", type=bool)
-    define("botname", default='Test Bot', help="name of the bot")
     define("mktables", default=False, help="bootstrap a new sqlite database")
 
     define("twitch", default=True, help="Connect to Twitch chat servers")
     define("twitchapi", default=True, help="Connect to Twitch API")
     define("discord", default=True, help="Connect to Discord chat servers")
+
+    define("runtests", default=False, help="Run tests")
 
     tornado.options.parse_command_line()
 
@@ -111,8 +118,11 @@ def main():
                 warning(e)
                 continue
 
+    if options.runtests:
+        tornado.testing.main()
+        return
 
-    app = App(options.botname, app_debug=options.debug)
+    app = App(app_debug=options.debug)
 
     http_server = tornado.httpserver.HTTPServer(app)
     tornado.platform.asyncio.AsyncIOMainLoop().install()  # uses default asyncio.loop()
