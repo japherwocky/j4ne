@@ -130,14 +130,15 @@ def main():
     if options.discord:
         from networks.deescord import Discord
         app.Discord = Discord()
+        app.Discord.application = app
+
         tornado.ioloop.IOLoop.instance().add_callback(app.Discord.connect)  
 
     # connect to Twitch API
     if options.twitchapi:
         from networks.twitch import TwitchParser, TwitchAPI
-
         app.TwitchAPI = TwitchAPI()
-        app.TwitchAPI.app = app
+        app.TwitchAPI.application = app
 
         from tornado.httpclient import AsyncHTTPClient
         app.TwitchAPI.client = AsyncHTTPClient()
@@ -147,7 +148,7 @@ def main():
     # connect to Twitch
     if options.twitch:
         app.Twitch = TwitchParser()
-        app.Twitch.app = app
+        app.Twitch.application = app
 
         tornado.ioloop.IOLoop.instance().add_callback(app.Twitch.connect)  
 
