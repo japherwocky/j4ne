@@ -4,6 +4,7 @@ from commands.models import Quote
 from random import choice
 from time import time
 import asyncio
+import datetime
 
 import giphypop
 G = giphypop.Giphy()
@@ -63,6 +64,28 @@ async def lewd(network, channel, message):
 @command('blush')
 async def blush(network, channel, message):
     await network.send_file(channel, 'static/anneBlush.png')
+
+
+@command('live')
+async def live(network, channel, message):
+    streams = await network.application.TwitchAPI.live()
+    out = ''
+    now = datetime.datetime.utcnow()
+    for stream in streams:
+        started = datetime.datetime.strptime(stream['created_at'],'%Y-%m-%dT%H:%M:%SZ')
+        hours = (now-started).seconds // 3600
+        minutes = ( (now-started).seconds // 60 ) % 60
+        oneline = '{} has been live for {}:{}, now playing {} w/ {} viewers.\n'.format( 
+            stream['channel']['display_name'], 
+            hours,
+            minutes,
+            stream['game'], 
+            stream['viewers']
+            )
+
+        out += oneline
+
+    await network.send_message(channel, out)
 
 
 @command('neat')
