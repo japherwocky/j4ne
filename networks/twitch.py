@@ -4,6 +4,7 @@ from datetime import datetime
 
 import tornado
 from tornado.websocket import websocket_connect
+from tornado.platform.asyncio import to_asyncio_future
 
 from keys import twitch_name, twitch_token, twitch_key
 from loggers.handlers import Twitch as Tlogger
@@ -22,7 +23,8 @@ class TwitchParser(object):
         await self.conn.write_message('NICK {}'.format(twitch_name))
 
         await self.conn.write_message('JOIN #{}'.format(twitch_name))
-        for channel in await self.app.TwitchAPI.follows():
+        follows = await self.application.TwitchAPI.follows()
+        for channel in follows:
             await self.conn.write_message('JOIN #{}'.format(channel))
 
 
@@ -177,15 +179,13 @@ class TwitchParser(object):
             logging.warning('{} PERMABANNED'.format(user))
 
 
-# from tornado.httpclient import AsyncHTTPClient
-# client = AsyncHTTPClient()
 class TwitchAPI(object):
 
     headers = { 
         'Accept': 'application/vnd.twitchtv.v3+json',  # specify v3, json
-        'Client-ID': twitch_key,  # TODO, not clear why this doesn't work
+        'Client-ID': twitch_key,
+        'Authorization': 'OAuth {}'.format(twitch_token)
         }
-
 
     async def connect(self):
 
@@ -201,9 +201,13 @@ class TwitchAPI(object):
 
     async def query(self, path):
         # util method to make api reqs with the correct headers
-        response = await self.client.fetch(path, headers=self.headers)
+        response = await to_asyncio_future(self.client.fetch(path, headers=self.headers))
         data = json.loads( response.body.decode('utf-8'))
 
         return data
 
+    async def live(self):
+        response = await self.query('https://api.twitch.tv/kraken/streams/followed'.format(twitch_name))
+
+        return response['streams']
 
