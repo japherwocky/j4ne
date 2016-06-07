@@ -15,6 +15,7 @@ from markdown import markdown
 # from networks.irc import IRC
 
 from db import db
+from api.handlers import APIHandler
 
 class App (tornado.web.Application):
     def __init__(self, app_debug=False):
@@ -38,6 +39,7 @@ class App (tornado.web.Application):
         handlers = [
             (r"/login/?", LoginHandler),
             (r"/logout/?", LogoutHandler),
+            (r"/api/(\w+)/(\w+)?/?", APIHandler),
         ]
 
         tornado.web.Application.__init__(self, handlers, **settings)
