@@ -1,9 +1,21 @@
+import datetime
 import tornado.web
+import json
 from loggers.models import Message, Event
 from commands.models import Quote
 from playhouse.shortcuts import model_to_dict
 
 from tornado.web import HTTPError
+
+
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+
+    if getattr(obj, 'isoformat'):
+        serial = obj.isoformat()
+        return serial
+    raise TypeError ("Type not serializable")
+
 
 class APIHandler(tornado.web.RequestHandler):
 
@@ -28,6 +40,9 @@ class APIHandler(tornado.web.RequestHandler):
 
         # can't return lists, see http://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.write
         out = {'count':len(out), 'data':out}
+        out = json.dumps(out, default=json_serial)
+
+        self.set_header('Content-Type', 'application/json')
         return self.finish(out) 
 
 
