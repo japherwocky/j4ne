@@ -25,10 +25,10 @@ class Discord(object):
             network = 'discord',
             author_id = int(message.author.id),
             author = message.author.name,
-            server_id = int(message.server.id),
-            server = message.server.name,
+            server_id = int(message.server.id) if message.server else 0,
+            server = message.server.name if message.server else 'discord',
             channel_id = int(message.channel.id),
-            channel = message.channel.name,
+            channel = message.channel.name if hasattr(message.channel, 'name') else 'private',
             timestamp = time(),
             content = message.content,
         )
