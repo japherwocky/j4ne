@@ -8,3 +8,4 @@ requests
 tornado
 twython
 youtube-dl
+terminaltables

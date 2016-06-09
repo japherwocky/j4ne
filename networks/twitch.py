@@ -207,7 +207,23 @@ class TwitchAPI(object):
         return data
 
     async def live(self):
-        response = await self.query('https://api.twitch.tv/kraken/streams/followed'.format(twitch_name))
+        response = await self.query('https://api.twitch.tv/kraken/streams/followed')
 
         return response['streams']
+
+    async def detail(self, streamer):
+        response = await self.query('https://api.twitch.tv/kraken/streams/{}'.format(streamer))
+        stream = response['stream']  # None if they are not live
+        channel = await self.query('https://api.twitch.tv/kraken/channels/{}'.format(streamer))
+
+        chan_id = channel['_id']
+        hosts = await self.query('http://tmi.twitch.tv/hosts?include_logins=1&target={}'.format(chan_id))
+        chatters = await self.query('http://tmi.twitch.tv/group/user/{}/chatters'.format(streamer))
+
+        return {
+            'channel': channel,
+            'stream': stream,
+            'hosts': hosts,
+            'chatters': chatters,
+        }
 

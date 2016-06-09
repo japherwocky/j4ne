@@ -3,6 +3,7 @@ from commands import twitch_command as tcommand
 from commands.models import Quote
 from random import choice
 from time import time
+from terminaltables import AsciiTable
 import asyncio
 import datetime
 
@@ -69,7 +70,10 @@ async def blush(network, channel, message):
 @command('live')
 async def live(network, channel, message):
     streams = await network.application.TwitchAPI.live()
-    out = ''
+
+    headers = ['Streamer', 'Game', 'Viewers', 'Uptime']
+
+    out = [headers,]
     now = datetime.datetime.utcnow()
     for stream in streams:
         started = datetime.datetime.strptime(stream['created_at'],'%Y-%m-%dT%H:%M:%SZ')
@@ -83,9 +87,29 @@ async def live(network, channel, message):
             stream['viewers']
             )
 
-        out += oneline
+        oneline = [
+            stream['channel']['display_name'], 
+            stream['game'], 
+            str(stream['viewers']), 
+            '{}h{}m'.format(hours,minutes),
+        ]
 
-    await network.send_message(channel, out)
+        out.append(oneline)
+
+    table = AsciiTable(out)
+
+    await network.send_message(channel, '\n`{}`'.format(table.table))
+
+@command('info')
+async def info(network, channel, message):
+    # details on a particular streamer
+    if not message.content.lower().split('info')[1]:
+        return await network.send_message(channel, 'Which streamer did you want details for?')
+
+    strimmer = message.content.lower().split('info')[1].strip()
+    data = await network.application.TwitchAPI.detail( strimmer )
+
+    import pdb;pdb.set_trace()
 
 
 @command('neat')
@@ -154,7 +178,7 @@ async def magicball(network, channel, message):
         "Very doubtful",
     ]
 
-    if not message.content.split('8ball')[1]:
+    if not message.content.lower().split('8ball')[1]:
         return await network.send_message(channel, 'What do you want me to ask the magic 8 ball?')
 
     await network.send_message(channel, choice(responses))
