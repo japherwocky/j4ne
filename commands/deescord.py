@@ -3,9 +3,10 @@ from commands import twitch_command as tcommand
 from commands.models import Quote
 from random import choice
 from time import time
-from terminaltables import AsciiTable
+from terminaltables import AsciiTable, SingleTable, DoubleTable, GithubFlavoredMarkdownTable
 import asyncio
 import datetime
+from tornado.httpclient import HTTPError
 
 import giphypop
 G = giphypop.Giphy()
@@ -76,9 +77,11 @@ async def live(network, channel, message):
     out = [headers,]
     now = datetime.datetime.utcnow()
     for stream in streams:
+
         started = datetime.datetime.strptime(stream['created_at'],'%Y-%m-%dT%H:%M:%SZ')
         hours = (now-started).seconds // 3600
         minutes = ( (now-started).seconds // 60 ) % 60
+
         oneline = '{} has been live for {}:{}, now playing {} w/ {} viewers.\n'.format( 
             stream['channel']['display_name'], 
             hours,
@@ -97,19 +100,41 @@ async def live(network, channel, message):
         out.append(oneline)
 
     table = AsciiTable(out)
+    for i in range(len(out[0])):
+        table.justify_columns[i] = 'center'
 
     await network.send_message(channel, '\n`{}`'.format(table.table))
 
-@command('info')
-async def info(network, channel, message):
+@command('watch')
+async def watch(network, channel, message):
     # details on a particular streamer
-    if not message.content.lower().split('info')[1]:
-        return await network.send_message(channel, 'Which streamer did you want details for?')
+    if not message.content.lower().split('watch')[1]:
+        return await network.send_message(channel, 'Which streamer did you want to watch?')
 
-    strimmer = message.content.lower().split('info')[1].strip()
-    data = await network.application.TwitchAPI.detail( strimmer )
+    # grab data from the twitch API
+    strimmer = message.content.lower().split('watch')[1].strip()
 
-    import pdb;pdb.set_trace()
+    try:
+        data = await network.application.TwitchAPI.detail( strimmer )
+    except HTTPError:
+        return await network.send_message(channel, "I could not find a streamer named {}".format(strimmer))
+
+    if not data['stream']:
+
+        out = """{} is offline right now, but you can follow them at <http://twitch.tv/{}/profile>""".format(
+                data['channel']['display_name'], 
+                strimmer
+            )
+
+    else:
+
+        out = """{} is live, w/ {} viewers!\nWatch them at: http://twitch.tv/{}/""".format(
+            data['channel']['display_name'], 
+            str(data['stream']['viewers']), 
+            data['channel']['name']
+        )
+
+    await network.send_message(channel, out)
 
 
 @command('neat')
