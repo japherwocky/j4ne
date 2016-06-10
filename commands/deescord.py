@@ -153,10 +153,13 @@ async def neat(network, channel, message):
 
 
 @command('wgaff')
-@tcommand('wgaff')
 async def wgaff(network, channel, message):
-    await network.send_message(channel, '┏(--)┓┏(--)┛┗(--﻿ )┓ WGAFF! ┏(--)┓┏(--)┛┗(--﻿ )┓')
+    await network.send_file(channel, 'static/WGAFFgif.gif')
 
+@tcommand('wgaff')
+async def twitchwgaff(network, channel, message):
+    await network.send_message(channel, '┏(--)┓┏(--)┛┗(--﻿ )┓ WGAFF! ┏(--)┓┏(--)┛┗(--﻿ )┓')
+    
 
 @command('invite')
 async def bot_invite(network, channel, message):
