@@ -11,6 +11,7 @@ from loggers.handlers import Twitch as Tlogger
 Tlogger = Tlogger()
 from loggers.models import Event
 from commands import Twitch_commands as Commands
+import commands.twitch
 
 class TwitchParser(object):
 
