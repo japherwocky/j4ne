@@ -105,10 +105,11 @@ def main():
     if options.mktables:
         from loggers.models import Message, Event
         from commands.models import Quote
+        from networks.models import User, Moderator
 
         from peewee import OperationalError
 
-        for table in [Message, Event, Quote]:
+        for table in [Message, Event, Quote, User, Moderator]:
             try:
                 db.create_table(table)
             except OperationalError as e:
