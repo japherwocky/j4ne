@@ -1,4 +1,5 @@
 from commands import twitch_command as command
+from networks.models import User, Moderator
 import logging
 
 from tornado.httpclient import HTTPError
@@ -31,13 +32,38 @@ async def mod(network, channel, message):
 
     # get user data from the API / check that it exists
     try:
-        user = await network.application.TwitchAPI.query('https://api.twitch.tv/kraken/users/{}/'.format(parts[0]))
-        logging.info(user)
-        
+        twitch_user = await network.application.TwitchAPI.query('https://api.twitch.tv/kraken/users/{}/'.format(parts[0]))
+
+        # a valid user - see if we have them in the database yet
+        user, created = User.get_or_create(twitch_id=twitch_user['_id'], twitch_name=parts[0].lower())
+        if created:
+            user.name = twitch_user['display_name']
+            user.save()
+
+        mod = Moderator.get_or_create(user_id=user, channel=channel, network='twitch')
+
+        await network.send_message(channel, '{} now has moderator powers in this channel.'.format(user.name))
+
     except HTTPError:
         return await network.send_message(channel, 'I could not find that user on twitch.')
         
 
-    # import pdb;pdb.set_trace()
+@command('unmod')
+@auth_owner
+async def unmod(network, channel, message):
+
+    parts = message.content.split('mod',1)[1].strip().split(' ', 1)
+
+    if not parts[0]:
+        return await network.send_message(channel, 'Who did you want to unmod, {}?'.format(message.author))
+
+    target = parts[0].lower()  # normalize to lowercase for lookups
+
+    modQ = Moderator.select().join(User).where((User.twitch_name==target) & (channel==channel))
+    if modQ.count() == 0:
+        return await network.send_message(channel, '{} was not a moderator, and remains so.'.format(target))
+        
+    modQ.get().delete_instance()
+    return await network.send_message(channel, '{} has lost their moderator powers in this channel.'.format(target))
 
 
