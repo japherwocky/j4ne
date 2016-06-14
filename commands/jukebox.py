@@ -129,7 +129,7 @@ async def summon(network, channel, message):
             return await network.send_message(channel, 'I am already in your channel, {}'.format(message.author.name))
 
         # or leave so we can join the new channel
-        else:
+        elif J.voice:
             await J.voice.disconnect()
 
     # join the author's voice channel
