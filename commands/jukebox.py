@@ -121,8 +121,7 @@ async def summon(network, channel, message):
     if not authorchan:
         return await network.send_message(channel, 'You must join a voice channel first, {}'.format(message.author.name))
 
-    # check if this is new or we're moving
-    if network.client.is_voice_connected(message.server):
+    if J.voicechan:
 
         # already connected somewhere - here?
         if authorchan == J.voicechan:
@@ -131,6 +130,7 @@ async def summon(network, channel, message):
         # or leave so we can join the new channel
         elif J.voice:
             await J.voice.disconnect()
+            J.voice = None
 
     # join the author's voice channel
     J.voicechan = authorchan
@@ -140,10 +140,13 @@ async def summon(network, channel, message):
 @command('banish')
 async def banish(network, channel, message):
     ''' Clear out any pre-existing voice connections '''
+    await stop()
+
     if network.client.is_voice_connected(message.server):
         await J.voice.disconnect()
 
     J.voicechan = J.voice = None
+
 
 J.ytdl = ytdl.YoutubeDL(
     {
