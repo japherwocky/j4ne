@@ -4,7 +4,7 @@ import logging
 
 from tornado.httpclient import HTTPError
 
-def auth_owner(func):
+def owner_only(func):
     """
     Decorator for registering commands
     """
@@ -22,7 +22,7 @@ def auth_owner(func):
 
 
 @command('mod')
-@auth_owner
+@owner_only
 async def mod(network, channel, message):
 
     parts = message.content.split('mod',1)[1].strip().split(' ', 1)
@@ -49,7 +49,7 @@ async def mod(network, channel, message):
         
 
 @command('unmod')
-@auth_owner
+@owner_only
 async def unmod(network, channel, message):
 
     parts = message.content.split('mod',1)[1].strip().split(' ', 1)
