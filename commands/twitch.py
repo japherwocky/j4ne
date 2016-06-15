@@ -6,7 +6,7 @@ from tornado.httpclient import HTTPError
 
 def owner_only(func):
     """
-    Decorator for registering commands
+    Decorator for channel owner commands
     """
 
     async def __decorator(network, channel, message):
@@ -16,6 +16,33 @@ def owner_only(func):
             await network.send_message(channel, 'Nice try, {}.'.format(message.author))
 
         else:
+            return await func(network, channel, message)
+
+    return __decorator
+
+
+def mod_only(func):
+
+    async def __decorator(network, channel, message):
+
+        auth = False
+        author = message.author
+
+        # only enforce this on Twitch
+        if network != network.application.Twitch:
+            auth = True
+
+        elif '#{}'.format(author.lower()) == channel:
+            auth = True
+
+        else:
+            modQ = Moderator.select().join(User).where( (User.twitch_name == message.author) & (channel == channel))
+            if modQ.count() == 1:
+                auth = True
+
+        if not auth:
+            await network.send_message(channel, 'Nice try, {}.'.format(message.author))
+        else: 
             return await func(network, channel, message)
 
     return __decorator

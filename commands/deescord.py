@@ -13,10 +13,12 @@ G = giphypop.Giphy()
 
 from keys import discord_app
 from peewee import fn
+from commands.twitch import mod_only
 
 
 @command('wizard')
 @tcommand('wizard')
+@mod_only
 async def wizard(network, channel, message):
 
     wizards = [
@@ -32,13 +34,11 @@ async def wizard(network, channel, message):
 
 
 @command('shrug')
-@tcommand('shrug')
 async def shrug(network, channel, message):
     await network.send_message(channel, '`¯\_(ツ)_/¯`')
 
 
 @command('shame')
-@tcommand('shame')
 async def shrug(network, channel, message):
     await network.send_message(channel, '`ಠ_ಠ`')
 
@@ -139,6 +139,7 @@ async def watch(network, channel, message):
 
 @command('neat')
 @tcommand('neat')
+@mod_only
 async def neat(network, channel, message):
     verbs = ['dandy', 'glorious', 'hunky-dory', 'keen', 'marvelous', 'neat', 'nifty', 'sensational', 'swell', 'spiffy']
 
@@ -157,6 +158,7 @@ async def wgaff(network, channel, message):
     await network.send_file(channel, 'static/WGAFFgif.gif')
 
 @tcommand('wgaff')
+@mod_only
 async def twitchwgaff(network, channel, message):
     await network.send_message(channel, '┏(--)┓┏(--)┛┗(--﻿ )┓ WGAFF! ┏(--)┓┏(--)┛┗(--﻿ )┓')
     
@@ -181,7 +183,6 @@ async def bot_invite(network, channel, message):
 
 
 @command('8ball')
-@tcommand('8ball')
 async def magicball(network, channel, message):
     responses = [
         'It is certain',
@@ -214,6 +215,7 @@ async def magicball(network, channel, message):
 
 @command('giphy')
 @tcommand('giphy')
+@mod_only
 async def giphy(network, channel, message):
     if not message.content.split('giphy')[1]:
         return await network.send_message(channel, 'What kind of GIF were you looking for?')
@@ -239,7 +241,6 @@ async def help(network, channel, message):
 
 
 @command('quote')
-@tcommand('quote')
 async def quote(network, channel, message):
 
     if not message.content.split('quote')[1]:
