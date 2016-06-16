@@ -106,12 +106,12 @@ def main():
 
     if options.mktables:
         from loggers.models import Message, Event
-        from commands.models import Quote
+        from commands.models import Quote, Command
         from networks.models import User, Moderator
 
         from peewee import OperationalError
 
-        for table in [Message, Event, Quote, User, Moderator]:
+        for table in [Message, Event, Quote, Command, User, Moderator]:
             try:
                 db.create_table(table)
             except OperationalError as e:
@@ -160,7 +160,6 @@ def main():
     # link the Jukebox to the application
     from commands.jukebox import J  # our instance of the Jukebox
     app.Jukebox = J
-
     
     tornado.ioloop.IOLoop.instance().start()
 

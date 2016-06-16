@@ -1,5 +1,6 @@
 from commands import twitch_command as command
 from networks.models import User, Moderator
+from commands.models import Command
 import logging
 
 from tornado.httpclient import HTTPError
@@ -13,7 +14,9 @@ def owner_only(func):
         # easy on twitch - check that the author of the message == the channel
         author = message.author
         if '#{}'.format(author.lower()) != channel:
-            await network.send_message(channel, 'Nice try, {}.'.format(message.author))
+            logging.warning( 'Nice try, {}.'.format(message.author) )
+            return
+            # await network.send_message(channel, 'Nice try, {}.'.format(message.author))
 
         else:
             return await func(network, channel, message)
@@ -41,7 +44,10 @@ def mod_only(func):
                 auth = True
 
         if not auth:
-            await network.send_message(channel, 'Nice try, {}.'.format(message.author))
+            logging.warning( 'Nice try, {}.'.format(message.author) )
+            return
+            # await network.send_message(channel, 'Nice try, {}.'.format(message.author))
+
         else: 
             return await func(network, channel, message)
 
@@ -94,3 +100,42 @@ async def unmod(network, channel, message):
     return await network.send_message(channel, '{} has lost their moderator powers in this channel.'.format(target))
 
 
+@command('addcommand')
+@mod_only
+async def addcount(network, channel, message):
+    parts = message.content.split('addcommand',1)[1].strip().split(' ', 1)
+
+    if not len(parts) == 2:
+        return await network.send_message(channel, 'I was looking for something like "|addcommand <trigger> <message (with $count)>", {}'.format(message.author))
+
+    count_obj, created = Command.get_or_create(
+        network='twitch', 
+        channel=channel,
+        trigger=parts[0].lower(),
+        defaults = {'count':0, 'message':'Hello $count'}
+        )
+
+    count_obj.message = parts[1]
+    count_obj.save()
+
+    if created:
+        return await network.send_message(channel, 'Count command "{}" is now active.'.format(count_obj.trigger))
+
+    else:
+        return await network.send_message(channel, '"{}" has been edited.'.format(count_obj.trigger))
+
+@mod_only
+async def custom(network, channel, message):
+
+    trigger = message.content.split(' ')[0].strip('|')
+
+    countQ = Command.select().where( Command.network == 'twitch', Command.channel == channel, Command.trigger == trigger )
+
+    if not countQ.exists():
+        return
+
+    cmd = countQ.get()
+    cmd.count += 1
+    cmd.save()
+
+    return await network.send_message(channel, cmd.message.replace('$count', str(cmd.count)))

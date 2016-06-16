@@ -13,6 +13,8 @@ from loggers.models import Event
 from commands import Twitch_commands as Commands
 import commands.twitch
 
+from commands.models import Command
+
 class TwitchParser(object):
 
     async def connect(self):
@@ -73,6 +75,12 @@ class TwitchParser(object):
 
             if cmd in Commands:
                 await Commands[cmd](self, message.channel, message)
+
+            # TODO put this somewhere else
+            elif message.content.startswith('|'):
+                # look for custom counting commands
+                await commands.twitch.custom(self, message.channel, message)
+
 
     async def on_event(self, msg):
         msg = msg.strip()  # make sure newlines are gone

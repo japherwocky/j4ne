@@ -12,3 +12,24 @@ class Quote(Model):
     class Meta:
         database = db
         db_table = 'quotes'
+
+"""
+|addcount command message
+|addcount hooks Sledge the REAPER has hooked $count unfortunate souls.
+
+|wipecount command
+|setcount command <number>
+
+"""
+
+class Command(Model):
+
+    network = CharField()  # only twitch for now
+    channel = CharField()
+    message = CharField()
+    count = IntegerField(default=0)
+    trigger = CharField()  # command to trigger the count
+
+    class Meta:
+        database = db
+        db_table = 'commands'
