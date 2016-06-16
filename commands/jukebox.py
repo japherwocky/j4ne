@@ -12,6 +12,29 @@ from youtube_dl.utils import DownloadError
 from websockets.exceptions import InvalidState
 
 
+class Jukebox:
+    """ music playing commands """
+
+    voice = None
+    voicechan = None
+    player = None
+
+    keep_playing = True
+
+    _volume = 53  # store this as 1-100
+    playlist = []  # seeded with __init__
+    requests = []
+
+    client = None  # used to set playing status
+
+    def __init__(self):
+        with open('playlist.txt') as f:
+            self.playlist = f.readlines()
+            shuffle(self.playlist)
+
+Jukebox = J = Jukebox()  # completely unenforced singleton
+
+
 class FancyVolumeBuff(object):
     """
         PatchedBuff monkey patches a readable object, allowing you to vary what the volume is as the song is playing.
@@ -80,28 +103,6 @@ class FancyVolumeBuff(object):
         # untested
         return round(buff.frame_count * 0.02)
 
-
-class Jukebox:
-    """ music playing commands """
-
-    voice = None
-    voicechan = None
-    player = None
-
-    keep_playing = True
-
-    _volume = 53  # store this as 1-100
-    playlist = []  # seeded with __init__
-    requests = []
-
-    client = None  # used to set playing status
-
-    def __init__(self):
-        with open('playlist.txt') as f:
-            self.playlist = f.readlines()
-            shuffle(self.playlist)
-
-J = Jukebox()  # completely unenforced singleton
 
 
 async def say(client, channel, message, destroy=0):
@@ -330,3 +331,20 @@ async def playsong():
 def on_end():
     if J.keep_playing:
         tornado.ioloop.IOLoop.instance().add_callback(lambda: playsong())
+
+
+class WebPlayer(tornado.web.RequestHandler):
+    """
+    super awkward naming now, basically a util to auth with twitch
+    and spit the oauth token out to stdout
+    """
+
+    def get(self):
+        self.render('jukebox.html')
+
+    def post(self):
+
+        token = self.get_argument('token')
+        username = self.get_argument('name')
+
+        info('got token %s for user %s' % (token, username))

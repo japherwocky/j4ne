@@ -16,6 +16,7 @@ from markdown import markdown
 
 from db import db
 from api.handlers import APIHandler
+from commands.jukebox import WebPlayer
 
 class App (tornado.web.Application):
     def __init__(self, app_debug=False):
@@ -39,6 +40,7 @@ class App (tornado.web.Application):
         handlers = [
             (r"/login/?", LoginHandler),
             (r"/logout/?", LogoutHandler),
+            (r"/jukebox/?", WebPlayer),
             (r"/api/(\w+)/(\w+)?/?", APIHandler),
         ]
 
@@ -154,6 +156,10 @@ def main():
         app.Twitch.application = app
 
         tornado.ioloop.IOLoop.instance().add_callback(app.Twitch.connect)  
+
+    # link the Jukebox to the application
+    from commands.jukebox import J  # our instance of the Jukebox
+    app.Jukebox = J
 
     
     tornado.ioloop.IOLoop.instance().start()
