@@ -102,7 +102,7 @@ async def unmod(network, channel, message):
 
 @command('addcommand')
 @mod_only
-async def addcount(network, channel, message):
+async def addcommand(network, channel, message):
     parts = message.content.split('addcommand',1)[1].strip().split(' ', 1)
 
     if not len(parts) == 2:
@@ -123,6 +123,7 @@ async def addcount(network, channel, message):
 
     else:
         return await network.send_message(channel, '"{}" has been edited.'.format(count_obj.trigger))
+
 
 @mod_only
 async def custom(network, channel, message):

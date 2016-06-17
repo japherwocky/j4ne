@@ -1,6 +1,5 @@
 from commands import discord_command as command
 from commands import twitch_command as tcommand
-from commands.models import Quote
 from random import choice
 from time import time
 from terminaltables import AsciiTable, SingleTable, DoubleTable, GithubFlavoredMarkdownTable
@@ -14,6 +13,7 @@ G = giphypop.Giphy()
 from keys import discord_app
 from peewee import fn
 from commands.twitch import mod_only
+from commands.models import Quote, Command
 
 
 @command('wizard')
@@ -285,3 +285,43 @@ async def quote(network, channel, message):
 
         return await network.send_message(channel, 'Quote {} added: "{}" -- {}'.format(new.id, new.content, new.author.capitalize()))
 
+
+@command('addcommand')
+async def addcommand(network, channel, message):
+    parts = message.content.split('addcommand',1)[1].strip().split(' ', 1)
+
+    if not len(parts) == 2:
+        return await network.send_message(channel, 
+            'I was looking for something like "addcommand <trigger> <message (with $count)>", {}'.format(message.author.name))
+
+    count_obj, created = Command.get_or_create(
+        network=message.server.name,
+        channel=channel.name,
+        trigger=parts[0].lower(),
+        defaults = {'count':0, 'message':'Hello $count'}
+        )
+
+    count_obj.message = parts[1]
+    count_obj.save()
+
+    if created:
+        return await network.send_message(channel, 'Count command "{}" is now active.'.format(count_obj.trigger))
+
+    else:
+        return await network.send_message(channel, '"{}" has been edited.'.format(count_obj.trigger))
+
+
+async def custom(network, channel, message):
+
+    trigger = message.content.split(' ')[0].strip('|')
+
+    countQ = Command.select().where( Command.network != 'twitch', Command.trigger == trigger )
+
+    if not countQ.exists():
+        return
+
+    cmd = countQ.get()
+    cmd.count += 1
+    cmd.save()
+
+    return await network.send_message(channel, cmd.message.replace('$count', str(cmd.count)))

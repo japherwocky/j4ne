@@ -110,6 +110,9 @@ class Discord(object):
             if cmd in Commands:
                 await Commands[cmd](self, message.channel, message)
 
+            elif message.content.startswith('|'):
+                await commands.deescord.custom(self, message.channel, message)
+
 
     async def retweet(self, message):
 
