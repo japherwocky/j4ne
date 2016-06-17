@@ -17,6 +17,7 @@ from markdown import markdown
 from db import db
 from api.handlers import APIHandler
 from commands.jukebox import WebPlayer
+from charts import ChartHandler
 
 class App (tornado.web.Application):
     def __init__(self, app_debug=False):
@@ -41,6 +42,7 @@ class App (tornado.web.Application):
             (r"/login/?", LoginHandler),
             (r"/logout/?", LogoutHandler),
             (r"/jukebox/?", WebPlayer),
+            (r"/stats/?", ChartHandler),
             (r"/api/(\w+)/(\w+)?/?", APIHandler),
         ]
 
