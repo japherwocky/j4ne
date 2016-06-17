@@ -119,7 +119,7 @@ async def addcommand(network, channel, message):
     count_obj.save()
 
     if created:
-        return await network.send_message(channel, 'Count command "{}" is now active.'.format(count_obj.trigger))
+        return await network.send_message(channel, 'Command "{}" is now active.'.format(count_obj.trigger))
 
     else:
         return await network.send_message(channel, '"{}" has been edited.'.format(count_obj.trigger))
