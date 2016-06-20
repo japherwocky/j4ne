@@ -155,7 +155,7 @@ class TwitchParser(object):
 
         if 'subscribed for' in body:
             # wats regex
-            e.length = int(body.split('for')[1].strip().split(' ',1)[0])
+            e.length = int(body.split('subscribed for')[1].strip().split(' ',1)[0])
 
         elif 'just subscribed!' in body:
             e.length = 1
