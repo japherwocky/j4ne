@@ -54,14 +54,14 @@ def mod_only(func):
     return __decorator
 
 
-@command('mod')
+@command('trust')
 @owner_only
 async def mod(network, channel, message):
 
-    parts = message.content.split('mod',1)[1].strip().split(' ', 1)
+    parts = message.content.split('trust',1)[1].strip().split(' ', 1)
 
     if not parts[0]:
-        return await network.send_message(channel, 'Who did you want to mod, {}?'.format(message.author))
+        return await network.send_message(channel, 'Who did you want me to trust, {}?'.format(message.author))
 
     # get user data from the API / check that it exists
     try:
@@ -75,29 +75,29 @@ async def mod(network, channel, message):
 
         mod = Moderator.get_or_create(user_id=user, channel=channel, network='twitch')
 
-        await network.send_message(channel, '{} now has moderator powers in this channel.'.format(user.name))
+        await network.send_message(channel, '{} is now trusted in this channel.'.format(user.name))
 
     except HTTPError:
         return await network.send_message(channel, 'I could not find that user on twitch.')
         
 
-@command('unmod')
+@command('untrust')
 @owner_only
 async def unmod(network, channel, message):
 
-    parts = message.content.split('mod',1)[1].strip().split(' ', 1)
+    parts = message.content.split('untrust',1)[1].strip().split(' ', 1)
 
     if not parts[0]:
-        return await network.send_message(channel, 'Who did you want to unmod, {}?'.format(message.author))
+        return await network.send_message(channel, 'Who did you want to untrust, {}?'.format(message.author))
 
     target = parts[0].lower()  # normalize to lowercase for lookups
 
     modQ = Moderator.select().join(User).where((User.twitch_name==target) & (channel==channel))
     if modQ.count() == 0:
-        return await network.send_message(channel, '{} was not a moderator, and remains so.'.format(target))
+        return await network.send_message(channel, '{} was not trusted, and remains so.'.format(target))
         
     modQ.get().delete_instance()
-    return await network.send_message(channel, '{} has lost their moderator powers in this channel.'.format(target))
+    return await network.send_message(channel, '{} has lost their trust in this channel.'.format(target))
 
 
 @command('addcommand')
