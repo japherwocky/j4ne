@@ -233,7 +233,8 @@ async def stop(network=None, channel=None, message=None):  # defaults, sometimes
         J.player.stop()
         J.player = None
 
-    await J.client.change_status(None)  # set our "playing" status to nothing
+    if J.client:
+        await J.client.change_status(None)  # set our "playing" status to nothing
     J.client = None
 
     if message:
