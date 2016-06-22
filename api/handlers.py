@@ -19,6 +19,7 @@ def json_serial(obj):
 
 class APIHandler(tornado.web.RequestHandler):
 
+    # straight model lookups
     models = {
         'events': Event,
         'messages': Message,
@@ -27,14 +28,23 @@ class APIHandler(tornado.web.RequestHandler):
 
     def get(self, model, id=None):
 
-        if model not in self.models:
-            raise HTTPError(404)
+        # things like channels which don't necessarily have a model (though maybe they should)
+        methods = {
+            'channels': self.channels,
+        }
 
-        if id:
-            Q = self.get_one(model, id)
+        if model in self.models:
+            if id:
+                Q = self.get_one(model, id)
+
+            else:
+                Q = self.query(model)
+
+        elif model in methods:
+            return methods[model]()
 
         else:
-            Q = self.query(model)
+            raise HTTPError(404)
 
         out = [model_to_dict(row) for row in Q]
 
@@ -68,4 +78,14 @@ class APIHandler(tornado.web.RequestHandler):
 
         return Q
 
+    def channels(self):
+
+        message_chans = [m.channel for m in Message.select(Message.channel).where(Message.network=='twitch').distinct()]
+        event_chans = [e.channel for e in Event.select(Event.channel).where(Event.network=='twitch').distinct()]
+
+        chans = [channel for channel in set(message_chans).union( set(event_chans))]
+
+        out = {'data':chans}
+        self.set_header('Content-Type', 'application/json')
+        return self.finish(out) 
 
