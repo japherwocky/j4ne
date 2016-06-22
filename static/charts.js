@@ -23,6 +23,7 @@ var line = d3.svg.line()
     .x(function(d) { return x(new Date(d.key)); })
     .y(function(d) { return y(d.values); });
 
+// add our SVG element
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
@@ -32,7 +33,7 @@ var svg = d3.select("body").append("svg")
 
 
 // grab our data and bucket it appropriately
-d3.json("/api/messages/", function(error, data) {
+d3.json("/api/messages/?network=twitch&channel=sledgethewrestler", function(error, data) {
 
     // cast our unix timestamps to local datetimes
     window.data = data.data.map( function(d) { 
@@ -72,13 +73,29 @@ d3.json("/api/messages/", function(error, data) {
             .attr("y", 6)
             .attr("dy", ".71em")
             .style("text-anchor", "end")
-            .text("Chat Activity");
+            .text("Chat / 10m");
 
+    // a group per channel we're rendering
     var channel = svg.selectAll(".channel")
         .data(nested)
         .enter().append("g")
         .attr("class", "channel");
 
+    // data as bars
+    var bars = channel.each( function(d) {
+        // each d comes in as key: date, values: int
+        d3.select(this).selectAll('.messagebar')
+            .data(d.values)
+            .enter()
+            .append("rect")
+            .attr('class', 'messagebar')
+            .attr('x', function(d) {return x(new Date(d.key))})
+            .attr('y', function(d) {return y(d.values)})
+            .attr('width', 5)
+            .attr('height', function(d) {return height - y(d.values)})
+        })
+
+    // data as a line
     channel.append("path")
         .attr("class", "line")
         .attr("d", function(d) { return line(d.values); })
@@ -86,6 +103,4 @@ d3.json("/api/messages/", function(error, data) {
 
 
     })
-
-
 
