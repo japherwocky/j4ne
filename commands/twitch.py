@@ -140,3 +140,21 @@ async def custom(network, channel, message):
     cmd.save()
 
     return await network.send_message(channel, cmd.message.replace('$count', str(cmd.count)))
+
+
+@command('tableflip')
+@mod_only
+async def tableflip(network, channel, message):
+    return await network.send_message(channel, '(╯°□°）╯︵ ┻━┻')
+
+
+@command('shrug')
+@mod_only
+async def shrug(network, channel, message):
+    return await network.send_message(channel, '¯\_(ツ)_/¯')
+
+
+@command('unflip')
+@mod_only
+async def unflip(network, channel, message):
+    return await network.send_message(channel, '┬─┬ ノ( ゜-゜ノ)')
