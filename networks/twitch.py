@@ -216,6 +216,7 @@ class TwitchAPI(object):
         return data
 
     async def live(self):
+        # get streams of anyone the bot is following
         response = await self.query('https://api.twitch.tv/kraken/streams/followed')
 
         return response['streams']

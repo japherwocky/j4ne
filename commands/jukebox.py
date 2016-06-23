@@ -161,7 +161,7 @@ J.ytdl = ytdl.YoutubeDL(
 
 @command('request')
 async def request(network, channel, message):
-    req = message.content.split('|request ')[1].strip()
+    req = message.content.split('|request')[1].strip()
 
     # they didn't manage to request a song
     if not req:
@@ -277,6 +277,35 @@ async def queue(network, channel, message):
 
     else:
         await network.send_message(channel, 'There are {} requests, next up is {}'.format(len(J.requests), J.requests[0].title))
+
+import livestreamer
+from livestreamer.exceptions import NoPluginError
+@command('stream')
+async def stream(network, channel, message):
+    req = message.content.split('stream')[1].strip()
+
+
+    if not req:
+        return await network.send_message(channel, 'What stream did you want to listen to, {}?'.format(message.author.name))
+
+    try:
+        # this actually blocks.. for a while :|
+        streams = livestreamer.streams('twitch.tv/{}'.format(req))
+    except NoPluginError:
+        # we should/could actually check that this is a twitch streamer in particular
+        return await network.send_message(channel, 'I could not find a streamer named {}, {}'.format(req, message.author.name))
+        
+    audio_url = streams['audio'].url 
+
+    # uhh.. yeah, fake a player object to work with the request system
+    class Foo(object):
+        pass
+
+    fake_player = Foo()
+    fake_player._query = audio_url
+
+    J.requests.append(fake_player)
+    return await network.send_message(channel, "{}'s stream has been added to the queue.".format(req, message.author.name))
 
 
 # maybe put these on the Jukebox class
