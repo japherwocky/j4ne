@@ -9,3 +9,4 @@ tornado
 twython
 youtube-dl
 terminaltables
+livestreamer
