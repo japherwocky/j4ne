@@ -49,7 +49,15 @@ class APIHandler(tornado.web.RequestHandler):
         out = [model_to_dict(row) for row in Q]
 
         # can't return lists, see http://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.write
-        out = {'count':len(out), 'data':out}
+        out = {
+                'count':len(out), 
+                'data':out,
+            }
+
+        if out['count'] > 0:
+            out['oldest'] = out['data'][-1]['timestamp']
+            out['newest'] = out['data'][0]['timestamp']
+
         out = json.dumps(out, default=json_serial)
 
         self.set_header('Content-Type', 'application/json')
@@ -72,7 +80,31 @@ class APIHandler(tornado.web.RequestHandler):
                 channs = ['#{}'.format(chann.decode('utf-8')) for chann in self.request.query_arguments['channel']]
                 self.request.query_arguments['channel'] = channs
 
-            Q = self.models[model].filter(**self.request.query_arguments)
+            if not ('before' in self.request.query_arguments or 'after' in self.request.query_arguments):
+
+                Q = self.models[model] \
+                    .filter(**self.request.query_arguments) \
+                    .order_by(self.models[model].timestamp.desc()) \
+                    .limit(500)
+
+            else:
+                times = {}
+                for query in ('before', 'after'):
+                    if query in self.request.query_arguments:
+                        times[query] = self.request.query_arguments[query][0].decode('utf-8').strip('Z').replace('T', ' ')
+                        del self.request.query_arguments[query]
+
+                Q = self.models[model] \
+                    .filter(**self.request.query_arguments) \
+                    .order_by(self.models[model].timestamp.desc()) \
+                    .limit(500)
+
+                if 'before' in times:
+                    Q = Q.filter(self.models[model].timestamp < times['before'])
+
+                if 'after' in times:
+                    Q = Q.filter(self.models[model].timestamp > times['after'])
+
         else:
             Q = self.models[model]
 

@@ -31,12 +31,6 @@ var svg = d3.select("body").append("svg")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 
-function setDomains(dataset) {
-
-
-}
-
-
 // grab our data and bucket it appropriately
 d3.json("/api/messages/?network=twitch&channel=sledgethewrestler", function(error, data) {
 
@@ -120,7 +114,37 @@ d3.json("/api/messages/?network=twitch&channel=sledgethewrestler", function(erro
     })
 
 
+function loadData(channel) {
+
+    // recursively load all back data
+    var now = moment.utc().toISOString(),
+        apipath = 'api/events/?network=twitch&channel=';
+
+    apipath += channel;
+
+    pager(now);
+
+    function pager(oldest) {
+        var thispath = apipath + '&before='+oldest;
+        d3.json(thispath, function(error, data) {
+
+            if (error) { console.log(error);return }
+
+            if (data.count > 0) {
+                pager(data.oldest);
+            }
+
+        });
+    }
+
+
+}
+
+loadData('annemunition');
+
 d3.json("/api/events/?network=twitch&channel=sledgethewrestler", function(error, data) {
+
+    return;
 
     console.log( data.data[0]);
     // cast our unix timestamps to local datetimes
