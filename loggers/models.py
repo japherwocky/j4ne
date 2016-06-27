@@ -14,6 +14,14 @@ class Message(Model):
     channel_id = IntegerField()
     timestamp = DateField()
 
+    # twitch specific stuffs
+    badges = CharField(null=True, default=None)
+    color = CharField(default="#FFF")
+    sub = BooleanField(default=False)
+    turbo = BooleanField(default=False) 
+    mod = BooleanField(default=False) 
+    bits = IntegerField(default=0)
+
     content = TextField()
 
     class Meta:
