@@ -2,7 +2,7 @@ import asyncio
 import unittest
 import feedparser
 from random import choice
-from logging import info, debug, warning
+from logging import info, debug, warning, error
 import tornado.httpserver
 import tornado.ioloop
 import tornado.options
@@ -97,6 +97,7 @@ def main():
     define("port", default=8888, help="serve web requests from the given port", type=int)
     define("debug", default=False, help="run server in debug mode", type=bool)
     define("mktables", default=False, help="bootstrap a new sqlite database")
+    define("migration", default='', help="run a named database migration")
 
     define("twitch", default=True, help="Connect to Twitch chat servers")
     define("twitchapi", default=True, help="Connect to Twitch API")
@@ -120,6 +121,15 @@ def main():
                 # table (probably/hopefully) exists, dump this into the console 
                 warning(e)
                 continue
+
+    if options.migration:
+        from db import Migrations
+        if options.migration not in Migrations:
+            error('No migration named "{}", ignoring.'.format(options.migration))
+
+        else:
+            info('Attempting migration {}'.format(options.migration))
+            return Migrations[options.migration]()
 
     if options.runtests:
         tornado.testing.main()
