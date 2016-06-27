@@ -45,5 +45,4 @@ def bits():
         migrator.add_column('messages', 'sub', sub),
         migrator.add_column('messages', 'turbo', turbo),
         migrator.add_column('messages', 'mod', mod),
-        migrator.add_column('messages', 'bits', bits),
     )
