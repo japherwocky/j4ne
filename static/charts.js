@@ -19,7 +19,7 @@ var yAxis = d3.svg.axis()
     .orient("left");
 
 var line = d3.svg.line()
-    .interpolate("basis")
+//    .interpolate("basis")
     .x(function(d) { return x(new Date(d.key)); })
     .y(function(d) { return y(d.values); });
 
@@ -30,95 +30,102 @@ var svg = d3.select("body").append("svg")
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+// add our axis elements (only one!)
+svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+
+svg.append("g")
+    .attr("class", "y axis")
+    .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Chat / 10m");
 
 // grab our data and bucket it appropriately
-d3.json("/api/messages/?network=twitch&channel=sledgethewrestler", function(error, data) {
+// d3.json("/api/messages/?network=twitch&channel=annemunition", function(error, data) {
 
-    // cast our unix timestamps to local datetimes
-    window.chatdata = data.data.map( function(d) { 
-        d.datetime = new Date(d.timestamp * 1000); 
+function renderMessages() {
 
-        d.datetime.setSeconds( 0 );
-        d.datetime.setMinutes( d.datetime.getMinutes() - d.datetime.getMinutes() % 5);
-
-        return d
-    });
-
-    window.nested = d3.nest()
+    // nest our data by channel and datetime (our data loader has bucketed this already)
+    var nested = d3.nest()
         .key( function (d) { return d.channel }) 
         .key( function (d) { return d.datetime })
         .rollup( function (d) { return d.length})
-        .entries( window.chatdata);
+        .entries( window.rawdata.messages);
 
-    var channels = window.nested.map( function(d) {return d.key});
+    var channels = nested.map( function(d) {return d.key});
 
     color.domain(channels);
 
     // set X domain and calculate bar widths
-    x.domain( d3.extent(data.data, function(d) {return new Date(d.datetime)}) );
+    x.domain( d3.extent(window.rawdata.messages, function(d) {return new Date(d.datetime)}) );
     var xdomain = x.domain();
     var xticks = (xdomain[1] - xdomain[0]) / 60 / 6 / 1000;  // number of 10 minute ticks on the chart
     var barwidth = x.range()[1] / xticks - 5 ;  // magic.. this is slightly too wide for some reason
-    // barwidth = barwidth < 1 ? 1 : barwidth;
-
+    barwidth = barwidth < 1 ? 1 : barwidth;
 
     y.domain([
         d3.min( nested, function(d) { return d3.min(d.values, function (e) {return e.values})}),
         d3.max( nested, function(d) { return d3.max(d.values, function (e) {return e.values})})
         ])
 
-    svg.append("g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0," + height + ")")
+    svg.select('g.x.axis')
         .call(xAxis);
 
-    svg.append("g")
-            .attr("class", "y axis")
-            .call(yAxis)
-        .append("text")
-            .attr("transform", "rotate(-90)")
-            .attr("y", 6)
-            .attr("dy", ".71em")
-            .style("text-anchor", "end")
-            .text("Chat / 10m");
+    svg.select('g.y.axis')
+        .call(yAxis)
 
     // a group per channel we're rendering
     var channel = svg.selectAll(".channel")
         .data(nested)
+
+    var changroup = channel
         .enter().append("g")
         .attr("class", "channel");
 
     // data as bars, if we're zoomed in enough to see them
-    if (barwidth > 1) {
-        var bars = channel.each( function(d) {
-            // each d comes in as key: date, values: int
-            d3.select(this).selectAll('.messagebar')
-                .data(d.values)
-                .enter()
-                .append("rect")
-                .attr('class', 'messagebar')
-                .attr('x', function(d) {return x(new Date(d.key))})
-                .attr('y', function(d) {return y(d.values)})
-                .attr('width', barwidth)
-                .attr('height', function(d) {return height - y(d.values)})
-            })
-    }
+    channel.each( function(d) {
+        // each d comes in as key: date, values: int
+        var bars = d3.select(this).selectAll('.messagebar')
+            .data(d.values)
+
+        bars
+            .enter()
+            .append("rect")
+            .attr('class', 'messagebar')
+
+        bars
+            .attr('x', function(d) {return x(new Date(d.key))})
+            .attr('y', function(d) {return y(d.values)})
+            .attr('width', barwidth)
+            .attr('height', function(d) {return height - y(d.values)})
+
+        })
+
 
     // data as a line
-    channel.append("path")
+    changroup.append("path")
         .attr("class", "line")
-        .attr("d", function(d) { return line(d.values); })
         .style("stroke", function(d) { return color(d.key); });
 
+    channel.select('.line')
+        .attr("d", function(d) { return line(d.values); })
 
-    })
+    }
 
 
-function loadData(channel) {
+function loadData(channel, type) {
+
+    renderfunc = {};
+    renderfunc.events = renderEvents;
+    renderfunc.messages = renderMessages;
 
     // recursively load all back data
     var now = moment.utc().toISOString(),
-        apipath = 'api/events/?network=twitch&channel=';
+        apipath = 'api/'+type+'/?network=twitch&channel=';
 
     apipath += channel;
 
@@ -132,7 +139,27 @@ function loadData(channel) {
 
             if (data.count > 0) {
                 pager(data.oldest);
+            } else {
+
+                // wait until it's all loaded?
+                // renderfunc[type]();
             }
+
+            // concat and transform our data set
+
+            // cast our unix timestamps to local datetimes
+            Tdata = data.data.map( function(d) { 
+                d.datetime = type == 'messages' ? new Date(d.timestamp * 1000) : new Date(d.timestamp);  // glorious
+                d.datetime.setSeconds( 0 );
+                d.datetime.setMinutes( d.datetime.getMinutes() - d.datetime.getMinutes() % 5);
+                return d
+                });
+
+            window.rawdata[type] = window.rawdata[type].concat(Tdata);
+
+            // render our data
+            renderfunc[type]();
+
 
         });
     }
@@ -140,22 +167,15 @@ function loadData(channel) {
 
 }
 
-loadData('annemunition');
+window.rawdata = {'events':[], 'messages':[]}
 
-d3.json("/api/events/?network=twitch&channel=sledgethewrestler", function(error, data) {
+loadData('sledgethewrestler', 'messages');
+// loadData('annemunition', 'events');
 
-    return;
+// d3.json("/api/events/?network=twitch&channel=sledgethewrestler", function(error, data) {
 
-    console.log( data.data[0]);
-    // cast our unix timestamps to local datetimes
-    window.eventdata = data.data.map( function(d) { 
-        d.datetime = new Date(d.timestamp); 
 
-        d.datetime.setSeconds( 0 );
-        d.datetime.setMinutes( d.datetime.getMinutes() - d.datetime.getMinutes() % 5);
-
-        return d
-    });
+function renderEvents() {
 
     window.eventnested = d3.nest()
         .key( function (d) { return d.type }) 
@@ -178,4 +198,4 @@ d3.json("/api/events/?network=twitch&channel=sledgethewrestler", function(error,
         .attr("d", function(d) { return line(d.values); })
         .style("stroke", function(d) { return colors[d.key]; });
 
-})
+}
