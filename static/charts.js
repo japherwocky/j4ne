@@ -19,7 +19,7 @@ var yAxis = d3.svg.axis()
     .orient("left");
 
 var line = d3.svg.line()
-//    .interpolate("basis")
+    // .interpolate("basis")
     .x(function(d) { return x(new Date(d.key)); })
     .y(function(d) { return y(d.values); });
 
@@ -44,9 +44,8 @@ svg.append("g")
         .style("text-anchor", "end")
         .text("Chat / 10m");
 
-// grab our data and bucket it appropriately
-// d3.json("/api/messages/?network=twitch&channel=annemunition", function(error, data) {
 
+/* RENDER MESSAGE DATA */
 function renderMessages() {
 
     // nest our data by channel and datetime (our data loader has bucketed this already)
@@ -116,6 +115,37 @@ function renderMessages() {
 
     }
 
+function renderEvents() {
+
+    console.log('rendering events');
+
+    window.eventnested = d3.nest()
+        .key( function (d) { return d.type }) 
+        .key( function (d) { return d.datetime })
+        .rollup( function (d) { return d.length})
+        .entries( window.rawdata.events);
+
+    var colors = { 'JOIN':'green', 'PART':'red'}
+
+    // a group per type of event
+    var eventtype = svg.selectAll(".event-type")
+        .data(eventnested)
+
+    eventtype
+        .enter().append("g")
+        .attr("class", "event-type");
+
+
+    // data as a line
+    eventtype.append("path")
+        .attr("class", "line")
+        .style("stroke", function(d) { return colors[d.key]; });
+
+    eventtype.select('.line')
+        .attr("d", function(d) {console.log(d); return line(d.values); })
+
+}
+
 
 function loadData(channel, type) {
 
@@ -169,33 +199,9 @@ function loadData(channel, type) {
 
 window.rawdata = {'events':[], 'messages':[]}
 
-loadData('sledgethewrestler', 'messages');
-// loadData('annemunition', 'events');
+loadData('annemunition', 'messages');
+loadData('annemunition', 'events');
 
 // d3.json("/api/events/?network=twitch&channel=sledgethewrestler", function(error, data) {
 
 
-function renderEvents() {
-
-    window.eventnested = d3.nest()
-        .key( function (d) { return d.type }) 
-        .key( function (d) { return d.datetime })
-        .rollup( function (d) { return d.length})
-        .entries( window.eventdata);
-
-
-    // a group per channel we're rendering
-    var eventtype = svg.selectAll(".event-type")
-        .data(eventnested)
-        .enter().append("g")
-        .attr("class", "event-type");
-
-    var colors = { 'JOIN':'green', 'PART':'red'}
-
-    // data as a line
-    eventtype.append("path")
-        .attr("class", "line")
-        .attr("d", function(d) { return line(d.values); })
-        .style("stroke", function(d) { return colors[d.key]; });
-
-}
