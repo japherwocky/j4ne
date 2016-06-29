@@ -23,19 +23,32 @@ var line = d3.svg.line()
     .x(function(d) { return x(new Date(d.key)); })
     .y(function(d) { return y(d.values); });
 
+
+function mkzoom() {
+    var xzoom = d3.behavior.zoom()
+        .x(x)
+        .on('zoom', function () {
+            renderMessages();
+            renderEvents();
+        })
+    svg.call(xzoom);
+    }
+
 // add our SVG element
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var maingroup = svg.append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
 
 // add our axis elements (only one!)
-svg.append("g")
+maingroup.append("g")
     .attr("class", "x axis")
     .attr("transform", "translate(0," + height + ")")
 
-svg.append("g")
+maingroup.append("g")
     .attr("class", "y axis")
     .append("text")
         .attr("transform", "rotate(-90)")
@@ -43,6 +56,14 @@ svg.append("g")
         .attr("dy", ".71em")
         .style("text-anchor", "end")
         .text("Chat / 10m");
+
+
+var tStart, tEnd = null;
+
+function updateAxes(dataset) {
+    x.domain( d3.extent(dataset, function(d) {return new Date(d.datetime)}) );
+    // xzoom.xExtent(x.domain());
+    }
 
 
 /* RENDER MESSAGE DATA */
@@ -59,15 +80,14 @@ function renderMessages() {
 
     color.domain(channels);
 
-    // set X domain and calculate bar widths
-    x.domain( d3.extent(window.rawdata.messages, function(d) {return new Date(d.datetime)}) );
+    // calculate bar widths
     var xdomain = x.domain();
     var xticks = (xdomain[1] - xdomain[0]) / 60 / 6 / 1000;  // number of 10 minute ticks on the chart
     var barwidth = x.range()[1] / xticks - 5 ;  // magic.. this is slightly too wide for some reason
     barwidth = barwidth < 1 ? 1 : barwidth;
 
     y.domain([
-        d3.min( nested, function(d) { return d3.min(d.values, function (e) {return e.values})}),
+        0,
         d3.max( nested, function(d) { return d3.max(d.values, function (e) {return e.values})})
         ])
 
@@ -117,15 +137,13 @@ function renderMessages() {
 
 function renderEvents() {
 
-    console.log('rendering events');
-
     window.eventnested = d3.nest()
         .key( function (d) { return d.type }) 
         .key( function (d) { return d.datetime })
         .rollup( function (d) { return d.length})
         .entries( window.rawdata.events);
 
-    var colors = { 'JOIN':'green', 'PART':'red'}
+    var colors = { 'JOIN':'green', 'PART':'red', 'SUB':'orange', 'TIMEOUT':'yellow'}
 
     // a group per type of event
     var eventtype = svg.selectAll(".event-type")
@@ -142,7 +160,7 @@ function renderEvents() {
         .style("stroke", function(d) { return colors[d.key]; });
 
     eventtype.select('.line')
-        .attr("d", function(d) {console.log(d); return line(d.values); })
+        .attr("d", function(d) {return line(d.values); })
 
 }
 
@@ -170,9 +188,8 @@ function loadData(channel, type) {
             if (data.count > 0) {
                 pager(data.oldest);
             } else {
-
-                // wait until it's all loaded?
-                // renderfunc[type]();
+                // when all is loaded, set up our zooming
+                mkzoom();
             }
 
             // concat and transform our data set
@@ -188,6 +205,7 @@ function loadData(channel, type) {
             window.rawdata[type] = window.rawdata[type].concat(Tdata);
 
             // render our data
+            updateAxes(window.rawdata[type]);
             renderfunc[type]();
 
 
