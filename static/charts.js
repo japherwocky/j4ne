@@ -3,6 +3,7 @@ var margin = {top: 20, right: 80, bottom: 30, left: 50},
     height = window.innerHeight - margin.top - margin.bottom;
 
 var x = d3.time.scale()
+    .domain([new Date(), new Date()])
     .range([0, width]);
 
 var y = d3.scale.sqrt()
@@ -68,7 +69,13 @@ var eventgroup = maingroup.append("g")
 
 
 function updateAxes(dataset) {
-    x.domain( d3.extent(dataset, function(d) {return new Date(d.datetime)}) );
+    var existing = x.domain();
+    var updated = d3.extent(dataset, function(d) {return new Date(d.datetime)});
+
+    x.domain( [ d3.min([existing[0], updated[0]]),
+                d3.max([existing[1], updated[1]]),
+                ]
+            )
 
     // we set the Y values in the rendering loop, where we nest the data
     // TODO don't
@@ -184,10 +191,6 @@ function renderEvents() {
 
 function loadData(channel, type) {
 
-    renderfunc = {};
-    renderfunc.events = renderEvents;
-    renderfunc.messages = renderMessages;
-
     // recursively load all back data
     var now = moment.utc().toISOString(),
         apipath = 'api/'+type+'/?network=twitch&channel=';
@@ -224,7 +227,8 @@ function loadData(channel, type) {
 
             // render our data
             updateAxes(window.rawdata[type]);
-            renderfunc[type]();
+            renderMessages();
+            renderEvents();
 
 
         });
