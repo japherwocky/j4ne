@@ -98,11 +98,17 @@ function updateBarsize() {
 /* RENDER MESSAGE DATA */
 function renderMessages() {
 
+    // only bucket and work with data we're zoomed into
+    var xdomain = x.domain();
+    var renderData = window.rawdata.messages.filter( 
+        function (row) { return row.datetime > xdomain[0] && row.datetime < xdomain[1]}
+        );
+
     // nest our data by channel and datetime (our data loader has bucketed this already)
     var nested = d3.nest()
         .key( function (d) { return d.datetime })
         .rollup( function (d) { return d.length})
-        .entries( window.rawdata.messages);
+        .entries( renderData);
 
 
     y.domain([
@@ -132,9 +138,20 @@ function renderMessages() {
         .attr('width', barwidth)
         .attr('height', function(d) {return height - y(d.values)})
 
+    bars.exit().remove();
+
     }
 
 function renderEvents() {
+
+    // hrm, this causes issues with removing event types when you zoom into a section that contains none of that type
+    /*
+    // only bucket and work with data we're zoomed into
+    var xdomain = x.domain();
+    var renderData = window.rawdata.events.filter( 
+        function (row) { return row.datetime > xdomain[0] && row.datetime < xdomain[1]}
+        );
+    */
 
     window.eventnested = d3.nest()
         .key( function (d) { return d.type }) 
@@ -164,7 +181,7 @@ function renderEvents() {
         bars
             .enter()
             .append('rect')
-            .attr('class', 'eventbar')
+            .attr('class', 'eventbar');
 
         bars
             .attr('x', function(d) {return x(new Date(d.key)) + (eventwidth*i) + 2  })
@@ -172,7 +189,11 @@ function renderEvents() {
             .attr('width', eventwidth)
             .attr('height', function(d) {return height - y(d.values)})
             .attr('opacity', '.6')
-            .attr('fill', color)
+            .attr('fill', color);
+
+        bars
+            .exit()
+            .remove();
 
     })
 
