@@ -12,12 +12,15 @@ import tornado.platform.asyncio
 from tornado.web import HTTPError, authenticated
 from markdown import markdown
 
-# from networks.irc import IRC
+# from networks.irc import IRC  # TODO
 
 from db import db
 from api.handlers import APIHandler
 from commands.jukebox import WebPlayer
 from charts import ChartHandler
+from webchat import WebHandler as ChatHandler
+from webchat import ChatSocketHandler
+
 
 class App (tornado.web.Application):
     def __init__(self, app_debug=False):
@@ -43,6 +46,8 @@ class App (tornado.web.Application):
             (r"/logout/?", LogoutHandler),
             (r"/jukebox/?", WebPlayer),
             (r"/stats/?", ChartHandler),
+            (r"/chat/?", ChatHandler),
+            (r"/chatsocket/?", ChatSocketHandler),
             (r"/api/(\w+)/(\w+)?/?", APIHandler),
         ]
 
