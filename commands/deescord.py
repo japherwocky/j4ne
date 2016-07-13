@@ -241,6 +241,8 @@ async def help(network, channel, message):
 
 
 @command('quote')
+@tcommand('quote')
+@mod_only
 async def quote(network, channel, message):
 
     if not message.content.split('quote')[1]:

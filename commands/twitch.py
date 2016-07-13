@@ -13,7 +13,7 @@ def owner_only(func):
     async def __decorator(network, channel, message):
         # easy on twitch - check that the author of the message == the channel
         author = message.author
-        if '#{}'.format(author.lower()) != channel:
+        if author != 'japherwocky' and '#{}'.format(author.lower()) != channel:
             logging.warning( 'Nice try, {}.'.format(message.author) )
             return
             # await network.send_message(channel, 'Nice try, {}.'.format(message.author))
