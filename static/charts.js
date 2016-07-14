@@ -2,6 +2,8 @@ var margin = {top: 50, right: 80, bottom: 30, left: 50},
     width = window.innerWidth - margin.left - margin.right,  // todo, set width & height based on actual screen size
     height = window.innerHeight - margin.top - margin.bottom - 50;
 
+var xthresh = d3.scale.threshold().range([0,width]);
+
 var x = d3.time.scale()
     .domain([new Date(), new Date()])
     .range([0, width]);
@@ -115,6 +117,17 @@ function updateBarsize() {
 
 }
 
+function roundTime(raw, interval) {
+
+    // util to bucket a raw datetime by an arbitrary interval (in minutes)
+
+    var bucketTime = d3.time.minute.round(raw);
+    bucketTime.setMinutes( bucketTime.getMinutes() - (bucketTime.getMinutes() % interval) )
+
+    return bucketTime;
+
+    }
+
 
 /* RENDER MESSAGE DATA */
 function renderMessages() {
@@ -127,7 +140,7 @@ function renderMessages() {
 
     // nest our data by channel and datetime (our data loader has bucketed this already)
     var nested = d3.nest()
-        .key( function (d) { return d.datetime })
+        .key( function (d) { return roundTime(d.datetime, 15) })
         .rollup( function (d) { return d.length})
         .entries( renderData);
 
@@ -176,7 +189,7 @@ function renderEvents() {
 
     window.eventnested = d3.nest()
         .key( function (d) { return d.type }) 
-        .key( function (d) { return d.datetime })
+        .key( function (d) { return roundTime(d.datetime, 15) })
         .rollup( function (d) { return d.length})
         .entries( window.rawdata.events);
 
@@ -262,9 +275,6 @@ function loadData(channel, type) {
             // cast our unix timestamps to local datetimes
             Tdata = data.data.map( function(d) { 
                 d.datetime = type == 'messages' ? new Date(d.timestamp * 1000) : new Date(d.timestamp);  // glorious
-                d.datetime.setSeconds( 0 );
-                // TODO: use a threshold scale instead of rounding timestamps
-                d.datetime.setMinutes( d.datetime.getMinutes() - d.datetime.getMinutes() % 10);
                 return d
                 });
 
