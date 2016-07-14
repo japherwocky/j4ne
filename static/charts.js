@@ -1,6 +1,6 @@
-var margin = {top: 20, right: 80, bottom: 30, left: 50},
+var margin = {top: 50, right: 80, bottom: 30, left: 50},
     width = window.innerWidth - margin.left - margin.right,  // todo, set width & height based on actual screen size
-    height = window.innerHeight - margin.top - margin.bottom;
+    height = window.innerHeight - margin.top - margin.bottom - 50;
 
 var x = d3.time.scale()
     .domain([new Date(), new Date()])
@@ -68,6 +68,27 @@ var eventgroup = maingroup.append("g")
     .attr("class", "events");
 
 
+d3.json( '/api/channels/', function (error, data) {
+
+    var channelpicker = d3.select("#channelpicker")
+    var options = channelpicker.selectAll('option').data(data.data);
+
+    options.enter()
+        .append('option')
+        .attr('value', function(d) {return d})
+        .text(function (d) {return d});
+
+    channelpicker.on('change', function () {
+        var chan = options[0][channelpicker.property('selectedIndex')].__data__.substr(1);
+        console.log( chan);
+
+        loadData(chan, 'events');
+        loadData(chan, 'messages');
+        })
+
+    });
+
+
 function updateAxes(dataset) {
     var existing = x.domain();
     var updated = d3.extent(dataset, function(d) {return new Date(d.datetime)});
@@ -88,7 +109,7 @@ function updateBarsize() {
 
     // calculate the width of one tick
     var xdomain = x.domain();
-    var xticks = (xdomain[1] - xdomain[0]) / 60 / 5 / 1000;  // number of 10 minute ticks on the chart
+    var xticks = (xdomain[1] - xdomain[0]) / 60 / 10 / 1000;  // number of 10 minute ticks on the chart
     var barwidth = (width / xticks) - 2;
     window.barwidth = barwidth < 1 ? 1 : barwidth;
 
@@ -212,6 +233,9 @@ function renderEvents() {
 
 function loadData(channel, type) {
 
+    // clear out any old data
+    window.rawdata = {'events':[], 'messages':[]}
+
     // recursively load all back data
     var now = moment.utc().toISOString(),
         apipath = 'api/'+type+'/?network=twitch&channel=';
@@ -240,7 +264,7 @@ function loadData(channel, type) {
                 d.datetime = type == 'messages' ? new Date(d.timestamp * 1000) : new Date(d.timestamp);  // glorious
                 d.datetime.setSeconds( 0 );
                 // TODO: use a threshold scale instead of rounding timestamps
-                d.datetime.setMinutes( d.datetime.getMinutes() - d.datetime.getMinutes() % 5);
+                d.datetime.setMinutes( d.datetime.getMinutes() - d.datetime.getMinutes() % 10);
                 return d
                 });
 
@@ -258,8 +282,4 @@ function loadData(channel, type) {
 
 }
 
-window.rawdata = {'events':[], 'messages':[]}
-
-loadData('sledgethewrestler', 'messages');
-loadData('sledgethewrestler', 'events');
 
