@@ -39,7 +39,6 @@ def mod_only(func):
             auth = True
 
         else:
-            import pdb;pdb.set_trace()
             modQ = Moderator.select().join(User).where( (User.twitch_name == message.author) & (Moderator.channel == channel))
             if modQ.count() == 1:
                 auth = True
