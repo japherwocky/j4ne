@@ -28,8 +28,8 @@ class TwitchParser(object):
         await self.conn.write_message('JOIN #{}'.format(twitch_name))
         follows = await self.application.TwitchAPI.follows()
         for channel in follows:
+            logging.info('joining #{}'.format(channel))
             await self.conn.write_message('JOIN #{}'.format(channel))
-
 
         while True:
             msg = await self.conn.read_message()
@@ -205,8 +205,14 @@ class TwitchAPI(object):
 
 
     async def follows(self):
-        response = await self.query('https://api.twitch.tv/kraken/users/{}/follows/channels'.format(twitch_name))
-        return [row['channel']['name'] for row in response['follows']]
+        follows = []
+        nxt = 'https://api.twitch.tv/kraken/users/{}/follows/channels'.format(twitch_name)
+        while nxt:
+            response = await self.query('https://api.twitch.tv/kraken/users/{}/follows/channels'.format(twitch_name))
+            follows += [row['channel']['name'] for row in response['follows']]
+            nxt = response['_links']['next'] if response['_links']['next'] != nxt else False
+
+        return follows
 
     async def query(self, path):
         # util method to make api reqs with the correct headers
