@@ -208,9 +208,9 @@ class TwitchAPI(object):
         follows = []
         nxt = 'https://api.twitch.tv/kraken/users/{}/follows/channels'.format(twitch_name)
         while nxt:
-            response = await self.query('https://api.twitch.tv/kraken/users/{}/follows/channels'.format(twitch_name))
+            response = await self.query(nxt)
             follows += [row['channel']['name'] for row in response['follows']]
-            nxt = response['_links']['next'] if response['_links']['next'] != nxt else False
+            nxt = response['_links']['next'] if response['follows'] else False
 
         return follows
 
