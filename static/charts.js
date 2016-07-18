@@ -82,7 +82,6 @@ d3.json( '/api/channels/', function (error, data) {
 
     channelpicker.on('change', function () {
         var chan = options[0][channelpicker.property('selectedIndex')].__data__.substr(1);
-        console.log( chan);
 
         loadData(chan, 'events');
         loadData(chan, 'messages');
