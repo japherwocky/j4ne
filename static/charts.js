@@ -82,7 +82,6 @@ d3.json( '/api/channels/', function (error, data) {
 
     channelpicker.on('change', function () {
         var chan = options[0][channelpicker.property('selectedIndex')].__data__.substr(1);
-        console.log( chan);
 
         loadData(chan, 'events');
         loadData(chan, 'messages');
@@ -111,10 +110,17 @@ function updateBarsize() {
 
     // calculate the width of one tick
     var xdomain = x.domain();
+    var onetick = (xdomain[1] - xdomain[0]) / x.range()[1] / 1000 / 60;  // # of minutes in one pixel
+
+    var onetick = onetick * 6 * 10 // one px for each stat, and a spacer
+
     var xticks = (xdomain[1] - xdomain[0]) / 60 / 10 / 1000;  // number of 10 minute ticks on the chart
     var barwidth = (width / xticks) - 2;
-    window.barwidth = barwidth < 1 ? 1 : barwidth;
 
+    window.barwidth = 4;
+    window.onetick = onetick;
+
+    console.log(window.barwidth, window.onetick);
 }
 
 function roundTime(raw, interval) {
@@ -122,7 +128,8 @@ function roundTime(raw, interval) {
     // util to bucket a raw datetime by an arbitrary interval (in minutes)
 
     var bucketTime = d3.time.minute.round(raw);
-    bucketTime.setMinutes( bucketTime.getMinutes() - (bucketTime.getMinutes() % interval) )
+    // bucketTime.setMinutes( bucketTime.getMinutes() - (bucketTime.getMinutes() % interval) )
+    bucketTime.setMinutes( bucketTime.getMinutes() - (bucketTime.getMinutes() % window.onetick) )
 
     return bucketTime;
 
@@ -169,8 +176,9 @@ function renderMessages() {
     bars
         .attr('x', function(d) {return x(new Date(d.key))})
         .attr('y', function(d) {return y(d.values)})
-        .attr('width', barwidth)
+        .attr('width', 5)
         .attr('height', function(d) {return height - y(d.values)})
+        .attr('data-time', function(d) {return d.key})
 
     bars.exit().remove();
 
@@ -218,7 +226,7 @@ function renderEvents() {
             .attr('class', 'eventbar');
 
         bars
-            .attr('x', function(d) {return x(new Date(d.key)) + (eventwidth*i) + 2  })
+            .attr('x', function(d) {return x(new Date(d.key)) + (eventwidth*i) + 5  })
             .attr('y', function(d) {return y(d.values)})
             .attr('width', eventwidth)
             .attr('height', function(d) {return height - y(d.values)})
