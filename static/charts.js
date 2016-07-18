@@ -250,7 +250,7 @@ function loadData(channel, type) {
 
     // recursively load all back data
     var now = moment.utc().toISOString(),
-        apipath = 'api/'+type+'/?network=twitch&channel=';
+        apipath = '/api/'+type+'/?network=twitch&channel=';
 
     apipath += channel;
 
