@@ -64,6 +64,9 @@ class Twitch(object):
         if not 'bits' in meta:
             meta['bits'] = 0
 
+        if not 'color' in meta:
+            meta['color'] = '#000'
+
         if meta and event == 'PRIVMSG':
 
             username = user.split('!')[0][1:]
