@@ -63,7 +63,7 @@ maingroup.append("g")
         .attr("y", 6)
         .attr("dy", ".71em")
         .style("text-anchor", "end")
-        .text("Chat / 10m");
+        .text("events / m");
 
 // a group for our chat data
 var chatgroup = maingroup.append("g")
