@@ -1,3 +1,5 @@
+
+
 var margin = {top: 50, right: 80, bottom: 30, left: 50},
     width = window.innerWidth - margin.left - margin.right,  // todo, set width & height based on actual screen size
     height = window.innerHeight - margin.top - margin.bottom - 50;
@@ -37,6 +39,7 @@ function mkzoom() {
         })
     svg.call(xzoom);
     }
+
 
 // add our SVG element
 var svg = d3.select("body").append("svg")
@@ -89,7 +92,6 @@ d3.json( '/api/channels/', function (error, data) {
 
     });
 
-
 function updateAxes(dataset) {
     var existing = x.domain();
     var updated = d3.extent(dataset, function(d) {return new Date(d.datetime)});
@@ -108,23 +110,24 @@ function updateAxes(dataset) {
 
 function updateBarsize() {
 
-    // calculate the width of one tick
     var xdomain = x.domain();
-    var xticks = (xdomain[1] - xdomain[0]) / 60 / 10 / 1000;  // number of 10 minute ticks on the chart
-    var barwidth = (width / xticks) - 2;
-    window.barwidth = barwidth < 1 ? 1 : barwidth;
+    var onetick = (xdomain[1] - xdomain[0]) / x.range()[1] ;  // # of minutes in one pixel
+    window.onetick = onetick;
+
+    window.barwidth = 50;  // arbitrary width we'd like our bars to be
 
 }
 
-function roundTime(raw, interval) {
+function roundTime(raw) {
 
-    // util to bucket a raw datetime by an arbitrary interval (in minutes)
+    // util to bucket a raw datetime by an arbitrary interval
+    var mod = Math.round( window.onetick * window.barwidth);
+    var epochtime = raw.getTime();
 
-    var bucketTime = d3.time.minute.round(raw);
-    bucketTime.setMinutes( bucketTime.getMinutes() - (bucketTime.getMinutes() % interval) )
+    epochtime = epochtime - (epochtime % mod);
+    var out = new Date(epochtime);
 
-    return bucketTime;
-
+    return out
     }
 
 
@@ -139,7 +142,7 @@ function renderMessages() {
 
     // nest our data by channel and datetime (our data loader has bucketed this already)
     var nested = d3.nest()
-        .key( function (d) { return roundTime(d.datetime, 15) })
+        .key( function (d) { return roundTime(d.datetime, window.onetick) })
         .rollup( function (d) { return d.length})
         .entries( renderData);
 
@@ -168,8 +171,9 @@ function renderMessages() {
     bars
         .attr('x', function(d) {return x(new Date(d.key))})
         .attr('y', function(d) {return y(d.values)})
-        .attr('width', barwidth)
+        .attr('width', window.barwidth)
         .attr('height', function(d) {return height - y(d.values)})
+        .attr('data-time', function(d) {return d.key})
 
     bars.exit().remove();
 
@@ -188,7 +192,7 @@ function renderEvents() {
 
     window.eventnested = d3.nest()
         .key( function (d) { return d.type }) 
-        .key( function (d) { return roundTime(d.datetime, 15) })
+        .key( function (d) { return roundTime(d.datetime, window.onetick) })
         .rollup( function (d) { return d.length})
         .entries( window.rawdata.events);
 
@@ -202,7 +206,7 @@ function renderEvents() {
         .enter().append("g")
         .attr("class", "event-type");
 
-    var eventwidth = (barwidth / eventnested.length) - 2;
+    var eventwidth = (barwidth / 4) / 2;
     eventwidth = eventwidth < 1 ? 1 : eventwidth;
 
     eventtype.each( function(d, i, set) {
@@ -217,7 +221,7 @@ function renderEvents() {
             .attr('class', 'eventbar');
 
         bars
-            .attr('x', function(d) {return x(new Date(d.key)) + (eventwidth*i) + 2  })
+            .attr('x', function(d) {return x(new Date(d.key)) + (eventwidth*i) + (barwidth / 2)  })
             .attr('y', function(d) {return y(d.values)})
             .attr('width', eventwidth)
             .attr('height', function(d) {return height - y(d.values)})

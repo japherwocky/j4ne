@@ -6,48 +6,46 @@
 
 
 {% block content %}
-<div class="container-fluid">
+
+<select id="channelpicker">
+    <option value="all">Choose a channel</option>
+</select>
+
+<button id="loading">
+</button>
 
 
-    <select id="channelpicker">
-        <option value="all">Choose a channel</option>
-    </select>
+<style>
 
-    <style>
+body {
+  font: 10px sans-serif;
+}
 
-        body {
-          font: 10px sans-serif;
-        }
-        
-        .axis path,
-        .axis line {
-          fill: none;
-          stroke: #000;
-          shape-rendering: crispEdges;
-        }
-        
-        .x.axis path {
-          display: none;
-        }
-        
-        .line {
-          fill: none;
-          stroke: steelblue;
-          stroke-width: 1px;
-        }
-        
-        .messagebar {
-            fill: steelblue;
-            opacity: .6;
-            /*
-            stroke: white;
-            stroke-width: 1px;
-            */
-        }
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
 
-    </style>
+.x.axis path {
+  display: none;
+}
 
-</div>
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1px;
+}
+
+.messagebar {
+    fill: aliceblue;
+    opacity: .6;
+    stroke: steelblue;
+    stroke-width: 1px;
+}
+
+</style>
 
 {% end %}
 
