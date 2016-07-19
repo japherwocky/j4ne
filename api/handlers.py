@@ -85,7 +85,7 @@ class APIHandler(tornado.web.RequestHandler):
                 Q = self.models[model] \
                     .filter(**self.request.query_arguments) \
                     .order_by(self.models[model].timestamp.desc()) \
-                    .limit(500)
+                    .limit(5000)
 
             else:
                 times = {}
