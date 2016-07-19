@@ -288,7 +288,7 @@ async def quote(network, channel, message):
         return await network.send_message(channel, 'Quote {} added: "{}" -- {}'.format(new.id, new.content, new.author.capitalize()))
 
 
-@command('addcommand')
+# @command('addcommand')
 async def addcommand(network, channel, message):
     parts = message.content.split('addcommand',1)[1].strip().split(' ', 1)
 
