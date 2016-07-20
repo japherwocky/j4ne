@@ -1,6 +1,6 @@
 
 
-var margin = {top: 50, right: 80, bottom: 30, left: 50},
+var margin = {top: 30, right: 30, bottom: 30, left: 50},
     width = window.innerWidth - margin.left - margin.right,  // todo, set width & height based on actual screen size
     height = window.innerHeight - margin.top - margin.bottom - 50;
 
@@ -71,6 +71,60 @@ var chatgroup = maingroup.append("g")
 
 var eventgroup = maingroup.append("g")
     .attr("class", "events");
+
+
+// some kind of legend
+var legdata = [
+    ['Chat Messages', 'steelblue', 'aliceblue',],
+    ['Parts', 'red', 'red',],
+    ['Joins', 'green', 'green',],
+    ['Subscriptions', 'orange', 'orange',],
+    ['Timeouts', 'yellow', 'yellow',],
+    ],
+    legwidth = 120;
+
+var legend = maingroup
+    .selectAll('#legend')
+    .data([true])  // weird pattern, to avoid using .select?
+
+var legendbox = legend.enter()
+    .append("g")
+    .attr('transform', 'translate('+ (width-margin.right-legwidth) +','+margin.top/2+')')
+
+legendbox
+    .append("rect")
+    .attr("id", "legend")
+    .style('stroke-width', '1px')
+    .style('stroke', 'steelblue')
+    .style('fill', 'white')
+    .style('opacity', '.6')
+    .attr("y", 0)
+    .attr("x", 0) // no worries about margins, we're in the transformed group
+    .attr('width', legwidth)
+    .attr('height', '11em')
+
+legendbox.selectAll('rect.legendcolor')
+    .data(legdata)
+    .enter()
+    .append('rect')
+    .style('fill', function(d) {return d[2]})
+    .style('stroke-width', '1px')
+    .style('stroke', function(d) {return d[1]})
+    .attr('x', 10)
+    .attr('y', function(d,i) {return ((i*2)+1) + 'em'})
+    .attr('dy', '1em')
+    .attr('width', 13)
+    .attr('height', 13)
+    .attr('class', 'legendcolor')
+
+legendbox.selectAll('text.legendtext')
+    .data(legdata)
+    .enter()
+    .append('text')
+    .attr('x', 33)
+    .attr('y', function(d,i) {return ((i*2)+2) + 'em'})
+    .attr('class', 'legendtext')
+    .text(function(d) {return d[0]})
 
 
 d3.json( '/api/channels/', function (error, data) {
