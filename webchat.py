@@ -7,7 +7,7 @@ import tornado.websocket
 class ChatSocketHandler(tornado.websocket.WebSocketHandler):
     waiters = set()
     cache = []
-    cache_size = 200
+    cache_size = 500
 
     # disabled - TODO config nginx properly
     def check_origin(self, origin):
@@ -39,7 +39,7 @@ class ChatSocketHandler(tornado.websocket.WebSocketHandler):
                 logging.error("Error sending message", exc_info=True)
 
     def on_message(self, message):
-        logging.info("got message %r", message)
+        logging.info("got message from web client %r", message)
         parsed = tornado.escape.json_decode(message)
         chat = {
             "id": str(uuid.uuid4()),
@@ -51,6 +51,8 @@ class ChatSocketHandler(tornado.websocket.WebSocketHandler):
         ChatSocketHandler.update_cache(chat)
         ChatSocketHandler.send_updates(chat)
 
+
+import json
 class WebHandler(tornado.web.RequestHandler):
     def get(self):
-        self.render("webchat.html", messages=ChatSocketHandler.cache)
+        self.render("webchat.html", messages=json.dumps(ChatSocketHandler.cache))

@@ -1,7 +1,10 @@
 from logging import debug, info
 from time import time
+import tornado
 
 from loggers.models import Message
+
+from webchat import ChatSocketHandler
 
 
 # the first thought was to bake this into a base class, but maybe that's overengineered
@@ -37,7 +40,7 @@ class Discord(object):
 
         return msg
 
-
+from playhouse.shortcuts import model_to_dict
 class Twitch(object):
 
     def boolcheck(self, string):
@@ -45,6 +48,12 @@ class Twitch(object):
             return False
 
         return True
+
+    def webchat(self, msg):
+        msg = model_to_dict(msg)  # serialize to json
+
+        ChatSocketHandler.update_cache(msg)
+        ChatSocketHandler.send_updates(msg)
 
 
     def __call__(self, message):
@@ -90,6 +99,7 @@ class Twitch(object):
             )
 
             echo(msg)
+            self.webchat(msg)
 
             return msg
 
