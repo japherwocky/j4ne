@@ -5,16 +5,14 @@ function init() {
         width = window.innerWidth - margin.left - margin.right,  // todo, set width & height based on actual screen size
         height = window.innerHeight - margin.top - margin.bottom - 50;
 
-    var x = d3.scaleTime()
-        .domain([new Date(), new Date()])
-        .range([0, width]);
+    window.x = d3.scaleTime()
+        .domain( [new Date(), new Date()])
+        .range([0, (width * 4 / 5)]);
 
-    var y = d3.scaleSqrt()
+    window.y = d3.scaleLinear()
         .range([height, 0]);
 
-
-    var xAxis = d3.axisBottom()
-        .scale(x)
+    window.xAxis = d3.axisBottom(x)
 
     var yAxis = d3.axisLeft()
         .scale(y)
@@ -30,12 +28,23 @@ function init() {
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
 
 
-    /*
+    // a group for incoming chat msgs
+    var chatgroup = maingroup.append('g')
+        .attr('id', 'chatgroup')
+        .attr("transform", "translate(" + (width * 4 / 5) + ",0)")
+
+    // scatter plot
+    maingroup.append('g')
+        .attr('id', 'scattergroup')
+
+
     // add our axis elements (only one!)
     maingroup.append("g")
         .attr("class", "x axis")
         .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
 
+    /*
     maingroup.append("g")
         .attr("class", "y axis")
         .append("text")
@@ -49,30 +58,58 @@ function init() {
 }
 
 
+function scale() {
+    x.domain(d3.extent(updater.msgs, function(d) {return d.timestamp*1000}))
+
+    d3.select('g.x.axis').call(xAxis)
+
+    y.domain( d3.extent(updater.msgs, function(d) {return d.author_id}))
+
+}
+
+
 function render () {
 
-    var canvas = d3.select('svg g#main');
+    var chatbox = d3.select('svg g#chatgroup');
 
-    // Update
-    var msgs = canvas
+    var msgs = chatbox
         .selectAll("text")
         .data(updater.msgs)
 
-    msgs
-        .transition()
-        .duration(500)
-        .style("fill", "aliceblue")
-        .attr('y', function(d,i) { return (updater.msgs.length - i) +'em'})
 
     // Create
     msgs.enter().append("text")
         .attr('class', 'chat')
         .attr('x', 0)
-        .attr('y', 0)
+        .attr('y', function(d,i) { return (updater.msgs.length - i) + 'em'})
         .text(function(d) { return d.content; });
+
+    // Update
+    msgs
+        .attr('y', function(d,i) { return (updater.msgs.length - i) +'em'})
+        .transition()
+        .duration(500)
+        .style("fill", "darkgrey")
 
     // Remove
     msgs.exit().remove();
+
+    var scats = d3.select('svg g#scattergroup')
+        .selectAll('circle')
+        .data(updater.msgs)
+
+
+    scats.enter().append('circle')
+        .attr('cx', function(d,i) {return x(d.timestamp*1000)})
+        .attr('cy', function(d,i) {return y(d.author_id)})
+        .attr('r', function(d,i) {return d.content.length})
+        .style('fill', 'steelblue')
+        .style('fill-opacity', '.2')
+
+    scats
+        .attr('cx', function(d,i) {return x(d.timestamp*1000)})
+        .attr('cy', function(d,i) {return y(d.author_id)})
+    
 }
 
 
@@ -129,6 +166,7 @@ var updater = {
 
     on_message: function(msg) {
         updater.msgs.push(msg);
+        scale(); 
         render();
     }
 };
