@@ -77,6 +77,9 @@ function render () {
         .data(updater.msgs)
 
 
+
+    /* TEXT */
+
     // Create
     msgs.enter().append("text")
         .attr('class', 'chat')
@@ -94,21 +97,33 @@ function render () {
     // Remove
     msgs.exit().remove();
 
+
+
+    /* DOTS */
+
     var scats = d3.select('svg g#scattergroup')
         .selectAll('circle')
         .data(updater.msgs)
 
-
+    // Create
     scats.enter().append('circle')
         .attr('cx', function(d,i) {return x(d.timestamp*1000)})
         .attr('cy', function(d,i) {return y(d.author_id)})
         .attr('r', function(d,i) {return d.content.length})
         .style('fill', 'steelblue')
-        .style('fill-opacity', '.2')
+        .style('fill-opacity', '.6')
 
+
+    // Update
     scats
-        .attr('cx', function(d,i) {return x(d.timestamp*1000)})
-        .attr('cy', function(d,i) {return y(d.author_id)})
+        .transition()
+            .duration(1000)
+            .attr('cx', function(d,i) {return x(d.timestamp*1000)})
+            .attr('cy', function(d,i) {return y(d.author_id)})
+            .style('fill-opacity', '.2')
+
+    // Remove
+    scats.exit().remove()
     
 }
 
