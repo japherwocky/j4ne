@@ -170,6 +170,7 @@ function render_channel () {
 
 
     /* AXES */
+    // todo, only compare new data to check extents
     x.domain(d3.extent(updater.msgs, function(d) {return d.timestamp*1000}))
     d3.select('g.x.axis').call(xAxis)
 
@@ -183,6 +184,11 @@ function render_channel () {
     y.domain(d3.extent(updater.msgs, function(d) {return d.author_id}))
     y.range([0, (window.height / nested.length)])
 
+    /* channel backgrounds */
+
+
+
+    /* channel groups */
     var channels = d3.select('svg g#scattergroup')
         .selectAll('.channel')
         .data(nested)
@@ -191,7 +197,6 @@ function render_channel () {
     channels.enter().append('g')
         .attr('data-channel', function (d) {return d.key})
         .attr('class', 'channel')
-        .style('border', '1px solid aliceblue')
 
     channels
         .attr("transform", function(d,i) { return "translate(0," + ((window.height / nested.length) * i) + ")"} )
@@ -204,23 +209,30 @@ function render_channel () {
         // d = nested data object
 
 
-        // background rect
-        var background = d3.select(this).select('rect')
+        /* TODO: adding these elements only once, but we shouldn't have
+            to check - somehow tie into the .append() ?
+        */
+        // bounding line to divide channels
+        var background = d3.select(this).select('line.bounds')
 
         if (background.empty() == true) {
             // we can't style groups, so throw this in
-            d3.select(this).append('rect')
-                .attr('width', x.range()[1])
-                .style('fill', 'aliceblue')
-                .style('stroke-width', '2px')
-                .style('stroke', 'red')
+            d3.select(this).append('line')
+                .attr('class', 'bounds')
+                .attr('x1', 0)
+                .attr('x2', x.range()[1])
+                .attr('y1', 0)
+                .attr('y2', 0)
+                .style('stroke-width', '1px')
+                .style('stroke', 'darkgrey')
+
+            d3.select(this).append('text')
+                .attr("y", 6)
+                .attr("dy", ".71em")
+                .style('font-size', '.6em')
+                .text(d.key)
 
         }        
-
-        // reset this always, if new channels have come in
-        background
-            .attr('height', (window.height / nested.length))
-
 
         var scats = d3.select(this)
             .selectAll('circle')
@@ -230,7 +242,7 @@ function render_channel () {
         scats.enter().append('circle')
             .attr('cx', function(d,i) {return x(d.timestamp*1000)})
             .attr('cy', function(d,i) {return y(d.author_id)})
-            .attr('r', function(d,i) {return d.content.length})
+            .attr('r', function(d,i) {return Math.log(d.content.length)})
             .style('fill', 'steelblue')
             .style('fill-opacity', '.6')
 
@@ -312,6 +324,9 @@ var updater = {
 
     on_message: function(msg) {
         updater.msgs.push(msg);
+        Tstart = new Date()
         render();  // draw things
+        console.log('rendered', updater.msgs.length, 'chats in', (new Date())-Tstart, 'ms');
+        
     }
 };
