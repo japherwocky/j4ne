@@ -5,6 +5,11 @@ function init() {
         width = window.innerWidth - margin.left - margin.right,  // todo, set width & height based on actual screen size
         height = window.innerHeight - margin.top - margin.bottom - 50;
 
+    window.margin = margin;
+    window.height = height;
+    window.width = width;
+
+
     window.x = d3.scaleTime()
         .domain( [new Date(), new Date()])
         .range([0, (width * 4 / 5)]);
@@ -55,27 +60,34 @@ function init() {
             .text("events / m");
     */
 
+    window.render = render_channel;  // choose a default rendering function
 }
 
 
-function scale() {
-    x.domain(d3.extent(updater.msgs, function(d) {return d.timestamp*1000}))
 
-    d3.select('g.x.axis').call(xAxis)
+function render_blue () {
 
-    y.domain( d3.extent(updater.msgs, function(d) {return d.author_id}))
+    /* 
+        very abstract, clean blue bubbles, 
+        global time on the X axis, author ID on Y, 
+        chat on the right, sized by message length
+    */
 
-}
+    /* resize our axes as required by new data */
+    function scale() {
 
+        x.domain(d3.extent(updater.msgs, function(d) {return d.timestamp*1000}))
+        d3.select('g.x.axis').call(xAxis)
+        y.domain( d3.extent(updater.msgs, function(d) {return d.author_id}))
 
-function render () {
+    }
+    scale();  // legacy refactoring junk, this doesn't need to be a function anymore I guess
 
     var chatbox = d3.select('svg g#chatgroup');
 
     var msgs = chatbox
         .selectAll("text")
-        .data(updater.msgs)
-
+        .data(updater.msgs);
 
 
     /* TEXT */
@@ -96,7 +108,6 @@ function render () {
 
     // Remove
     msgs.exit().remove();
-
 
 
     /* DOTS */
@@ -125,6 +136,126 @@ function render () {
     // Remove
     scats.exit().remove()
     
+}
+
+
+function render_channel () {
+    /* scatter plot with data bucketed by channel */
+
+    var chatbox = d3.select('svg g#chatgroup');
+
+    var msgs = chatbox
+        .selectAll("text")
+        .data(updater.msgs)
+
+
+    /* TEXT */
+
+    // Create
+    msgs.enter().append("text")
+        .attr('class', 'chat')
+        .attr('x', 0)
+        .attr('y', function(d,i) { return (updater.msgs.length - i) + 'em'})
+        .text(function(d) { return d.content; });
+
+    // Update
+    msgs
+        .attr('y', function(d,i) { return (updater.msgs.length - i) +'em'})
+        .transition()
+        .duration(500)
+        .style("fill", "darkgrey")
+
+    // Remove
+    msgs.exit().remove();
+
+
+    /* AXES */
+    x.domain(d3.extent(updater.msgs, function(d) {return d.timestamp*1000}))
+    d3.select('g.x.axis').call(xAxis)
+
+
+    /* channels */
+
+    // nest our data by channels we have data for
+    var nested = d3.nest().key( function(d) {return d.channel}).entries(updater.msgs);
+
+    // set range of Y axis for the height of one channel
+    y.domain(d3.extent(updater.msgs, function(d) {return d.author_id}))
+    y.range([0, (window.height / nested.length)])
+
+    var channels = d3.select('svg g#scattergroup')
+        .selectAll('.channel')
+        .data(nested)
+
+
+    channels.enter().append('g')
+        .attr('data-channel', function (d) {return d.key})
+        .attr('class', 'channel')
+        .style('border', '1px solid aliceblue')
+
+    channels
+        .attr("transform", function(d,i) { return "translate(0," + ((window.height / nested.length) * i) + ")"} )
+
+    channels.exit().remove();
+
+    channels.each( function(d,i) {
+
+        // this = DOM element
+        // d = nested data object
+
+
+        // background rect
+        var background = d3.select(this).select('rect')
+
+        if (background.empty() == true) {
+            // we can't style groups, so throw this in
+            d3.select(this).append('rect')
+                .attr('width', x.range()[1])
+                .style('fill', 'aliceblue')
+                .style('stroke-width', '2px')
+                .style('stroke', 'red')
+
+        }        
+
+        // reset this always, if new channels have come in
+        background
+            .attr('height', (window.height / nested.length))
+
+
+        var scats = d3.select(this)
+            .selectAll('circle')
+            .data(d.values)
+
+        // Create
+        scats.enter().append('circle')
+            .attr('cx', function(d,i) {return x(d.timestamp*1000)})
+            .attr('cy', function(d,i) {return y(d.author_id)})
+            .attr('r', function(d,i) {return d.content.length})
+            .style('fill', 'steelblue')
+            .style('fill-opacity', '.6')
+
+        // Update
+        scats
+            .transition()
+                .duration(1000)
+                .attr('cx', function(d,i) {return x(d.timestamp*1000)})
+                .attr('cy', function(d,i) {return y(d.author_id)})
+                .style('fill-opacity', '.2')
+
+        // Remove
+        scats.exit().remove()
+
+    })
+
+
+    /* DOTS 
+
+    var scats = d3.select('svg g#scattergroup')
+        .selectAll('circle')
+        .data(updater.msgs)
+
+    */ 
+
 }
 
 
@@ -181,7 +312,6 @@ var updater = {
 
     on_message: function(msg) {
         updater.msgs.push(msg);
-        scale(); 
-        render();
+        render();  // draw things
     }
 };
