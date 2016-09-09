@@ -35,7 +35,7 @@ async def wizard(network, channel, message):
 
 @command('shrug')
 async def shrug(network, channel, message):
-    await network.send_message(channel, '`¯\_(ツ)_/¯`')
+    await network.send_file(channel, 'static/lul.PNG')
 
 
 @command('shame')
