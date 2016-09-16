@@ -175,14 +175,16 @@ function render_channel () {
     d3.select('g.x.axis').call(xAxis)
 
 
-    /* channels */
+    /* CHANNELS */
 
     // nest our data by channels we have data for
     var nested = d3.nest().key( function(d) {return d.channel}).entries(updater.msgs);
 
     // set range of Y axis for the height of one channel
-    y.domain(d3.extent(updater.msgs, function(d) {return d.author_id}))
-    y.range([0, (window.height / nested.length)])
+    var chatmargin = (window.height / nested.length) / 6
+    // y.domain(d3.extent(updater.msgs, function(d) {return d.author_id}))
+    y.domain([0,13])  // modulo author_id by this so we don't have to keep calculating the extents
+    y.range([0, (window.height / nested.length) - (chatmargin*2) ])
 
     /* channel backgrounds */
 
@@ -240,19 +242,19 @@ function render_channel () {
 
         // Create
         scats.enter().append('circle')
-            .attr('cx', function(d,i) {return x(d.timestamp*1000)})
-            .attr('cy', function(d,i) {return y(d.author_id)})
-            .attr('r', function(d,i) {return Math.log(d.content.length)})
-            .style('fill', 'steelblue')
-            .style('fill-opacity', '.6')
+            .attr('cx', function(d,i) { return x(d.timestamp*1000) })
+            .attr('cy', function(d,i) { return y(d.author_id % 13) + chatmargin })
+            .attr('r', function(d,i) { return Math.log(d.content.length) })
+            .style('fill', function(d) { return d.color }) // should be the author's chosen color
+            .style('fill-opacity', '1')
 
         // Update
         scats
             .transition()
                 .duration(1000)
                 .attr('cx', function(d,i) {return x(d.timestamp*1000)})
-                .attr('cy', function(d,i) {return y(d.author_id)})
-                .style('fill-opacity', '.2')
+                .attr('cy', function(d,i) {return y(d.author_id % 13) + chatmargin })
+                .style('fill-opacity', '.6')
 
         // Remove
         scats.exit().remove()
@@ -313,6 +315,7 @@ jQuery.fn.formToDict = function() {
 var updater = {
     socket: null,
     msgs: [],
+    buffsize: 1000,
 
     start: function() {
         var url = "ws://" + location.host + "/chatsocket";
@@ -323,10 +326,13 @@ var updater = {
     },
 
     on_message: function(msg) {
-        updater.msgs.push(msg);
+        var buffer = updater.msgs;
+        buffer.push(msg);
+        updater.msgs = buffer.slice(buffer.length-updater.buffsize, buffer.length); // discard oldest items when we hit the cap
+
         Tstart = new Date()
         render();  // draw things
-        console.log('rendered', updater.msgs.length, 'chats in', (new Date())-Tstart, 'ms');
+        // console.log('rendered', updater.msgs.length, 'chats in', (new Date())-Tstart, 'ms');
         
     }
 };
