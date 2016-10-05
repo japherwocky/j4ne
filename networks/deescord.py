@@ -6,6 +6,8 @@ import asyncio
 import re
 import os
 import json
+import requests
+import html
 
 import discord
 
@@ -197,6 +199,27 @@ class Discord(object):
         await self.check_tweets()
         tornado.ioloop.PeriodicCallback(self.check_tweets, 5*60*1000).start()
 
+    def normalize_tweet(self, tweet):
+
+        tweet['text'] = html.unescape(tweet['text'])
+
+        # twitter sets a cookie in the redirect, so this is basically moot
+        # for attachments.  
+        if 'https://t.co/' in tweet['text']:
+            link = tweet['text'].split('https://t.co/', 1)[1].strip(')').split()[0]
+            link = 'https://t.co/' + link
+
+            resp = requests.head(link)
+
+            if 'location' not in resp.headers:
+                # we grabbed the URL wrong somehow, abort
+                return tweet
+
+            real_link = '<{}>'.format(resp.headers['location'])
+
+            tweet['text'] = tweet['text'].replace(link, real_link)
+
+        return tweet
 
     async def check_tweets(self):
 
@@ -218,8 +241,24 @@ class Discord(object):
                         if tweet['in_reply_to_status_id']:
                             continue
 
-                        await self.say(chann, '{} tweets: {}'.format(tweet['user']['screen_name'],tweet['text']))
+                        tweet = self.normalize_tweet(tweet)
+
+                        if 'retweeted_status' in tweet:
+                            user = tweet['retweeted_status']['user']['screen_name']
+                            tweet_id = tweet['retweeted_status']['id']
+                            retweet_link = 'https://twitter.com/{}/status/{}'.format(user, tweet_id)
+
+                            if not tweet['is_quote_status']:
+                                await self.say(chann, '{} retweets:\n\n {} \n\n <{}>'.format(tweet['user']['screen_name'], tweet['text'],retweet_link))
+                                continue
+
+                            else:
+                                await self.say(chann, '{} tweets:\n\n {} \n\n <{}>'.format(tweet['user']['screen_name'],tweet['text'],retweet_link))
+                                continue
+
+                        await self.say(chann, '{} tweets:\n\n {}'.format(tweet['user']['screen_name'],tweet['text']))
 
                         tooter['last'] = tweet['id']
 
         await self.save_twitter_config()
+
