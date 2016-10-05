@@ -1,7 +1,7 @@
 cleverbot
 feedparser
 giphypop
-git+https://github.com/Rapptz/discord.py@async
+discord.py[voice]
 markdown
 peewee
 requests
