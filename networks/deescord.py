@@ -238,6 +238,8 @@ class Discord(object):
                         if tooter['last'] and tweet['id'] <= tooter['last']:
                             continue
 
+                        tooter['last'] = tweet['id']
+
                         if tweet['in_reply_to_status_id']:
                             continue
 
@@ -258,7 +260,6 @@ class Discord(object):
 
                         await self.say(chann, '{} tweets:\n\n {}'.format(tweet['user']['screen_name'],tweet['text']))
 
-                        tooter['last'] = tweet['id']
 
         await self.save_twitter_config()
 
