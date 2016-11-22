@@ -29,6 +29,8 @@ Dlogger = Dlogger()
 # instantiate this here to use decorators
 client = discord.Client()  # loop defaults to asyncio.get_event_loop()
 
+# We need to wrap connect() as a task to prevent timeout error at runtime.
+# based on the following suggested fix: https://github.com/KeepSafe/aiohttp/issues/1176
 def connect_deco(func):
     async def wrapper(*args, **kwargs):
         return asyncio.get_event_loop().create_task(func(*args, **kwargs))
