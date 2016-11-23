@@ -107,6 +107,7 @@ def main():
     define("twitch", default=True, help="Connect to Twitch chat servers")
     define("twitchapi", default=True, help="Connect to Twitch API")
     define("discord", default=True, help="Connect to Discord chat servers")
+    define("newbot", default=False, help="Generates a Discord server invite link for a new bot instance")
 
     define("runtests", default=False, help="Run tests")
 
@@ -148,7 +149,16 @@ def main():
     http_server.listen(options.port)
     info('Serving on port %d' % options.port)
 
-    # connect to discord 
+    # Discord options:
+    ## new bot instance authentication
+    if options.newbot:
+        from keys import discord_app
+        from discord_invite import invite_link
+        print("Please go to the following link to authorize the bot, then press `Enter`:\n")
+        print(invite_link(discord_app))
+        input("\nPress `Enter` to continue...")
+
+    ## connect to discord 
     if options.discord:
         from networks.deescord import Discord
         app.Discord = Discord()
