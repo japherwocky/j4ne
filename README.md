@@ -73,7 +73,7 @@ The following options should be passed to `j4ne.py` if you are running the bot f
 
 * `mktables` : Generates a new sqlite database
 
-* `twitch` & `twitchapi` : These options should be set to `False` if you will not be using these features and not added the credentials to `keys.py`
+* `twitch` & `twitchapi` : These options should be set to `False` if you will not be using these features and have not added the credentials to `keys.py`
 
 Examble:
 
