@@ -42,6 +42,8 @@ virtualenv -p python3.5 env
 env/bin/pip install -r requirements.txt
 ```
 
+
+
 Getting j4ne up and running
 ===========================
 
@@ -67,14 +69,14 @@ Running the server for the first time
 
 The following options should be passed to 'j4ne.py' if you are running the bot for the first time.
 
-\`newbot\`  
-This option will generate a link at the command line so you can add j4ne to your Discord server
+`newbot`  
+    This option will generate a link at the command line so you can add j4ne to your Discord server
 
-\`mktables\`  
-Generates a new sqlite database
+`mktables`  
+    Generates a new sqlite database
 
-\`twitch\` & \`twitchapi\`  
-These options should be set to \`False\` if you will not be using these features and not added the credentials to \`keys.py\`
+`twitch` & `twitchapi`  
+    These options should be set to \`False\` if you will not be using these features and not added the credentials to \`keys.py\`
 
 Examble:
 
