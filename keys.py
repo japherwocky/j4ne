@@ -1,8 +1,9 @@
-twitch_key = ''
-twitch_secret = ''
+twitch_name = ''
+twitch_token = ''
+twitch_key =''
 
-discord_email = ''
-discord_pass = ''
+discord_token = ''
+discord_app_id = ''
 
 twitter_appkey = ''
 twitter_appsecret = ''
