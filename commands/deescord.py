@@ -11,6 +11,7 @@ import giphypop
 G = giphypop.Giphy()
 
 from keys import discord_app
+from discord_invite import invite_link
 from peewee import fn
 from commands.twitch import mod_only
 from commands.models import Quote, Command
@@ -165,20 +166,7 @@ async def twitchwgaff(network, channel, message):
 
 @command('invite')
 async def bot_invite(network, channel, message):
-    perms = [
-        '0x0000400',  # READ_MESSAGES
-        '0x0000800',  # SEND_MESSAGES
-        '0x0002000',  # DELETE_MESSAGES
-        '0x0008000',  # ATTACH_FILES
-        '0x0004000',  # EMBED_LINKS ?
-        '0x0100000',  # CONNECT (to voice)
-        '0x0200000',  # SPEAK
-        '0x2000000',  # DETECT VOICE
-    ]
-
-    perm_int = sum([int(perm, 0) for perm in perms])
-
-    link = 'https://discordapp.com/oauth2/authorize?&client_id={}&scope=bot&permissions={}'.format(discord_app, perm_int)
+    link = invite_link(discord_app)
     await network.send_message(channel, 'Invite me to your server here: {}'.format(link))
 
 

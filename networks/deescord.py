@@ -29,6 +29,12 @@ Dlogger = Dlogger()
 # instantiate this here to use decorators
 client = discord.Client()  # loop defaults to asyncio.get_event_loop()
 
+# We need to wrap connect() as a task to prevent timeout error at runtime.
+# based on the following suggested fix: https://github.com/KeepSafe/aiohttp/issues/1176
+def connect_deco(func):
+    async def wrapper(*args, **kwargs):
+        return asyncio.get_event_loop().create_task(func(*args, **kwargs))
+    return wrapper
 
 class Discord(object):
     _Twitter = None
@@ -36,8 +42,8 @@ class Discord(object):
 
     client = client  # so that network specific commands can access lower levels
 
-    @gen.coroutine
-    def connect(self):
+    @connect_deco
+    async def connect(self):
 
         """
         @client.event
@@ -59,9 +65,8 @@ class Discord(object):
             await self.on_message(message)
 
         # this lived in a while True loop for a bit, to handle restarting
-        while True:
-            info('Connecting to Discord..')
-            yield client.start(discord_token)
+        info('Connecting to Discord..')
+        await client.start(discord_token)
 
     async def send_message(self, channel, message):
         return await client.send_message(channel, message)
