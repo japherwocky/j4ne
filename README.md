@@ -75,7 +75,7 @@ The following options should be passed to `j4ne.py` if you are running the bot f
 
 * `twitch` & `twitchapi` : These options should be set to `False` if you will not be using these features and have not added the credentials to `keys.py`
 
-Examble:
+Example:
 
 ``` bash
 env/bin/python j4ne.py -newbot=True -mktables=True -twitch=False -twitchapi=False
