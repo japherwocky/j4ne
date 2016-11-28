@@ -152,10 +152,10 @@ def main():
     # Discord options:
     ## new bot instance authentication
     if options.newbot:
-        from keys import discord_app
+        from keys import discord_app_id
         from discord_invite import invite_link
         print("Please go to the following link to authorize the bot, then press `Enter`:\n")
-        print(invite_link(discord_app))
+        print(invite_link(discord_app_id))
         input("\nPress `Enter` to continue...")
 
     ## connect to discord 

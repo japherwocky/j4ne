@@ -10,7 +10,7 @@ from tornado.httpclient import HTTPError
 import giphypop
 G = giphypop.Giphy()
 
-from keys import discord_app
+from keys import discord_app_id
 from discord_invite import invite_link
 from peewee import fn
 from commands.twitch import mod_only
@@ -166,7 +166,7 @@ async def twitchwgaff(network, channel, message):
 
 @command('invite')
 async def bot_invite(network, channel, message):
-    link = invite_link(discord_app)
+    link = invite_link(discord_app_id)
     await network.send_message(channel, 'Invite me to your server here: {}'.format(link))
 
 
