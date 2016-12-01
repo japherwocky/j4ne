@@ -58,6 +58,14 @@ async def youropinion(network, channel, message):
     await network.send_file(channel, 'static/youropinion.png')
 
 
+@command('megapracejudge')
+async def megajudge(network, channel, message):
+    await network.send_file(channel, 'static/megapracejudge.png')
+
+@command('megapracefail')
+async def megafail(network, channel, message):
+    await network.send_file(channel, 'static/megapracefail.png')
+
 @command('lewd')
 async def lewd(network, channel, message):
     lewds = ['anneLewd1.jpg', 'anneLewd2.gif', 'anneLewd3.png', 'anneLewd4.gif', 'sledgeLewd.gif', 'beanLewd.gif']  # TODO get some randint() action in here
