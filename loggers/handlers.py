@@ -7,17 +7,6 @@ from loggers.models import Message
 from webchat import ChatSocketHandler
 
 
-# the first thought was to bake this into a base class, but maybe that's overengineered
-def echo(msg):
-    """ dump a copy of the chat into the console / stdout """
-    info('[{}:{}] <{}> {}'.format(
-        msg.server,
-        msg.channel,
-        msg.author,
-        msg.content
-        ))
-
-
 class Discord(object):
 
     def __call__(self, message):
@@ -36,9 +25,8 @@ class Discord(object):
             content = message.content,
         )
 
-        echo(msg)
-
         return msg
+
 
 from playhouse.shortcuts import model_to_dict
 class Twitch(object):
@@ -98,7 +86,6 @@ class Twitch(object):
                 bits = meta['bits'],
             )
 
-            echo(msg)
             self.webchat(msg)
 
             return msg
