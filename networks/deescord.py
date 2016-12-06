@@ -256,14 +256,14 @@ class Discord(object):
                             retweet_link = 'https://twitter.com/{}/status/{}'.format(user, tweet_id)
 
                             if not tweet['is_quote_status']:
-                                await self.say(chann, '{} retweets:\n\n {} \n\n <{}>'.format(tweet['user']['screen_name'], tweet['text'],retweet_link))
+                                await self.say(chann, '{} retweets:\n\n{}\n\n<{}>'.format(tweet['user']['screen_name'], tweet['text'],retweet_link))
                                 continue
 
                             else:
-                                await self.say(chann, '{} tweets:\n\n {} \n\n <{}>'.format(tweet['user']['screen_name'],tweet['text'],retweet_link))
+                                await self.say(chann, '{} tweets:\n\n{}\n\n<{}>'.format(tweet['user']['screen_name'],tweet['text'],retweet_link))
                                 continue
 
-                        await self.say(chann, '{} tweets:\n\n {}'.format(tweet['user']['screen_name'],tweet['text']))
+                        await self.say(chann, '{} tweets:\n\n{}'.format(tweet['user']['screen_name'],tweet['text']))
 
 
         await self.save_twitter_config()
