@@ -142,7 +142,7 @@ class Discord(object):
         if message.channel in conf[this_server] and tooter in [t['screen_name'] for t in conf[this_server][message.channel]]:
             return await self.say(message.channel, 'I am already retweeting {} here.'.format(tooter))
 
-        conf[this_server][message.channel].append( {'screen_name':tooter, 'last':None})
+        conf[this_server][message.channel].append( {'screen_name':tooter, 'last':1})
 
         await self.save_twitter_config()
 
@@ -208,6 +208,7 @@ class Discord(object):
 
         tweet['text'] = html.unescape(tweet['text'])
 
+        """
         # twitter sets a cookie in the redirect, so this is basically moot
         # for attachments.  
         if 'https://t.co/' in tweet['text']:
@@ -223,6 +224,7 @@ class Discord(object):
             real_link = '<{}>'.format(resp.headers['location'])
 
             tweet['text'] = tweet['text'].replace(link, real_link)
+        """
 
         return tweet
 
@@ -238,9 +240,11 @@ class Discord(object):
 
                     tweets = self._twitter.get_user_timeline(screen_name = tooter['screen_name'])
                     tweets.reverse()
+                    if tooter['last'] == 1:
+                        tweets = [tweets[-1],]
 
                     for tweet in tweets:
-                        if tooter['last'] and tweet['id'] <= tooter['last']:
+                        if tooter['last'] > 1 and tweet['id'] <= tooter['last']:
                             continue
 
                         tooter['last'] = tweet['id']
@@ -256,14 +260,14 @@ class Discord(object):
                             retweet_link = 'https://twitter.com/{}/status/{}'.format(user, tweet_id)
 
                             if not tweet['is_quote_status']:
-                                await self.say(chann, '{} retweets:\n\n{}\n\n<{}>'.format(tweet['user']['screen_name'], tweet['text'],retweet_link))
+                                await self.say(chann, '{} retweets:\n\n{}'.format(tweet['user']['screen_name'], retweet_link))
                                 continue
 
                             else:
-                                await self.say(chann, '{} tweets:\n\n{}\n\n<{}>'.format(tweet['user']['screen_name'],tweet['text'],retweet_link))
+                                await self.say(chann, '{} retweets:\n\n{}'.format(tweet['user']['screen_name'], retweet_link))
                                 continue
 
-                        await self.say(chann, '{} tweets:\n\n{}'.format(tweet['user']['screen_name'],tweet['text']))
+                        await self.say(chann, '{} tweets:\n\n{}\n\n'.format(tweet['user']['screen_name'], tweet['text']))
 
 
         await self.save_twitter_config()
