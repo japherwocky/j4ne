@@ -226,6 +226,7 @@ class Discord(object):
 
         return tweet
 
+    @connect_deco
     async def check_tweets(self):
 
         for serv in self._twitter_conf.keys():
