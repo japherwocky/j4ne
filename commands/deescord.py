@@ -71,6 +71,10 @@ async def lewd(network, channel, message):
     lewds = ['anneLewd1.jpg', 'anneLewd2.gif', 'anneLewd3.png', 'anneLewd4.gif', 'sledgeLewd.gif', 'beanLewd.gif']  # TODO get some randint() action in here
     await network.send_file(channel, 'static/{}'.format(choice(lewds)))
 
+@command('dance')
+async def dance(network, channel, message):
+    await network.send_file(channel, 'static/mculdance.gif')
+
 
 @command('blush')
 async def blush(network, channel, message):
