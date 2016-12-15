@@ -107,6 +107,7 @@ def main():
     define("twitch", default=True, help="Connect to Twitch chat servers")
     define("twitchapi", default=True, help="Connect to Twitch API")
     define("discord", default=True, help="Connect to Discord chat servers")
+    define("twitter", default=True, help="Connect to Twitter")
     define("newbot", default=False, help="Generates a Discord server invite link for a new bot instance")
 
     define("runtests", default=False, help="Run tests")
@@ -177,16 +178,22 @@ def main():
 
         tornado.ioloop.IOLoop.instance().add_callback(app.TwitchAPI.connect)  
 
-    # connect to Twitch
+    # connect to Twitch chat
     if options.twitch:
         app.Twitch = TwitchParser()
         app.Twitch.application = app
 
         tornado.ioloop.IOLoop.instance().add_callback(app.Twitch.connect)  
 
+    if options.twitter:
+        from networks.twatter import Twitter
+        app.Twitter = Twitter(app)
+
+        tornado.ioloop.IOLoop.instance().add_callback(app.Twitter.connect)
+
     # link the Jukebox to the application
     from commands.jukebox import J  # our instance of the Jukebox
-    app.Jukebox = J
+    app.Jukebox = J  # on our instance of the Application
     
     tornado.ioloop.IOLoop.instance().start()
 
