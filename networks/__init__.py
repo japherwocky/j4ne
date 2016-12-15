@@ -1,7 +1,10 @@
-class Network:
+class Network (object):
     """
     Common interface for connecting and receiving realtimey events
     """
+
+    def __init__(self, application):
+        self.application = application
 
     async def connect(self):
         pass
@@ -17,7 +20,7 @@ class Network:
         #handle logging
     
         # classify & normalize
-        self.parse(msg)  
+        msg = self.parse(msg)  
 
         # archive
         self.log(msg)  
@@ -27,7 +30,15 @@ class Network:
 
 
     async def parse(self, msg):
-        pass
+        """
+        Normalize the raw message:
+            * HTML encoding
+            * unicode
+            * timezones
+        """
+
+
+        return msg
 
 
     async def log(self, msg):
