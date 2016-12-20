@@ -25,8 +25,18 @@ import commands.jukebox
 from loggers.handlers import Discord as Dlogger
 Dlogger = Dlogger()
 
+
+class ErrorCatcher(discord.Client):
+
+    async def on_error(event, *args, **kwargs):
+        import sys
+        sys.exc_info()
+
+        import pdb;pdb.set_trace()
+
+
 # instantiate this here to use decorators
-client = discord.Client()  # loop defaults to asyncio.get_event_loop()
+client = ErrorCatcher()  # loop defaults to asyncio.get_event_loop()
 
 # We need to wrap connect() as a task to prevent timeout error at runtime.
 # based on the following suggested fix: https://github.com/KeepSafe/aiohttp/issues/1176
@@ -59,7 +69,6 @@ class Discord(object):
         async def on_message(message):
             # info(message) 
             await self.on_message(message)
-
 
 
         # this lived in a while True loop for a bit, to handle restarting

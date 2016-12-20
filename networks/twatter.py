@@ -98,9 +98,12 @@ class Twitter(Network):
                     if tooter['last'] == 1:
                         tweets = [tweets[-1],]
 
+
                     for tweet in tweets:
                         if tooter['last'] > 1 and tweet['id'] <= tooter['last']:
                             continue
+
+                        info('new tweet from {}'.format(tweet['user']['screen_name']))
 
                         tooter['last'] = tweet['id']
 
@@ -125,8 +128,7 @@ class Twitter(Network):
 
                         await self.application.Discord.say(chann, '{} tweets:\n\n{}\n\n'.format(tweet['user']['screen_name'], tweet['text']))
 
-
-                        self.save_twitter_config()
+                    self.save_twitter_config()
 
         
     def setup_retweets(self):
