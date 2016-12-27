@@ -4,7 +4,10 @@ Centralized db connection to avoid circular imports
 import logging
 from peewee import SqliteDatabase
 from peewee import CharField, IntegerField, BooleanField
+
 db = SqliteDatabase('database.db')
+archive_db = SqliteDatabase('archive.db')
+
 db.connect()
 
 Migrations = {}
