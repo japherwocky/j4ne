@@ -1,6 +1,6 @@
 from peewee import *
 
-from db import db
+from db import db, archive_db
 
 
 class Message(Model):
@@ -47,4 +47,16 @@ class Event(Model):
 
     class Meta:
         database = db
+        db_table = 'events'
+
+
+class ArchiveMessage(Message):
+    class Meta:
+        database = archive_db
+        db_table = 'messages'
+
+
+class ArchiveEvent(Event):
+    class Meta:
+        database = archive_db
         db_table = 'events'
