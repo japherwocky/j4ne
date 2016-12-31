@@ -47,23 +47,22 @@ def shuffle2archive(LiveModel, ArchiveModel, cutoff_period=2):
                                          .get()
                                          .timestamp)
 
-    iterations = 0
+    records_archived = 0
     while oldest_record_date < cutoff:
         archive_row(LiveModel, ArchiveModel)
 
-        iterations += 1
-        if iterations % 100 == 1:
+        records_archived += 1
+        if records_archived % 100 == 1:
             logging.info('Archiving models older than {}.\n'
                          'Archived model {} with date {}.\n'
                          'Total records archived: {}.\n'
                          .format(cutoff,
                                  LiveModel,
                                  oldest_record_date,
-                                 iterations))
+                                 records_archived))
 
         oldest_record_date = ensure_datetime(oldest_record_query(LiveModel)
                                              .get()
                                              .timestamp)
 
-    logging.info('Shuffle finished with {} records archived in model {}.'
-                 .format(iterations, ArchiveModel))
+    return records_archived
