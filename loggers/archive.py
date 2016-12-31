@@ -14,8 +14,8 @@ def ensure_datetime(timestamp):
 def oldest_record_query(Model):
     record = (Model
               .select()
-              .group_by(Model)
-              .having(fn.Min(Model.timestamp)))
+              .order_by(Model.timestamp.asc())
+              .limit(1))
     return record
 
 
