@@ -41,6 +41,8 @@ def archive_row(LiveModel, ArchiveModel):
     except IntegrityError:
         return "Archiving failed: there was an issue with either saving the record to archive or deleting from live database."
 
+    return 1  # number of rows archived. will always be 1 if successful
+
 
 def shuffle2archive(LiveModel, ArchiveModel, cutoff_period=2):
     cutoff = datetime.now() - timedelta(days=cutoff_period)
@@ -50,9 +52,9 @@ def shuffle2archive(LiveModel, ArchiveModel, cutoff_period=2):
 
     records_archived = 0
     while oldest_record_date < cutoff:
-        archive_row(LiveModel, ArchiveModel)
+        was_archived = archive_row(LiveModel, ArchiveModel)
 
-        records_archived += 1
+        records_archived += was_archived
         if records_archived % 100 == 1:
             logging.info('Archiving models older than {}.\n'
                          'Archived model {} with date {}.\n'
