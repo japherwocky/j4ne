@@ -36,12 +36,12 @@ def archive_row(LiveModel, ArchiveModel):
                  .delete()
                  .where(LiveModel.id == livedb_query.get().id)
                  .execute())
-        return 'Record archived successfully.'
+        return 1  # number of rows archived. will always be 1 if successful
 
     except IntegrityError:
         return "Archiving failed: there was an issue with either saving the record to archive or deleting from live database."
 
-    return 1  # number of rows archived. will always be 1 if successful
+
 
 
 def shuffle2archive(LiveModel, ArchiveModel, cutoff_period=2):
@@ -55,7 +55,7 @@ def shuffle2archive(LiveModel, ArchiveModel, cutoff_period=2):
         was_archived = archive_row(LiveModel, ArchiveModel)
 
         records_archived += was_archived
-        if records_archived % 100 == 1:
+        if records_archived % 10 == 1:
             logging.info('Archiving models older than {}.\n'
                          'Archived model {} with date {}.\n'
                          'Total records archived: {}.\n'
