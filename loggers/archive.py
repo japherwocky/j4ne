@@ -19,6 +19,7 @@ def oldest_record_query(Model):
     return record
 
 
+@db.atomic()
 def archive_row(LiveModel, ArchiveModel):
     livedb_query = oldest_record_query(LiveModel)
     # ensure Table exists in archive
