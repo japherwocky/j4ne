@@ -12,11 +12,11 @@ def ensure_datetime(timestamp):
 
 
 def oldest_record_query(Model):
-    record = (Model
-              .select()
-              .order_by(Model.timestamp.asc())
-              .limit(1))
-    return record
+    query = (Model
+             .select()
+             .order_by(Model.timestamp.asc())
+             .limit(1))
+    return query
 
 
 @db.atomic()
