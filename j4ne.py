@@ -148,10 +148,15 @@ def main():
                          (models.Event, models.ArchiveEvent)]
 
         for LiveModel, ArchiveModel in archive_pairs:
-            number_of_records = shuffle2archive(LiveModel, ArchiveModel)
+            info('Starting archive shuffle with model {}'.format(LiveModel))
+            number_of_records = shuffle2archive(LiveModel, ArchiveModel, False, 219) # temporary cutoff period
 
-            info('Shuffle finished with {} records archived in model {}.'
-                 .format(number_of_records, ArchiveModel))
+            info('Shuffle finished with {} records archived in model {},\n'
+                 'and {} records deleted from model {}'
+                 .format(number_of_records[0],
+                         LiveModel,
+                         number_of_records[1],
+                         ArchiveModel))
 
 
     if options.runtests:

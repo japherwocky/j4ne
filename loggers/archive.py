@@ -11,61 +11,60 @@ def ensure_datetime(timestamp):
         return datetime.fromtimestamp(timestamp)
 
 
-def oldest_record_query(Model):
+@db.atomic()
+def archivable_records_query(Model, cutoff):
     query = (Model
              .select()
+             .where(Model.timestamp < cutoff)
              .order_by(Model.timestamp.asc())
-             .limit(1))
+             .dicts())  # we want a dict for ceating new record
     return query
 
 
-@db.atomic()
-def archive_row(LiveModel, ArchiveModel):
-    livedb_query = oldest_record_query(LiveModel)
+@archive_db.atomic()
+def archive_record(record_as_dict, ArchiveModel):
     # ensure Table exists in archive
     ArchiveModel.create_table(fail_silently=True)
-    try:
-        with archive_db.atomic():
-            record_data = livedb_query.dicts().get()
-            archive_db.connect()
-            ArchiveModel.insert(record_data).execute()
-            archive_db.close()
-
-            with db.atomic():
-                (LiveModel
-                 .delete()
-                 .where(LiveModel.id == livedb_query.get().id)
-                 .execute())
-        return 1  # number of rows archived. will always be 1 if successful
-
-    except IntegrityError:
-        return "Archiving failed: there was an issue with either saving the record to archive or deleting from live database."
+    result = (ArchiveModel
+              .get_or_create(id=record_as_dict['id'],
+                             defaults=record_as_dict))
+    if result[1]:
+        return 1
+    else:
+        return 0
 
 
-
-
-def shuffle2archive(LiveModel, ArchiveModel, cutoff_period=2):
+# @db.atomic() reminder: talk about the trade offs of this decorator and if its wanted
+def shuffle2archive(LiveModel, ArchiveModel, limit_one_row=True, cutoff_period=2):
     cutoff = datetime.now() - timedelta(days=cutoff_period)
-    oldest_record_date = ensure_datetime(oldest_record_query(LiveModel)
-                                         .get()
-                                         .timestamp)
+    archivable_records = archivable_records_query(LiveModel, cutoff) # todo: see what happens when nothing is archivable
 
-    records_archived = 0
-    while oldest_record_date < cutoff:
-        was_archived = archive_row(LiveModel, ArchiveModel)
+    logging.info('Attempting to archive model {} older than {}.\n'
+                 'Please wait, the initial query will take some time'
+                 'to complete if there is a large number of recrods'
+                 'to be archived.'
+                 .format(LiveModel, cutoff))
 
-        records_archived += was_archived
-        if records_archived % 10 == 1:
-            logging.info('Archiving models older than {}.\n'
-                         'Archived model {} with date {}.\n'
-                         'Total records archived: {}.\n'
-                         .format(cutoff,
-                                 LiveModel,
-                                 oldest_record_date,
-                                 records_archived))
+    if limit_one_row:
+        archivable_records = archivable_records.limit(1)
 
-        oldest_record_date = ensure_datetime(oldest_record_query(LiveModel)
-                                             .get()
-                                             .timestamp)
+    archived = 0
+    deleted = 0
+    for record in archivable_records:
+        archived += archive_record(record, ArchiveModel)
 
-    return records_archived
+        #  delete the archived record from live database
+        deleted += (LiveModel
+                    .get(id=record['id'])
+                    .delete_instance())
+
+        if True: #(archived % 100 == 1) | (deleted % 100 == 1):
+            logging.info('Archived model {} with date {}.\n'
+                         'Total records archived: {}\n'
+                         'Total records deleted: {}\n'
+                         .format(LiveModel,
+                                 record['timestamp'],
+                                 archived,
+                                 deleted))
+
+    return (archived, deleted)
