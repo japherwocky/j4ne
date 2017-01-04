@@ -3,7 +3,12 @@ from peewee import *
 from db import db, archive_db
 
 
-class Message(Model):
+class BaseModel(Model):
+    class Mesa:
+        database = db
+
+
+class Message(BaseModel):
 
     network = CharField()
     author = CharField()

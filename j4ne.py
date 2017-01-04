@@ -144,19 +144,18 @@ def main():
         from loggers import models
 
         # (live_models, archive_models)
-        archive_pairs = [(models.Message, models.ArchiveMessage),
-                         (models.Event, models.ArchiveEvent)]
+        models2archive = [models.Message,
+                          models.Event]
 
-        for LiveModel, ArchiveModel in archive_pairs:
+        for LiveModel in models2archive:
             info('Starting archive shuffle with model {}'.format(LiveModel))
-            number_of_records = shuffle2archive(LiveModel, ArchiveModel, False, 219) # temporary cutoff period
+            number_of_records = shuffle2archive(LiveModel, False, 219) # temporary cutoff period
 
-            info('Shuffle finished with {} records archived in model {},\n'
+            info('Shuffle finished with {} records archived'
                  'and {} records deleted from model {}'
                  .format(number_of_records[0],
-                         LiveModel,
                          number_of_records[1],
-                         ArchiveModel))
+                         LiveModel))
 
 
     if options.runtests:
