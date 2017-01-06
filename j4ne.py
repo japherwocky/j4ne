@@ -149,14 +149,16 @@ def main():
 
         for LiveModel in models2archive:
             info('Starting archive shuffle with model {}'.format(LiveModel))
-            number_of_records = shuffle2archive(LiveModel, False, 219) # temporary cutoff period
 
-            info('Shuffle finished with {} records archived'
+            try:
+                number_of_records = shuffle2archive(LiveModel, False, 224) # temporary cutoff period
+                info('Shuffle finished with {} records archived'
                  'and {} records deleted from model {}'
                  .format(number_of_records[0],
                          number_of_records[1],
                          LiveModel))
-
+            except LiveModel.DoesNotExist:
+                info('No records exist before archivable date')
 
     if options.runtests:
         tornado.testing.main()
