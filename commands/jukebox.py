@@ -3,6 +3,7 @@ from random import shuffle
 from array import array
 from collections import deque
 from logging import info, debug, error
+import asyncio
 import audioop
 import discord
 import tornado
@@ -10,6 +11,9 @@ import tornado
 import youtube_dl as ytdl
 from youtube_dl.utils import DownloadError
 from websockets.exceptions import InvalidState
+
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 
 
 class Jukebox:
@@ -31,6 +35,10 @@ class Jukebox:
         with open('playlist.txt') as f:
             self.playlist = f.readlines()
             shuffle(self.playlist)
+
+        self.executor = ProcessPoolExecutor(max_workers=2)
+        self.loop = asyncio.get_event_loop()
+
 
 Jukebox = J = Jukebox()  # completely unenforced singleton
 
@@ -114,7 +122,7 @@ async def say(client, channel, message, destroy=0):
         await client.delete_message(msg)
 
 
-@command('summon')
+#@command('summon')
 async def summon(network, channel, message):
     ''' Try to join the author's voice channel '''
     authorchan = message.author.voice_channel
@@ -196,7 +204,7 @@ async def request(network, channel, message):
 
 
 
-@command('play')
+#@command('play')
 async def play(network, channel, message):
 
     if not (J.voice and J.voicechan):
@@ -215,7 +223,7 @@ async def play(network, channel, message):
     await playsong()
 
 
-@command('song')
+#@command('song')
 async def song(network, channel, message):
     if not (J.player and J.player.is_playing()):
         return await network.send_message(channel, 'I am not playing right now.')
@@ -223,7 +231,7 @@ async def song(network, channel, message):
     await network.send_message(channel, 'Now playing **{}**'.format(J.player.title))
 
 
-@command('stop')
+#@command('stop')
 async def stop(network=None, channel=None, message=None):  # defaults, sometimes we call this directly
 
     # set this before calling .stop(), the end callback will check for it
@@ -241,7 +249,7 @@ async def stop(network=None, channel=None, message=None):  # defaults, sometimes
         await network.send_message(channel, ':hammer: time')
 
 
-@command('skip')
+#@command('skip')
 async def skip(network, channel, message):
     """ Skip whatever is playing right now - TODO, votes? """
 
@@ -249,7 +257,7 @@ async def skip(network, channel, message):
         J.player.stop()
 
 
-@command('volume')
+#@command('volume')
 async def volume(network, channel, message):
     """ Set the volume """
 
@@ -269,7 +277,7 @@ async def volume(network, channel, message):
     return await network.send_message(channel, 'The volume is set at {}'.format(J._volume))
 
 
-@command('queue')
+#@command('queue')
 async def queue(network, channel, message):
 
     if not J.requests:
@@ -278,9 +286,29 @@ async def queue(network, channel, message):
     else:
         await network.send_message(channel, 'There are {} requests, next up is {}'.format(len(J.requests), J.requests[0].title))
 
+
+#@command('pause')
+async def pause(network, channel, message):
+    import time
+    time.sleep(10)
+    info('unblocking')
+
+
+#@command('tangle')
+async def tangle(network, channel, message):
+    player = J.voice.create_ffmpeg_player(
+                    'test.mp3',
+                    before_options="-nostdin",
+                    options="-vn -b:a 128k",
+            )
+
+    J.player = player
+    player.start()
+    
+
 import livestreamer
 from livestreamer.exceptions import NoPluginError
-@command('stream')
+#@command('stream')
 async def stream(network, channel, message):
     req = message.content.split('stream')[1].strip()
 
