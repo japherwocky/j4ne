@@ -36,7 +36,7 @@ class ErrorCatcher(discord.Client):
 
 
 # instantiate this here to use decorators
-client = ErrorCatcher()  # loop defaults to asyncio.get_event_loop()
+client = discord.Client()  # loop defaults to asyncio.get_event_loop()
 
 # We need to wrap connect() as a task to prevent timeout error at runtime.
 # based on the following suggested fix: https://github.com/KeepSafe/aiohttp/issues/1176
@@ -59,7 +59,7 @@ class Discord(object):
         async def on_ready():
             info('Logged into Discord as {} {}'.format(client.user.id, client.user.name) )
 
-            if getattr(self.application, 'Twitter'):
+            if getattr(self.application, 'Twitter', False):
                 self.application.Twitter.setup_retweets()
                 info('Retweet config loaded')
 
