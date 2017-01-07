@@ -146,7 +146,7 @@ async def summon(network, channel, message):
     J.voice = await network.client.join_voice_channel(authorchan)
 
 
-@command('banish')
+#@command('banish')
 async def banish(network, channel, message):
     ''' Clear out any pre-existing voice connections '''
     await stop()
@@ -167,7 +167,7 @@ J.ytdl = ytdl.YoutubeDL(
 )
 
 
-@command('request')
+#@command('request')
 async def request(network, channel, message):
     req = message.content.split('|request')[1].strip()
 
