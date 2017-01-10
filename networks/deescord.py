@@ -71,9 +71,10 @@ class Discord(object):
             await self.on_message(message)
 
 
-        # this lived in a while True loop for a bit, to handle restarting
-        info('Connecting to Discord..')
-        await client.start(discord_token)
+        # force the thing to reconnect?
+        while True:
+            info('Connecting to Discord..')
+            await client.start(discord_token)
 
     async def send_message(self, channel, message):
         return await client.send_message(channel, message)
