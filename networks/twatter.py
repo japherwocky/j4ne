@@ -29,6 +29,7 @@ class Twitter(Network):
     _twitter_conf = None
 
     async def connect(self):
+
         # kick off a periodic task for our ghetto ass Twitter polling
         self._twitter = Twython(
             twitter_appkey,
@@ -37,7 +38,7 @@ class Twitter(Network):
             twitter_tokensecret
             )
 
-        verify = self._twitter.verify_credentials()
+        self._twitter.verify_credentials()
 
         # schedule polling for tweeters
         tornado.ioloop.PeriodicCallback( self.check_tweets , 1*60*1000).start()
