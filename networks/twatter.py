@@ -37,7 +37,7 @@ class Twitter(Network):
             twitter_tokensecret
             )
 
-        verify = self._twitter.verify_credentials()
+        self._twitter.verify_credentials()
 
         # schedule polling for tweeters
         tornado.ioloop.PeriodicCallback( self.check_tweets , 1*60*1000).start()
