@@ -23,6 +23,7 @@ class Twitter(Network):
 
     async def connect(self):
 
+        # kick off a periodic task for our ghetto ass Twitter polling
         self._twitter = Twython(
             twitter_appkey, 
             twitter_appsecret, 
@@ -30,8 +31,6 @@ class Twitter(Network):
             twitter_tokensecret
             )
 
-        # kick off a periodic task for our ghetto ass Twitter polling
-        self._twitter = Twython(twitter_appkey, twitter_appsecret, twitter_token, twitter_tokensecret)
         self._twitter.verify_credentials()
 
         # schedule polling for tweeters
