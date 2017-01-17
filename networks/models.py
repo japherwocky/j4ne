@@ -38,3 +38,30 @@ class Moderator(Model):
     class Meta:
         database = db
         db_table = 'moderators'
+
+
+#Twitter related tables
+db = Sqlitedatabase('test.db') # for testing only
+class DiscordServer(Model):
+    Server = CharField()
+
+    class Meta:
+        database = db
+        db_table = 'servers'
+
+
+class ServerChannel(Model):
+    channel = ForeignKeyField(DiscordServer)
+
+    class Meta:
+        database = db
+        db_table = 'channels'
+
+
+class Tooter(Model):
+    name = CharField()
+    last_toot_id = IntegerField()
+
+    class Meta:
+        database = db
+        db_table = 'tooters'
