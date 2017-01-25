@@ -1,4 +1,5 @@
 from peewee import *
+from playhouse.fields import ManyToManyField
 
 from db import db
 
@@ -41,27 +42,41 @@ class Moderator(Model):
 
 
 #Twitter related tables
-db = Sqlitedatabase('test.db') # for testing only
+db = SqliteDatabase('test.db') # for testing
+
+'''
+twatter tables with many to many relations:
+create_tables([
+    Tooter,
+    DiscordServer,
+    DiscordServer.tooters.get_through_model(),
+    DiscordChannel,
+    DiscordChannel.tooters.get_through_model()  ])
+'''
+class Tooter(Model):
+    account_name = CharField() # prolly should be unique
+    last_tweet_id = IntegerField(default=0)
+    retweeted_id = IntegerField(default=0)
+
+    class Meta:
+        database = db
+        db_table = 'tooters'
+
+
 class DiscordServer(Model):
-    Server = CharField()
+    name = CharField()
+    tooters = ManyToManyField(Tooter, related_name='servers')
 
     class Meta:
         database = db
         db_table = 'servers'
 
 
-class ServerChannel(Model):
-    channel = ForeignKeyField(DiscordServer)
+class DiscordChannel(Model):
+    name = CharField()
+    server = ForeignKeyField(DiscordServer, related_name='channels')
+    tooters = ManyToManyField(Tooter, related_name='channels')
 
     class Meta:
         database = db
         db_table = 'channels'
-
-
-class Tooter(Model):
-    name = CharField()
-    last_toot_id = IntegerField()
-
-    class Meta:
-        database = db
-        db_table = 'tooters'
