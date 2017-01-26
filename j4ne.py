@@ -245,6 +245,19 @@ def main():
     if options.twitter_setup:
         import keys
         from twython import Twython
+        from db import db
+        from networks import DiscordChannel, DiscordChannel, Tooter
+        
+        tables = [
+            Tooter,
+            DiscordServer,
+            DiscordServer.tooters.get_through_model(), # many-to-many 
+            DiscordChannel,
+            DiscordChannel.tooters.get_through_model() # many-to many 
+        ]
+
+        # ensure tables exist in db including intermediate tables for many to many relations
+        db.create_tables(tables, True)
 
         twitter = Twython(keys.twitter_appkey, keys.twitter_appsecret)
 
@@ -270,7 +283,7 @@ def main():
 
         print("token: {}\n token secret: {}".format(oauth_token, oauth_token_secret))
 
-        return  # remove this eventually
+        return
 
     if options.twitter:
         from networks.twatter import Twitter
