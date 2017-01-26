@@ -107,6 +107,7 @@ def main():
     define("twitch", default=True, help="Connect to Twitch chat servers")
     define("twitchapi", default=True, help="Connect to Twitch API")
     define("discord", default=True, help="Connect to Discord chat servers")
+    define("twitter_setup", default=False, help="setup twitter account integration")
     define("twitter", default=True, help="Connect to Twitter")
     define("newbot", default=False, help="Generates a Discord server invite link for a new bot instance")
 
@@ -184,6 +185,49 @@ def main():
         app.Twitch.application = app
 
         tornado.ioloop.IOLoop.instance().add_callback(app.Twitch.connect)  
+
+    if options.twitter_setup:
+        import keys
+        from twython import Twython
+        from db import db
+        from networks import DiscordChannel, DiscordChannel, Tooter
+        
+        tables = [
+            Tooter,
+            DiscordServer,
+            DiscordServer.tooters.get_through_model(), # many-to-many 
+            DiscordChannel,
+            DiscordChannel.tooters.get_through_model() # many-to many 
+        ]
+
+        # ensure tables exist in db including intermediate tables for many to many relations
+        db.create_tables(tables, True)
+
+        twitter = Twython(keys.twitter_appkey, keys.twitter_appsecret)
+
+        auth = twitter.get_authentication_tokens()
+        #Grab intermediate tokens. These are not the final tokens
+        ioauth_token = auth['oauth_token']
+        ioauth_token_secret = auth['oauth_token_secret']
+
+
+        print("\nPlease go to the following link to authorize Twitter account access, then record the authorization PIN:\n")
+        print(auth['auth_url'])
+        
+        pin = input("\nEnter the PIN then press `Enter`: ")
+        twitter = Twython(keys.twitter_appkey,
+                          keys.twitter_appsecret,
+                          ioauth_token,
+                          ioauth_token_secret)
+
+        final_auth = twitter.get_authorized_tokens(pin)
+
+        oauth_token = final_auth['oauth_token']
+        oauth_token_secret = final_auth['oauth_token_secret']
+
+        print("token: {}\n token secret: {}".format(oauth_token, oauth_token_secret))
+
+        return
 
     if options.twitter:
         from networks.twatter import Twitter
