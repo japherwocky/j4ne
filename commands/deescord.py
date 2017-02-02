@@ -170,6 +170,10 @@ async def neat(network, channel, message):
 async def wgaff(network, channel, message):
     await network.send_file(channel, 'static/WGAFFgif.gif')
 
+@command('panic')
+async def wgaff(network, channel, message):
+    await network.send_file(channel, 'static/panic.gif')
+
 @tcommand('wgaff')
 @mod_only
 async def twitchwgaff(network, channel, message):
