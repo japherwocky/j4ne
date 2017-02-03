@@ -54,7 +54,7 @@ create_tables([
     DiscordChannel.tooters.get_through_model()  ])
 '''
 class Tooter(Model):
-    account_name = CharField() # prolly should be unique
+    screen_name = CharField(unique=True)
     last_tweet_id = IntegerField(default=0)
     retweeted_id = IntegerField(default=0)
 
