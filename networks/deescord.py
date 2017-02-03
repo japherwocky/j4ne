@@ -27,7 +27,7 @@ from commands import discord_command as command
 import commands.deescord
 import commands.jukebox
 
-from networks.models import Tooter, DiscordChannel
+from networks.models import Tooter, DiscordServer, DiscordChannel
 
 from loggers.handlers import Discord as Dlogger
 Dlogger = Dlogger()
@@ -134,33 +134,45 @@ class Discord(object):
 
 
     async def retweet(self, message):
-        screen_name = message.content.split('|retweet')[1].strip()
+        screen_name = message.content.split('|retweet')[1]
 
         if not screen_name:
             return await self.say(message.channel, 'Who should I retweet?')
 
-        try:
-            tooter_profile = (self.application.Twitter._twitter
-                              .show_user(screen_name=screen_name))
+        else:
+            try:
+                tooter_profile = (self.application.Twitter
+                                  .show_user(screen_name=screen_name))
 
-        except TwythonError as e:
-            error('Twython Error: {}'.format(e))
+            except TwythonError as e:
+                error('Twython Error: {}'.format(e))
 
-            return await self.say(message.channel, 'There was a problem searching for the Twitter user with the screen name {}.'.format(screen_name))
+                return await self.say(message.channel, 'There was a problem searching for the Twitter user with the screen name {}. Is this spelled correctly?')
 
+        this_server = message.server
         this_channel = message.channel
 
         #  get_or_create() method returns (instance, created? = bool)
         tooter = Tooter.get_or_create(screen_name=screen_name)[0]
-        channel_in_db = DiscordChannel.get_or_create(discord_id=this_channel.id)
-        channel = channel_in_db[0]
+        server_in_db = DiscordServer.get_or_create(name=this_server)
 
-        if tooter.channels.where(DiscordChannel.discord_id == this_channel.id).exists():
+        if not server_in_db[1]:
+            channel = DiscordChannel.create(name=this_channel,
+                                            server=server_in_db[0])
+
+            tooter.servers.add(server_in_db, clear_existing=False)
+            tooter.channels.add(channel, clear_existing=False)
+
+        elif tooter.channels.where(DiscordChannel == this_channel):
             return await self.say(this_channel,
                                   'I am already retweeting {} here.'
-                                  .format(tooter.screen_name))
+                                  .format(tooter))
 
-        tooter.channels.add(channel, clear_existing=False)
+        else:
+            channel = DiscordChannel.get_or_create(name=this_channel,
+                                                   server=server_in_db)[0]
+            tooter.servers.add(server_in_db, clear_existing=False)
+            tooter.channels.add(channel, clear_existing=False)
 
         info('Tooter {} succesufully added'.format(tooter.screen_name))
         await self.say(message.channel, "I will start retweeting {} in this channel.".format(tooter.screen_name))
