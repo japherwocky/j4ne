@@ -42,8 +42,6 @@ class Moderator(Model):
 
 
 #Twitter related tables
-db = SqliteDatabase('test.db') # for testing
-
 '''
 twatter tables with many to many relations:
 create_tables([
