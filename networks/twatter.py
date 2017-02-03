@@ -7,6 +7,8 @@ from twython import Twython,TwythonStreamer
 from keys import twitter_appkey, twitter_appsecret, twitter_token, twitter_tokensecret
 from logging import debug, info, warning
 
+from networks.models import DiscordServer, DiscordChannel, Tooter
+
 # twitter = Twython(twitter_appkey, twitter_appsecret, twitter_token, twitter_tokensecret)
 # twitter.verify_credentials()
 
@@ -19,19 +21,18 @@ class Twitter(Network):
     Common interface for connecting and receiving realtimey events
     """
 
-    _twitter_conf = None  
+    _twitter_conf = None
 
     async def connect(self):
-
         # kick off a periodic task for our ghetto ass Twitter polling
         self._twitter = Twython(
-            twitter_appkey, 
-            twitter_appsecret, 
-            twitter_token, 
+            twitter_appkey,
+            twitter_appsecret,
+            twitter_token,
             twitter_tokensecret
             )
 
-        self._twitter.verify_credentials()
+        verify = self._twitter.verify_credentials()
 
         # schedule polling for tweeters
         tornado.ioloop.PeriodicCallback( self.check_tweets , 1*60*1000).start()
@@ -59,7 +60,7 @@ class Twitter(Network):
 
 
     async def parse(self, tweet):
-        
+
         tweet['text'] = html.unescape(tweet['text'])
 
         return tweet
@@ -75,43 +76,39 @@ class Twitter(Network):
 
     @taskify
     async def check_tweets(self):
-        """ Parse our stupid homebrew conf file """
 
+        info('checking tweets')
         if not self._twitter_conf:
             warning('_twitter_conf not (yet?) loaded!')
-
             return
 
-        for serv in self._twitter_conf.keys():
-            debug(serv)
+        info('parsing twitter_conf')
+        tooters = self._twitter_conf
 
-            for chann in self._twitter_conf[serv].keys():
-                debug(chann)
+        for tooter in tooters:
+            tweets = self._twitter.get_user_timeline(screen_name = tooter.screen_name)            tweets.reverse()
 
-                for tooter in self._twitter_conf[serv][chann]:
+            # this will be the first tweet in the channel
+            tooter.last_tweet_id
+            if last_tweet == 0:
+                # handle exception here if user doesnt exist
+                tweets = [tweets[-1],]
 
-                    tweets = self._twitter.get_user_timeline(screen_name = tooter['screen_name'])
-                    tweets.reverse()
+                for tweet in tweets:
+                    if last_tweet > 0 and tweet['id'] <= tooter.last_tweet_id:
+                        continue
 
-                    # this will be the first tweet in the channel
-                    if tooter['last'] == 1:
-                        tweets = [tweets[-1],]
+                    info('new tweet from {}'.format(tweet['user']['screen_name']))
+                    tooter.last_tweet_id = tweet['id']
 
+                    if tweet['in_reply_to_status_id']:
+                        # don't show tweets that are replies to other users
+                        continue
 
-                    for tweet in tweets:
-                        if tooter['last'] > 1 and tweet['id'] <= tooter['last']:
-                            continue
+                    tweet = await self.parse(tweet)
 
-                        info('new tweet from {}'.format(tweet['user']['screen_name']))
-
-                        tooter['last'] = tweet['id']
-
-                        if tweet['in_reply_to_status_id']:
-                            # don't show tweets that are replies to other users
-                            continue
-
-                        tweet = await self.parse(tweet)
-
+                    for channel in tooters.channels:
+                        ''' might be a good idea to add retweet id to each channel'''
                         if 'retweeted_status' in tweet:
                             user = tweet['retweeted_status']['user']['screen_name']
                             tweet_id = tweet['retweeted_status']['id']
@@ -127,9 +124,9 @@ class Twitter(Network):
 
                         await self.application.Discord.say(chann, '{} tweets:\n\n{}\n\n'.format(tweet['user']['screen_name'], tweet['text']))
 
-                    self.save_twitter_config()
+                    tooter.save()
 
-        
+
     def setup_retweets(self):
 
         # this is all moot if we're not connected to Discord
@@ -138,31 +135,13 @@ class Twitter(Network):
 
             return
 
-        # look up where we're supposed to be retweeting to
-        with open('./twitterconf.json') as f:
-            conf = json.loads(f.read())
+        tooters = Tooter.select()  # create an interable peewee object
 
-            # replace server strings with proper objects
-            servers = {server.name:server for server in self.application.Discord.client.servers}
-            for servstring in [k for k in conf.keys()]:
-                debug('Loading server {}'.format(servstring))
-
-                if servstring in servers:
-
-                    servobj = servers[servstring]
-                    conf[servobj] = conf[servstring]
-                    del conf[servstring]
-
-                    for chanstring in [k for k in conf[servobj].keys()]:
-                        channels = {channel.name:channel for channel in servers[servstring].channels}
-                        chanobj = channels[chanstring]
-                        conf[servobj][chanobj] = conf[servobj][chanstring]
-                        del conf[servobj][chanstring]
-
-            self._twitter_conf = conf
-
-        info('Twitter conf loaded')
-
+        if tooters.exists():
+            self._twitter_conf = tooters
+            info('Twitter conf loaded')
+        else:
+            warning('No Twitter accounts have been added for retweets, conf not loaded')
 
     def save_twitter_config(self):
 
