@@ -225,7 +225,7 @@ def main():
         import keys
         from twython import Twython
         from db import db
-        from networks import DiscordChannel, DiscordChannel, Tooter
+        from networks import DiscordServer, DiscordChannel, Tooter
         
         tables = [
             Tooter,
@@ -262,7 +262,7 @@ def main():
 
         print("token: {}\n token secret: {}".format(oauth_token, oauth_token_secret))
 
-        return
+        return  # remove this eventually
 
     if options.twitter:
         from networks.twatter import Twitter
