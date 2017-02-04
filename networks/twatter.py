@@ -86,7 +86,8 @@ class Twitter(Network):
         tooters = self._twitter_conf
 
         for tooter in tooters:
-            tweets = self._twitter.get_user_timeline(screen_name = tooter.screen_name)            tweets.reverse()
+            tweets = self._twitter.get_user_timeline(screen_name = tooter.screen_name)
+            tweets.reverse()
 
             # this will be the first tweet in the channel
             tooter.last_tweet_id
