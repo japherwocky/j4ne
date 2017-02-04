@@ -225,7 +225,7 @@ def main():
         import keys
         from twython import Twython
         from db import db
-        from networks import DiscordServer, DiscordChannel, Tooter
+        from networks.models import DiscordServer, DiscordChannel, Tooter
         
         tables = [
             Tooter,
