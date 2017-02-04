@@ -90,17 +90,18 @@ class Twitter(Network):
             tweets.reverse()
 
             # this will be the first tweet in the channel
-            tooter.last_tweet_id
+            last_tweet = tooter.last_tweet_id
             if last_tweet == 0:
                 # handle exception here if user doesnt exist
                 tweets = [tweets[-1],]
 
                 for tweet in tweets:
-                    if last_tweet > 0 and tweet['id'] <= tooter.last_tweet_id:
+                    if last_tweet > 0 and tweet['id'] <= lat_tweet:
                         continue
 
                     info('new tweet from {}'.format(tweet['user']['screen_name']))
                     tooter.last_tweet_id = tweet['id']
+                    tooter.save()
 
                     if tweet['in_reply_to_status_id']:
                         # don't show tweets that are replies to other users
@@ -108,7 +109,7 @@ class Twitter(Network):
 
                     tweet = await self.parse(tweet)
 
-                    for channel in tooters.channels:
+                    for channel in tooter.channels:
                         ''' might be a good idea to add retweet id to each channel'''
                         if 'retweeted_status' in tweet:
                             user = tweet['retweeted_status']['user']['screen_name']
