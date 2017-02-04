@@ -1,5 +1,7 @@
 from logging import info, debug, error
 from random import choice, shuffle
+from cleverbot import Cleverbot
+from twython.exceptions import TwythonError
 
 import cl3ver
 from keys import cleverbot_key as cleverkey
@@ -142,7 +144,7 @@ class Discord(object):
 
         else:
             try:
-                tooter_profile = (self.application.Twitter
+                tooter_profile = (self.application.Twitter._twitter
                                   .show_user(screen_name=screen_name))
 
             except TwythonError as e:
@@ -156,12 +158,16 @@ class Discord(object):
         #  get_or_create() method returns (instance, created? = bool)
         tooter = Tooter.get_or_create(screen_name=screen_name)[0]
         server_in_db = DiscordServer.get_or_create(name=this_server)
-
+        server = server_in_db[0]
+        
         if not server_in_db[1]:
-            channel = DiscordChannel.create(name=this_channel,
-                                            server=server_in_db[0])
+            info('Discord server {} added to database'.format(server.name))
 
-            tooter.servers.add(server_in_db, clear_existing=False)
+            info('Adding channel: {} to database for retweeting'.format(this_channel))
+            channel = DiscordChannel.create(name=this_channel,
+                                            server=server)
+
+            tooter.servers.add(server, clear_existing=False)
             tooter.channels.add(channel, clear_existing=False)
 
         elif tooter.channels.where(DiscordChannel == this_channel):
@@ -171,10 +177,10 @@ class Discord(object):
 
         else:
             channel = DiscordChannel.get_or_create(name=this_channel,
-                                                   server=server_in_db)[0]
-            tooter.servers.add(server_in_db, clear_existing=False)
+                                                   server=server)
+            tooter.servers.add(server, clear_existing=False)
             tooter.channels.add(channel, clear_existing=False)
 
-        await self.say(message.channel, "I will start retweeting {} in this channel.".format(tooter))
+        await self.say(message.channel, "I will start retweeting {} in this channel.".format(tooter.screen_name))
 
         await self.application.Twitter.check_tweets()
