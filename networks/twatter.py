@@ -94,44 +94,44 @@ class Twitter(Network):
             tweets = self._twitter.get_user_timeline(screen_name = tooter.screen_name)
             tweets.reverse()
 
-            # this will be the first tweet in the channel
             last_tweet = tooter.last_tweet_id
-            if last_tweet == 0:
-                # handle exception here if user doesnt exist
-                tweets = [tweets[-1],]
 
-                for tweet in tweets:
-                    if last_tweet > 0 and tweet['id'] <= lat_tweet:
-                        continue
+            for tweet in tweets:
+                if last_tweet >= 0 and tweet['id'] > last_tweet:
+                    continue
 
-                    info('new tweet from {}'.format(tweet['user']['screen_name']))
-                    tooter.last_tweet_id = tweet['id']
-                    tooter.save()
+                info('new tweet from {}'.format(tweet['user']['screen_name']))
+                tooter.last_tweet_id = tweet['id']
+                tooter.save()
 
-                    if tweet['in_reply_to_status_id']:
-                        # don't show tweets that are replies to other users
-                        continue
+                if tweet['in_reply_to_status_id']:
+                    # don't show tweets that are replies to other users
+                    continue
 
-                    tweet = await self.parse(tweet)
+                tweet = await self.parse(tweet)
 
-                    for channel in tooter.channels:
-                        ''' might be a good idea to add retweet id to each channel'''
-                        if 'retweeted_status' in tweet:
-                            user = tweet['retweeted_status']['user']['screen_name']
-                            tweet_id = tweet['retweeted_status']['id']
-                            retweet_link = 'https://twitter.com/{}/status/{}'.format(user, tweet_id)
+                for channel in tooter.channels:
 
-                            if not tweet['is_quote_status']:
-                                await self.application.Discord.say(chann, '{} retweets:\n\n{}'.format(tweet['user']['screen_name'], retweet_link))
-                                continue
+                    destination = (self.application.Discord.client
+                                   .servers[channel.server.name]
+                                   .channels[channel.name])
 
-                            else:
-                                await self.application.Discord.say(chann, '{} retweets:\n\n{}'.format(tweet['user']['screen_name'], retweet_link))
-                                continue
+                    ''' might be a good idea to add retweet id to each channel'''
+                    if 'retweeted_status' in tweet:
+                        user = tweet['retweeted_status']['user']['screen_name']
+                        tweet_id = tweet['retweeted_status']['id']
+                        retweet_link = ('https://twitter.com/{}/status/{}'
+                                        .format(user, tweet_id))
 
-                        await self.application.Discord.say(chann, '{} tweets:\n\n{}\n\n'.format(tweet['user']['screen_name'], tweet['text']))
+                        if not tweet['is_quote_status']:
+                            await self.application.Discord.say(destination, '{} retweets:\n\n{}'.format(tweet['user']['screen_name'], retweet_link))
+                            continue
 
-                    tooter.save()
+                        else:
+                            await self.application.Discord.say(destination, '{} retweets:\n\n{}'.format(tweet['user']['screen_name'], retweet_link))
+                            continue
+
+                    await self.application.Discord.say(destination, '{} tweets:\n\n{}\n\n'.format(tweet['user']['screen_name'], tweet['text']))
 
 
     def setup_retweets(self):
