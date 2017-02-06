@@ -137,7 +137,7 @@ class Discord(object):
 
 
     async def retweet(self, message):
-        screen_name = message.content.split('|retweet')[1]
+        screen_name = message.content.split('|retweet')[1].strip()
 
         if not screen_name:
             return await self.say(message.channel, 'Who should I retweet?')
@@ -159,7 +159,7 @@ class Discord(object):
         tooter = Tooter.get_or_create(screen_name=screen_name)[0]
         server_in_db = DiscordServer.get_or_create(name=this_server)
         server = server_in_db[0]
-        
+
         if not server_in_db[1]:
             info('Discord server {} added to database'.format(server.name))
 
@@ -167,20 +167,19 @@ class Discord(object):
             channel = DiscordChannel.create(name=this_channel,
                                             server=server)
 
-            tooter.servers.add(server, clear_existing=False)
-            tooter.channels.add(channel, clear_existing=False)
-
-        elif tooter.channels.where(DiscordChannel == this_channel):
+        elif tooter.channels.where(DiscordChannel == this_channel).exists():
             return await self.say(this_channel,
                                   'I am already retweeting {} here.'
-                                  .format(tooter))
+                                  .format(tooter.screen_name))
 
         else:
             channel = DiscordChannel.get_or_create(name=this_channel,
-                                                   server=server)
-            tooter.servers.add(server, clear_existing=False)
-            tooter.channels.add(channel, clear_existing=False)
+                                                   server=server)[0]
 
+        tooter.servers.add(server, clear_existing=False)
+        tooter.channels.add(channel, clear_existing=False)
+
+        info('Tooter {} succesufully added'.format(tooter.screen_name))
         await self.say(message.channel, "I will start retweeting {} in this channel.".format(tooter.screen_name))
 
         await self.application.Twitter.check_tweets()
