@@ -190,12 +190,10 @@ def main():
         import keys
         from twython import Twython
         from db import db
-        from networks.models import DiscordServer, DiscordChannel, Tooter
-        
+        from networks.models import DiscordChannel, Tooter
+
         tables = [
             Tooter,
-            DiscordServer,
-            DiscordServer.tooters.get_through_model(), # many-to-many 
             DiscordChannel,
             DiscordChannel.tooters.get_through_model() # many-to many 
         ]

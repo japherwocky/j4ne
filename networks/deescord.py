@@ -23,7 +23,7 @@ from commands import discord_command as command
 import commands.deescord
 import commands.jukebox
 
-from networks.models import Tooter, DiscordServer, DiscordChannel
+from networks.models import Tooter, DiscordChannel
 
 from loggers.handlers import Discord as Dlogger
 Dlogger = Dlogger()
@@ -144,28 +144,18 @@ class Discord(object):
 
             return await self.say(message.channel, 'There was a problem searching for the Twitter user with the screen name {}. Is this spelled correctly?')
 
-        this_server = message.server
         this_channel = message.channel
 
         #  get_or_create() method returns (instance, created? = bool)
         tooter = Tooter.get_or_create(screen_name=screen_name)[0]
-        server_in_db = DiscordServer.get_or_create(name=this_server)
-        server = server_in_db[0]
+        channel_in_db = DiscordChannel.get_or_create(discord_id=this_channel.id)
+        channel = channel_in_db[0]
 
-        if not server_in_db[1]:
-            info('Discord server {} added to database'.format(server.name))
-
-            info('Adding channel: {} to database for retweeting'.format(this_channel))
-            channel = DiscordChannel.create(name=this_channel, server=server)
-
-        elif tooter.channels.where(DiscordChannel.discord_id == this_channel.id).exists():
+        if tooter.channels.where(DiscordChannel.discord_id == this_channel.id).exists():
             return await self.say(this_channel,
                                   'I am already retweeting {} here.'
                                   .format(tooter.screen_name))
 
-        channel = DiscordChannel.get_or_create(channel_id=this_channel.id, server=server)[0]
-
-        tooter.servers.add(server, clear_existing=False)
         tooter.channels.add(channel, clear_existing=False)
 
         info('Tooter {} succesufully added'.format(tooter.screen_name))
