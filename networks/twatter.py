@@ -21,8 +21,6 @@ class Twitter(Network):
     Common interface for connecting and receiving realtimey events
     """
 
-    _twitter_conf = None
-
     async def connect(self):
         # kick off a periodic task for our ghetto ass Twitter polling
         self._twitter = Twython(
@@ -76,14 +74,13 @@ class Twitter(Network):
 
     @taskify
     async def check_tweets(self):
+        info('Checking Tweets')
 
-        info('checking tweets')
-        if not self._twitter_conf:
-            warning('_twitter_conf not (yet?) loaded!')
+        tooters = Tooter.select()
+
+        if not tooters.exists():
+            info('No Tooters exist in the database yet')
             return
-
-        info('parsing twitter_conf')
-        tooters = self._twitter_conf
 
         for tooter in tooters:
             tweets = self._twitter.get_user_timeline(screen_name = tooter.screen_name)
@@ -129,43 +126,3 @@ class Twitter(Network):
                         continue
 
                     await self.application.Discord.say(destination, '{} tweets:\n\n{}\n\n'.format(tweet['user']['screen_name'], tweet['text']))
-
-    def setup_retweets(self):
-
-        # this is all moot if we're not connected to Discord
-        if not getattr(self.application, 'Discord'):
-            warning('No discord connection, not retweeting')
-
-            return
-
-        tooters = Tooter.select()  # create an interable peewee object
-
-        if tooters.exists():
-            self._twitter_conf = tooters
-            info('Twitter conf loaded')
-        else:
-            warning('No Twitter accounts have been added for retweets, conf not loaded')
-
-    def save_twitter_config(self):
-
-        out = {}
-        servers = {server.name:server for server in self.application.Discord.client.servers}
-
-        for serv in self._twitter_conf.keys():
-            out[serv.name] = {}
-       
-            for chann in self._twitter_conf[serv].keys():
-                out[serv.name][chann.name] = []
-
-                for tooter in self._twitter_conf[serv][chann]:
-                    out[serv.name][chann.name].append(tooter)
-                 
-        with open('./twitterconf.json', 'w') as f:
-            out = json.dumps(out, sort_keys=True, indent=4)
-
-            f.write(out)
-
-
-
-
-
