@@ -54,7 +54,6 @@ create_tables([
 class Tooter(Model):
     screen_name = CharField(unique=True)
     last_tweet_id = IntegerField(default=0)
-    retweeted_id = IntegerField(default=0)
 
     class Meta:
         database = db
