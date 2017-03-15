@@ -97,7 +97,10 @@ class Twitter(Network):
             last_tweet = tooter.last_tweet_id
 
             for tweet in tweets:
-                if last_tweet >= 0 and tweet['id'] > last_tweet:
+                if last_tweet == 0:
+                    last_tweet = tweets[-2]['id']
+
+                if tweet['id'] <= last_tweet:
                     continue
 
                 info('new tweet from {}'.format(tweet['user']['screen_name']))
