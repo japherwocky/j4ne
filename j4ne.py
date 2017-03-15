@@ -189,7 +189,6 @@ def main():
     if options.twitter_setup:
         import keys
         from twython import Twython
-        from db import db
         from networks.models import DiscordChannel, Tooter
 
         tables = [
