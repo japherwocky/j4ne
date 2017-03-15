@@ -59,7 +59,7 @@ class Tooter(Model):
 
 
 class DiscordChannel(Model):
-    discord = CharField()
+    discord_id = CharField()
     tooters = ManyToManyField(Tooter, related_name='channels')
 
     class Meta:
