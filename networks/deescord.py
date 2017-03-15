@@ -159,17 +159,14 @@ class Discord(object):
             info('Discord server {} added to database'.format(server.name))
 
             info('Adding channel: {} to database for retweeting'.format(this_channel))
-            channel = DiscordChannel.create(name=this_channel,
-                                            server=server)
+            channel = DiscordChannel.create(name=this_channel, server=server)
 
-        elif tooter.channels.where(DiscordChannel == this_channel).exists():
+        elif tooter.channels.where(DiscordChannel.name == this_channel).exists():
             return await self.say(this_channel,
                                   'I am already retweeting {} here.'
                                   .format(tooter.screen_name))
 
-        else:
-            channel = DiscordChannel.get_or_create(name=this_channel,
-                                                   server=server)[0]
+        channel = DiscordChannel.get_or_create(name=this_channel, server=server)[0]
 
         tooter.servers.add(server, clear_existing=False)
         tooter.channels.add(channel, clear_existing=False)
