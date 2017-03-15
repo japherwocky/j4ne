@@ -138,15 +138,14 @@ class Discord(object):
         if not screen_name:
             return await self.say(message.channel, 'Who should I retweet?')
 
-        else:
-            try:
-                tooter_profile = (self.application.Twitter._twitter
-                                  .show_user(screen_name=screen_name))
+        try:
+            tooter_profile = (self.application.Twitter._twitter
+                              .show_user(screen_name=screen_name))
 
-            except TwythonError as e:
-                error('Twython Error: {}'.format(e))
+        except TwythonError as e:
+            error('Twython Error: {}'.format(e))
 
-                return await self.say(message.channel, 'There was a problem searching for the Twitter user with the screen name {}. Is this spelled correctly?')
+            return await self.say(message.channel, 'There was a problem searching for the Twitter user with the screen name {}. Is this spelled correctly?')
 
         this_server = message.server
         this_channel = message.channel
