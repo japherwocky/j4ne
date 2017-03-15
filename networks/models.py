@@ -46,8 +46,6 @@ class Moderator(Model):
 twatter tables with many to many relations:
 create_tables([
     Tooter,
-    DiscordServer,
-    DiscordServer.tooters.get_through_model(),
     DiscordChannel,
     DiscordChannel.tooters.get_through_model()  ])
 '''
@@ -60,18 +58,8 @@ class Tooter(Model):
         db_table = 'tooters'
 
 
-class DiscordServer(Model):
-    name = CharField()
-    tooters = ManyToManyField(Tooter, related_name='servers')
-
-    class Meta:
-        database = db
-        db_table = 'servers'
-
-
 class DiscordChannel(Model):
     discord = CharField()
-    server = ForeignKeyField(DiscordServer, related_name='channels')
     tooters = ManyToManyField(Tooter, related_name='channels')
 
     class Meta:
