@@ -108,10 +108,8 @@ class Twitter(Network):
                 for channel in tooter.channels:
 
                     destination = (self.application.Discord.client
-                                   .servers[channel.server.name]
-                                   .channels[channel.name])
+                                   .get_channel(channel.discord_id))
 
-                    ''' might be a good idea to add retweet id to each channel'''
                     if 'retweeted_status' in tweet:
                         user = tweet['retweeted_status']['user']['screen_name']
                         tweet_id = tweet['retweeted_status']['id']
