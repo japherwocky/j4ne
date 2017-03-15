@@ -59,9 +59,6 @@ class Discord(object):
             info('Logged into Discord as {} {}'.format(client.user.id, client.user.name) )
 
             if getattr(self.application, 'Twitter', False):
-                self.application.Twitter.setup_retweets()
-                info('Retweet config loaded')
-
                 await self.application.Twitter.check_tweets()
 
         @client.event
