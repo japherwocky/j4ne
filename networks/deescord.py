@@ -146,7 +146,7 @@ class Discord(object):
         except TwythonError as e:
             error('Twython Error: {}'.format(e))
 
-            return await self.say(message.channel, 'There was a problem searching for the Twitter user with the screen name {}. Is this spelled correctly?')
+            return await self.say(message.channel, 'There was a problem searching for the Twitter user with the screen name {}.'.format(screen_name))
 
         this_channel = message.channel
 
