@@ -70,7 +70,7 @@ class DiscordServer(Model):
 
 
 class DiscordChannel(Model):
-    name = CharField()
+    discord = CharField()
     server = ForeignKeyField(DiscordServer, related_name='channels')
     tooters = ManyToManyField(Tooter, related_name='channels')
 
