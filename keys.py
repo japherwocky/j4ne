@@ -9,3 +9,5 @@ twitter_appkey = ''
 twitter_appsecret = ''
 twitter_token = ''
 twitter_tokensecret = ''
+
+cleverbot_key = ''
