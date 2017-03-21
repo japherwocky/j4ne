@@ -103,6 +103,7 @@ def main():
     define("debug", default=False, help="run server in debug mode", type=bool)
     define("mktables", default=False, help="bootstrap a new sqlite database")
     define("migration", default='', help="run a named database migration")
+    define("archive", default=False, help="archive live database")
 
     define("twitch", default=True, help="Connect to Twitch chat servers")
     define("twitchapi", default=True, help="Connect to Twitch API")
@@ -137,6 +138,27 @@ def main():
         else:
             info('Attempting migration {}'.format(options.migration))
             return Migrations[options.migration]()
+
+    if options.archive:
+        from loggers.archive import shuffle2archive
+        from loggers import models
+
+        # (live_models, archive_models)
+        models2archive = [models.Message,
+                          models.Event]
+
+        for LiveModel in models2archive:
+            info('Starting archive shuffle with model {}'.format(LiveModel))
+
+            try:
+                number_of_records = shuffle2archive(LiveModel, False, 224) # temporary cutoff period
+                info('Shuffle finished with {} records archived'
+                 'and {} records deleted from model {}'
+                 .format(number_of_records[0],
+                         number_of_records[1],
+                         LiveModel))
+            except LiveModel.DoesNotExist:
+                info('No records exist before archivable date')
 
     if options.runtests:
         tornado.testing.main()

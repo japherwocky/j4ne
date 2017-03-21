@@ -10,3 +10,6 @@ twython
 youtube-dl
 terminaltables
 livestreamer
+
+# test helpers
+loremipsum
