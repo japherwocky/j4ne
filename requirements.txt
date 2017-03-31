@@ -1,4 +1,4 @@
-cleverwrapper
+cl3ver
 feedparser
 giphypop
 discord.py[voice]
