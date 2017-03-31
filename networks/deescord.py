@@ -94,7 +94,7 @@ class Discord(object):
     async def on_triggered(self, channel):
         ''' someone said the magic word! '''
 
-        posts = feedparser.parse('http://feeds2.feedburner.com/fmylife')
+        posts = feedparser.parse('http://www.fmylife.com/rss')
         post = choice(posts.entries)
         post = re.sub(r'<[^>]*?>', '', post.description).replace('FML', '')
 
