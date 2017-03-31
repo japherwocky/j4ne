@@ -1,7 +1,7 @@
 from logging import info, debug, error
 from random import choice, shuffle
 
-from cleverwrap import CleverWrap
+import cl3ver
 from keys import cleverbot_key as cleverkey
 
 import asyncio
@@ -48,7 +48,7 @@ def taskify(func):
     return wrapper
 
 class Discord(object):
-    CB = CleverWrap(cleverkey)
+    CB = cl3ver.Cl3ver(cleverkey)
 
     client = client  # so that network specific commands can access lower levels
 
@@ -112,7 +112,7 @@ class Discord(object):
                 return await client.send_message(message.channel, "Yes?")
 
             debug(query)
-            reply = self.CB.say(query)
+            reply = self.CB.say(query, message.author.name)
             reply = reply[:1].lower() + reply[1:]
             reply = '{}, {}'.format(message.author.name, reply)
             await client.send_message(message.channel, reply)
