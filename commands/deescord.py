@@ -80,6 +80,18 @@ async def dance(network, channel, message):
 async def blush(network, channel, message):
     await network.send_file(channel, 'static/anneBlush.png')
 
+@command('hm')
+async def youropinion(network, channel, message):
+    await network.send_file(channel, 'static/hm.gif')
+
+@command('vote')
+async def youropinion(network, channel, message):
+    await network.send_file(channel, 'static/NOVOTES.gif')
+
+@command('cool')
+async def youropinion(network, channel, message):
+    await network.send_file(channel, 'static/anneCool.gif')
+
 
 @command('live')
 async def live(network, channel, message):
