@@ -4,6 +4,7 @@ from random import choice, shuffle
 import cl3ver
 from keys import cleverbot_key as cleverkey
 
+import aiohttp
 import asyncio
 import re
 import os
@@ -73,10 +74,18 @@ class Discord(object):
             await self.on_message(message)
 
 
-        # force the thing to reconnect?
+
+        """ eventually, when the connection gets reset (when, not if),
+            it bubbles up as aiohttp.errors.ClientResponseError
+        """
         while True:
+            # force the thing to reconnect?
             info('Connecting to Discord..')
-            await client.start(discord_token)
+            try:
+                await client.start(discord_token)
+            except aiohttp.errors.ClientResponseError as e:
+                error(e)
+                continue
 
     async def send_message(self, channel, message):
         return await client.send_message(channel, message)
