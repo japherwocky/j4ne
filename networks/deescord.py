@@ -41,19 +41,11 @@ class ErrorCatcher(discord.Client):
 # instantiate this here to use decorators
 client = discord.Client()  # loop defaults to asyncio.get_event_loop()
 
-# We need to wrap connect() as a task to prevent timeout error at runtime.
-# based on the following suggested fix: https://github.com/KeepSafe/aiohttp/issues/1176
-def taskify(func):
-    async def wrapper(*args, **kwargs):
-        return asyncio.get_event_loop().create_task(func(*args, **kwargs))
-    return wrapper
-
 class Discord(object):
     CB = cl3ver.Cl3ver(cleverkey)
 
     client = client  # so that network specific commands can access lower levels
 
-    @taskify
     async def connect(self):
 
         self.client = client

@@ -187,7 +187,18 @@ def main():
         app.Discord = Discord()
         app.Discord.application = app
 
-        tornado.ioloop.IOLoop.instance().add_callback(app.Discord.connect)  
+        @asyncio.coroutine
+        def Drunner():
+            while True:
+                try:
+                    yield from app.Discord.connect()
+                except Exception as e:
+                    error(e)
+                    continue
+        asyncio.ensure_future(Drunner())
+
+
+        # tornado.ioloop.IOLoop.instance().add_callback(app.Discord.connect)  
 
     # connect to Twitch API
     if options.twitchapi:
