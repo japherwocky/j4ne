@@ -11,7 +11,12 @@ from logging import debug, info, warning
 # twitter.verify_credentials()
 
 
-from networks.deescord import taskify  # TODO just do this right
+# We need to wrap connect() as a task to prevent timeout error at runtime.
+# based on the following suggested fix: https://github.com/KeepSafe/aiohttp/issues/1176
+def taskify(func):
+    async def wrapper(*args, **kwargs):
+        return asyncio.get_event_loop().create_task(func(*args, **kwargs))
+    return wrapper
 
 from networks import Network
 class Twitter(Network):

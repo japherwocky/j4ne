@@ -107,14 +107,15 @@ class TwitchParser(object):
 
         elif event == 'PRIVMSG':
             # either a new sub or a resub; we've already filtered out chat messages 
-            logging.warning(msg)
+            # logging.warning(msg)
             self.on_sub(user, channel, body)
 
         elif event == 'CLEARCHAT':
             self.on_timeout(user, channel, body, meta)
 
         else:
-            logging.warning('[{}] <{}:{}> {}'.format(event, channel, user, body))
+            # logging.warning('[{}] <{}:{}> {}'.format(event, channel, user, body))
+            pass
 
     def on_part(self, user, channel, body):
 
