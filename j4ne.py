@@ -189,12 +189,14 @@ def main():
 
         @asyncio.coroutine
         def Drunner():
-            while True:
+            errcount = 0
+            while errcount < 3:
                 try:
                     yield from app.Discord.connect()
                 except Exception as e:
                     error(e)
                     continue
+                errcount += 1
         asyncio.ensure_future(Drunner())
 
 
