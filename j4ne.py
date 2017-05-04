@@ -121,14 +121,35 @@ def main():
         from networks.models import User, Moderator
 
         from peewee import OperationalError
+        from networks.models import DiscordChannel, Tooter
 
-        for table in [Message, Event, Quote, Command, User, Moderator]:
-            try:
-                db.create_table(table)
-            except OperationalError as e:
-                # table (probably/hopefully) exists, dump this into the console 
-                warning(e)
-                continue
+        tables = [
+            Message,
+            Event,
+            Quote,
+            Command,
+            User,
+            Moderator,
+            Tooter,
+            DiscordChannel,
+            DiscordChannel.tooters.get_through_model() # many-to-many 
+        ]
+
+        # ensure tables exist in db including intermediate tables for many to many relations
+        try:
+            """ `create_tables()` ref: 'This method should be used for creating
+            tables as it will resolve the model dependency graph and
+            ensure the tables are created in the correct order. This
+            method will also create any indexes and constraints
+            defined on the models.'
+
+            When `safe=True`, checks table exists before creating
+            """
+            db.create_tables(tables, safe=True)
+        except OperationalError as e:
+            # table (probably/hopefully) exists, dump this into the console
+            warning(e)
+
 
     if options.migration:
         from db import Migrations
@@ -189,16 +210,6 @@ def main():
     if options.twitter_setup:
         import keys
         from twython import Twython
-        from networks.models import DiscordChannel, Tooter
-
-        tables = [
-            Tooter,
-            DiscordChannel,
-            DiscordChannel.tooters.get_through_model() # many-to many 
-        ]
-
-        # ensure tables exist in db including intermediate tables for many to many relations
-        db.create_tables(tables, True)
 
         twitter = Twython(keys.twitter_appkey, keys.twitter_appsecret)
 
