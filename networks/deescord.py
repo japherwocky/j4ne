@@ -1,5 +1,7 @@
 from logging import info, debug, error
 from random import choice, shuffle
+from cleverbot import Cleverbot
+from twython.exceptions import TwythonError
 
 import cl3ver
 from keys import cleverbot_key as cleverkey
@@ -24,6 +26,8 @@ from commands import Discord_commands as Commands
 from commands import discord_command as command
 import commands.deescord
 import commands.jukebox
+
+from networks.models import Tooter, DiscordChannel
 
 from loggers.handlers import Discord as Dlogger
 Dlogger = Dlogger()
@@ -55,9 +59,6 @@ class Discord(object):
             info('Logged into Discord as {} {}'.format(client.user.id, client.user.name) )
 
             if getattr(self.application, 'Twitter', False):
-                self.application.Twitter.setup_retweets()
-                info('Retweet config loaded')
-
                 await self.application.Twitter.check_tweets()
 
         @client.event
@@ -133,32 +134,35 @@ class Discord(object):
 
 
     async def retweet(self, message):
+        screen_name = message.content.split('|retweet')[1].strip()
 
-        tooter = message.content.split('|retweet')[1]
-        if not tooter:
+        if not screen_name:
             return await self.say(message.channel, 'Who should I retweet?')
 
-        tooter = tooter.strip()
+        try:
+            tooter_profile = (self.application.Twitter._twitter
+                              .show_user(screen_name=screen_name))
 
-        this_server = message.server
+        except TwythonError as e:
+            error('Twython Error: {}'.format(e))
 
-        conf = self.application.Twitter._twitter_conf
+            return await self.say(message.channel, 'There was a problem searching for the Twitter user with the screen name {}.'.format(screen_name))
 
-        if not this_server in conf:
-            conf[this_server] = {message.channel: []}
+        this_channel = message.channel
 
-        if not message.channel in conf[this_server]:
-            conf[this_server][message.channel] = []
+        #  get_or_create() method returns (instance, created? = bool)
+        tooter = Tooter.get_or_create(screen_name=screen_name)[0]
+        channel_in_db = DiscordChannel.get_or_create(discord_id=this_channel.id)
+        channel = channel_in_db[0]
 
-        if message.channel in conf[this_server] and tooter in [t['screen_name'] for t in conf[this_server][message.channel]]:
-            return await self.say(message.channel, 'I am already retweeting {} here.'.format(tooter))
+        if tooter.channels.where(DiscordChannel.discord_id == this_channel.id).exists():
+            return await self.say(this_channel,
+                                  'I am already retweeting {} here.'
+                                  .format(tooter.screen_name))
 
-        conf[this_server][message.channel].append( {'screen_name':tooter, 'last':1})
+        tooter.channels.add(channel, clear_existing=False)
 
-        self.application.Twitter.save_twitter_config()
-
-        await self.say(message.channel, "I will start retweeting {} in this channel.".format(tooter))
+        info('Tooter {} succesufully added'.format(tooter.screen_name))
+        await self.say(message.channel, "I will start retweeting {} in this channel.".format(tooter.screen_name))
 
         await self.application.Twitter.check_tweets()
-
-

@@ -1,4 +1,5 @@
 from peewee import *
+from playhouse.fields import ManyToManyField
 
 from db import db
 
@@ -38,3 +39,30 @@ class Moderator(Model):
     class Meta:
         database = db
         db_table = 'moderators'
+
+
+#Twitter related tables
+'''
+twatter tables with many to many relations:
+create_tables([
+    Tooter,
+    DiscordChannel,
+    DiscordChannel.tooters.get_through_model()  ])
+'''
+class Tooter(Model):
+    screen_name = CharField(unique=True)
+    last_tweet_id = IntegerField(default=0)
+
+    class Meta:
+        database = db
+        db_table = 'tooters'
+
+
+class DiscordChannel(Model):
+    discord_id = CharField()
+    tooters = ManyToManyField(Tooter, related_name='channels')
+
+    class Meta:
+        database = db
+        db_table = 'channels'
+
