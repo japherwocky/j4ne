@@ -43,6 +43,7 @@ class App (tornado.web.Application):
         """
 
         handlers = [
+            (r"/?", HomeHandler),
             (r"/login/?", LoginHandler),
             (r"/logout/?", LogoutHandler),
             (r"/jukebox/?", WebPlayer),
@@ -62,6 +63,10 @@ class AuthMixin(object):
     @property
     def user(self):
         return self.get_current_user()
+
+class HomeHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.render('index.html')
 
 
 class LoginHandler(tornado.web.RequestHandler):
