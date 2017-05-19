@@ -47,10 +47,18 @@ env/bin/pip install -r requirements.txt
 Getting j4ne up and running
 ===========================
 
+
+J4ne needs a bunch of credentials, which are stored in the `keys.py` files.  Sorry, it will probably crash if you don't have a full set.
+
+You can turn some networks off by passing `--< network >=False`, eg, `--twitter=False` to not load twitter.
+
+This is awkward and bad UX, sorry.
+
+
 Discord Credentials
 -------------------
 
-First you will need to add your Discord application to the `keys.py` file. If you do not yet have those, you can create an application here: [Discord Applications](https://discordapp.com/developers/applications/)
+You can create a Discord application here: [Discord Applications](https://discordapp.com/developers/applications/)
 
 ``` python
 # proj-dir/keys.py
@@ -59,10 +67,10 @@ discord_token = 'your-secret-token'
 discord_app_id = 'your-discord-client/application-ID'
 ```
 
-Optional Credentials
---------------------
+Afterwards use the `--newbot` option to generate an invitation link to your server:
 
--TODO
+    ./env/bin/python j4ne.py --newbot
+
 
 Running the server for the first time
 -------------------------------------
@@ -73,10 +81,8 @@ The following options should be passed to `j4ne.py` if you are running the bot f
 
 * `mktables` : Generates a new sqlite database
 
-* `twitch` & `twitchapi` : These options should be set to `False` if you will not be using these features and have not added the credentials to `keys.py`
 
-Example:
+Updating or migrating a database
+--------------------------------
 
-``` bash
-env/bin/python j4ne.py -newbot=True -mktables=True -twitch=False -twitchapi=False
-```
+Migrations can be run by name, see `db.py` for notes
