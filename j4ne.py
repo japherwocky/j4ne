@@ -3,6 +3,7 @@ import unittest
 import feedparser
 from random import choice
 from logging import info, debug, warning, error
+
 import tornado.httpserver
 import tornado.ioloop
 import tornado.options
@@ -65,7 +66,7 @@ class AuthMixin(object):
 
 class LoginHandler(tornado.web.RequestHandler):
     """
-    super awkward naming now, basically a util to auth with twitch 
+    super awkward naming now, basically a util to auth with twitch
     and spit the oauth token out to stdout
     """
     def get(self):
@@ -193,9 +194,9 @@ def main():
     if options.newbot:
         from keys import discord_app_id
         from discord_invite import invite_link
-        print("Please go to the following link to authorize the bot, then press `Enter`:\n")
+        info("Please go to the following link to authorize the bot, then press `Enter`:\n")
         print(invite_link(discord_app_id))
-        input("\nPress `Enter` to continue...")
+        info("\nPress `Enter` to continue...")
 
     ## connect to discord 
     if options.discord:
