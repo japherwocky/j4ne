@@ -6,6 +6,14 @@ class Network (object):
     def __init__(self, application):
         self.application = application
 
+    def credentials(self):
+        """
+        Get any credentials this network will require to call `self.connect()`
+
+        return True if we should connect, False if we're missing credentials
+        """
+        return True
+
     async def connect(self):
         pass
 
@@ -18,16 +26,15 @@ class Network (object):
 
     async def on_message(self, msg):
         #handle logging
-    
+
         # classify & normalize
-        msg = self.parse(msg)  
+        msg = self.parse(msg)
 
         # archive
-        self.log(msg)  
+        self.log(msg)
 
         # trigger any tasks
         self.process(msg)
-
 
     async def parse(self, msg):
         """
@@ -36,14 +43,10 @@ class Network (object):
             * unicode
             * timezones
         """
-
-
         return msg
-
 
     async def log(self, msg):
         pass
-
 
     async def process(self, msg):
         pass
