@@ -1,6 +1,5 @@
 from logging import info, debug, error
 from random import choice, shuffle
-from cleverbot import Cleverbot
 from twython.exceptions import TwythonError
 
 import cl3ver
@@ -119,9 +118,6 @@ class Discord(object):
             reply = '{}, {}'.format(message.author.name, reply)
             await client.send_message(message.channel, reply)
 
-        # TODO refactor this out of here
-        elif message.content.startswith('|retweet'):
-            await self.retweet(message)
 
         elif '|' in message.content:
             cmd = message.content.split('|')[1].split(' ')[0].lower()
@@ -132,37 +128,3 @@ class Discord(object):
             elif message.content.startswith('|'):
                 await commands.deescord.custom(self, message.channel, message)
 
-
-    async def retweet(self, message):
-        screen_name = message.content.split('|retweet')[1].strip()
-
-        if not screen_name:
-            return await self.say(message.channel, 'Who should I retweet?')
-
-        try:
-            tooter_profile = (self.application.Twitter._twitter
-                              .show_user(screen_name=screen_name))
-
-        except TwythonError as e:
-            error('Twython Error: {}'.format(e))
-
-            return await self.say(message.channel, 'There was a problem searching for the Twitter user with the screen name {}.'.format(screen_name))
-
-        this_channel = message.channel
-
-        #  get_or_create() method returns (instance, created? = bool)
-        tooter = Tooter.get_or_create(screen_name=screen_name)[0]
-        channel_in_db = DiscordChannel.get_or_create(discord_id=this_channel.id)
-        channel = channel_in_db[0]
-
-        if tooter.channels.where(DiscordChannel.discord_id == this_channel.id).exists():
-            return await self.say(this_channel,
-                                  'I am already retweeting {} here.'
-                                  .format(tooter.screen_name))
-
-        tooter.channels.add(channel, clear_existing=False)
-
-        info('Tooter {} succesufully added'.format(tooter.screen_name))
-        await self.say(message.channel, "I will start retweeting {} in this channel.".format(tooter.screen_name))
-
-        await self.application.Twitter.check_tweets()

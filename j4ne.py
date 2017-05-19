@@ -138,19 +138,13 @@ def main():
 
         # ensure tables exist in db including intermediate tables for many to many relations
         try:
-            """ `create_tables()` ref: 'This method should be used for creating
-            tables as it will resolve the model dependency graph and
-            ensure the tables are created in the correct order. This
-            method will also create any indexes and constraints
-            defined on the models.'
-
+            """
             When `safe=True`, checks table exists before creating
             """
             db.create_tables(tables, safe=True)
         except OperationalError as e:
             # table (probably/hopefully) exists, dump this into the console
             warning(e)
-
 
     if options.migration:
         from db import Migrations
@@ -173,7 +167,7 @@ def main():
             info('Starting archive shuffle with model {}'.format(LiveModel))
 
             try:
-                number_of_records = shuffle2archive(LiveModel, False, 224) # temporary cutoff period
+                number_of_records = shuffle2archive(LiveModel, False, 224)  # temporary cutoff period
                 info('Shuffle finished with {} records archived'
                  'and {} records deleted from model {}'
                  .format(number_of_records[0],
