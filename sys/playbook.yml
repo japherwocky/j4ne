@@ -9,6 +9,7 @@
     project_repo: https://github.com/japherwocky/pforex.git
     project_uid: 1313
     project_gid: 1313
+    project_port: 8013
 
     system_packages:
       - git
