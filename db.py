@@ -11,6 +11,7 @@ archive_db = SqliteDatabase('archive.db')
 db.connect()
 
 Migrations = {}
+
 def migration(name):
 
     def __decorator(func):
@@ -23,12 +24,15 @@ def migration(name):
 @migration('nothing')
 def foo():
     """ An example migration that does nothing.  Run it like:
-    `python j4ne.py --migration=foo`
+    `python j4ne.py --migration=nothing`
     """
 
     logging.info('Migrating nothing...')
 
+
 from playhouse.migrate import SqliteMigrator, migrate
+
+
 @migration('bits')
 def bits():
     """ bits, badges, colors, yolo """
