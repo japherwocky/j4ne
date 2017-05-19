@@ -181,10 +181,10 @@ def main():
         tornado.testing.main()
         return
 
-    app = App(app_debug=options.debug)
-
-    http_server = tornado.httpserver.HTTPServer(app)
     tornado.platform.asyncio.AsyncIOMainLoop().install()  # uses default asyncio.loop()
+
+    app = App(app_debug=options.debug)
+    http_server = tornado.httpserver.HTTPServer(app)
 
     http_server.listen(options.port)
     info('Serving on port %d' % options.port)
