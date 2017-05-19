@@ -318,7 +318,7 @@ var updater = {
     buffsize: 1000,
 
     start: function() {
-        var url = "ws://" + location.host + "/chatsocket";
+        var url = "ws://" + location.host + "/chatsocket/";
         updater.socket = new WebSocket(url);
         updater.socket.onmessage = function(event) {
             updater.on_message( JSON.parse(event.data));
