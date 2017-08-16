@@ -23,6 +23,7 @@
       - ffmpeg 
       - libopus-dev 
       - libffi-dev
+      - sqlite3
 
   pre_tasks:
     - name: set locale
