@@ -7,10 +7,7 @@ from twython import Twython,TwythonStreamer
 from keys import twitter_appkey, twitter_appsecret, twitter_token, twitter_tokensecret
 from logging import debug, info, warning
 
-from networks.models import DiscordChannel, Tooter
-
-# twitter = Twython(twitter_appkey, twitter_appsecret, twitter_token, twitter_tokensecret)
-# twitter.verify_credentials()
+from networks.models import DiscordChannel, Tooter, Retweets
 
 
 # We need to wrap connect() as a task to prevent timeout error at runtime.
@@ -38,6 +35,7 @@ class Twitter(Network):
         verify = self._twitter.verify_credentials()
 
         # schedule polling for tweeters
+        # TODO, not like this, see j4ne.py for scheduling callbacks w/ tornado
         tornado.ioloop.PeriodicCallback( self.check_tweets , 1*60*1000).start()
         info('Twitter connected')
 
@@ -81,14 +79,14 @@ class Twitter(Network):
     async def check_tweets(self):
         info('Checking Tweets')
 
-        tooters = Tooter.select()
+        tooters = Retweets.select().distinct(Retweets.tooter)
 
         if not tooters.exists():
             info('No Tooters exist in the database yet')
             return
 
         for tooter in tooters:
-            tweets = self._twitter.get_user_timeline(screen_name = tooter.screen_name)
+            tweets = self._twitter.get_user_timeline(screen_name=tooter.tooter)
             tweets.reverse()
 
             last_tweet = tooter.last_tweet_id
@@ -100,26 +98,36 @@ class Twitter(Network):
                 if tweet['id'] <= last_tweet:
                     continue
 
-                info('new tweet from {}'.format(tweet['user']['screen_name']))
-                tooter.last_tweet_id = tweet['id']
-                tooter.save()
-
                 if tweet['in_reply_to_status_id']:
                     # don't show tweets that are replies to other users
                     continue
 
+                info('new tweet from {}'.format(tweet['user']['screen_name']))
+
                 tweet = await self.parse(tweet)
 
-                for channel in tooter.channels:
+                # kind of sloppy, but find any/all channels we're supposed to post this in
+                channels = Retweets.select().where(Retweets.tooter == tooter.tooter)
 
-                    destination = (self.application.Discord.client
-                                   .get_channel(channel.discord_id))
+                for channel in channels:
+
+                    destination = (self.application.Discord.client.get_channel(channel.discord_channel))
+
+                    # save last posted .. better if we did this after it works so we don't lose toots
+                    channel.last_tweet_id = tweet['id']
+                    channel.save()
 
                     if 'retweeted_status' in tweet:
                         user = tweet['retweeted_status']['user']['screen_name']
                         tweet_id = tweet['retweeted_status']['id']
                         retweet_link = ('https://twitter.com/{}/status/{}'
                                         .format(user, tweet_id))
+
+                        import pdb;pdb.set_trace()
+
+                        # skip self retweets for tiny
+                        if user.lower() == channel.tooter.lower():
+                            continue
 
                         if not tweet['is_quote_status']:
                             await self.application.Discord.say(destination, '{} retweets:\n\n{}'.format(tweet['user']['screen_name'], retweet_link))
@@ -129,3 +137,25 @@ class Twitter(Network):
                         continue
 
                     await self.application.Discord.say(destination, '{} tweets:\n\n{}\n\n'.format(tweet['user']['screen_name'], tweet['text']))
+
+
+from commands import discord_command
+
+@discord_command('retweet')
+async def retweet(network, channel, message):
+
+    tooter = message.content.split('|retweet')[1]
+    if not tooter:
+        return await network.say(message.channel, 'Who should I retweet?')
+
+    tooter = tooter.strip()
+
+    existing = Retweets().select().where(Retweets.tooter==tooter, Retweets.discord_channel==channel.id)
+
+    if len(existing) > 0:
+        return await network.say(message.channel, 'I am already retweeting {} here.'.format(tooter))
+
+    new_retweet = Retweets.insert(tooter=tooter, discord_channel=channel.id).execute()
+
+    await network.say(message.channel, "I will start retweeting {} in this channel.".format(tooter))
+

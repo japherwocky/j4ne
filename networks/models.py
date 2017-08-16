@@ -66,3 +66,11 @@ class DiscordChannel(Model):
         database = db
         db_table = 'channels'
 
+class Retweets(Model):
+    tooter = CharField()
+    last_tweet_id = IntegerField(default=0)
+    discord_channel = CharField()  # maybe this is actually an integer?
+
+    class Meta:
+        database = db
+        db_table = 'retweets'

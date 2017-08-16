@@ -128,7 +128,7 @@ def main():
         from networks.models import User, Moderator
 
         from peewee import OperationalError
-        from networks.models import DiscordChannel, Tooter
+        from networks.models import Retweets
 
         tables = [
             Message,
@@ -137,9 +137,7 @@ def main():
             Command,
             User,
             Moderator,
-            Tooter,
-            DiscordChannel,
-            DiscordChannel.tooters.get_through_model() # many-to-many 
+            Retweets,
         ]
 
         # ensure tables exist in db including intermediate tables for many to many relations
