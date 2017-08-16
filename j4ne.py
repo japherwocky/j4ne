@@ -183,20 +183,18 @@ def main():
 
     ## connect to discord 
     if options.discord:
-        from networks.deescord import Discord
-        app.Discord = Discord()
-        app.Discord.application = app
 
         @asyncio.coroutine
         def Drunner():
-            errcount = 0
-            while errcount < 3:
-                try:
-                    yield from app.Discord.connect()
-                except Exception as e:
-                    error(e)
-                    continue
-                errcount += 1
+            try:
+                from networks.deescord import Discord
+                app.Discord = Discord()
+                app.Discord.application = app
+                yield from app.Discord.connect()
+            except Exception as e:
+                error(e)
+                raise
+
         asyncio.ensure_future(Drunner())
 
 
