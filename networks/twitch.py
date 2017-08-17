@@ -192,26 +192,29 @@ class TwitchParser(object):
 class TwitchAPI(object):
 
     headers = { 
-        'Accept': 'application/vnd.twitchtv.v3+json',  # specify v3, json
+        'Accept': 'application/vnd.twitchtv.v5+json',  # specify v3, json
         'Client-ID': twitch_key,
         'Authorization': 'OAuth {}'.format(twitch_token)
         }
 
     async def connect(self):
 
+        # this just sort of says that we're authorized, not clear if it's necessary any more
         data = await self.query('https://api.twitch.tv/kraken')
 
-        # on the extremely off chance that these endpoints actually change
-        self.links = data['_links']
 
 
     async def follows(self):
         follows = []
-        nxt = 'https://api.twitch.tv/kraken/users/{}/follows/channels'.format(twitch_name)
+        twitch_id = await self.name2id(twitch_name)
+        nxt = 'https://api.twitch.tv/kraken/users/{}/follows/channels'.format(twitch_id)
         while nxt:
             response = await self.query(nxt)
             follows += [row['channel']['name'] for row in response['follows']]
-            nxt = response['_links']['next'] if response['follows'] else False
+
+            # seems like pagination doesn't happen in v5
+            # nxt = response['_links']['next'] if response['follows'] else False
+            nxt = False
 
         return follows
 
@@ -222,6 +225,13 @@ class TwitchAPI(object):
 
         return data
 
+    async def name2id(self, name):
+        path = 'https://api.twitch.tv/kraken/users?login={}'.format(name)
+        response = await self.query(path)
+
+        return int(response['users'][0]['_id'])
+
+
     async def live(self):
         # get streams of anyone the bot is following
         response = await self.query('https://api.twitch.tv/kraken/streams/followed')
@@ -229,6 +239,11 @@ class TwitchAPI(object):
         return response['streams']
 
     async def detail(self, streamer):
+
+        if type(streamer) == type('string'):
+            #legacy, convert screen name to an id
+            streamer = await self.name2id(streamer)
+
         response = await self.query('https://api.twitch.tv/kraken/streams/{}'.format(streamer))
         stream = response['stream']  # None if they are not live
         channel = await self.query('https://api.twitch.tv/kraken/channels/{}'.format(streamer))

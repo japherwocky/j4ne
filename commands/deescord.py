@@ -190,7 +190,51 @@ async def wgaff(network, channel, message):
 @mod_only
 async def twitchwgaff(network, channel, message):
     await network.send_message(channel, '┏(--)┓┏(--)┛┗(--﻿ )┓ WGAFF! ┏(--)┓┏(--)┛┗(--﻿ )┓')
-    
+
+#@command('reminder')    
+
+
+@command('following')
+async def twitchfollowing(network, channel, message):
+
+    msg = message.content.lower().split('|following ')[1]
+
+    follower, followee = msg.split(' ')
+
+    async def get_details(username):
+        try:
+            userdata = await network.application.TwitchAPI.detail( username )
+            return userdata
+        except HTTPError:
+            await network.send_message(channel, "I could not find a Twitch user named {}".format(username))
+            return False
+
+    follower = await get_details(follower)
+    followee = await get_details(followee)
+
+    if not follower and followee:
+        return
+
+    path = 'https://api.twitch.tv/kraken/users/{}/follows/channels/{}'.format(
+        follower['channel']['_id'],
+        followee['channel']['_id']
+        )
+    try:
+        deets = await network.application.TwitchAPI.query(path)
+    except HTTPError:
+        return await network.send_message(channel, "Awkward, {} isn't even following {}".format(
+            follower['channel']['name'],
+            followee['channel']['name']
+            ))
+
+
+    out = '{} has been following {} since {}'.format(
+        follower['channel']['name'],
+        followee['channel']['name'],
+        deets['created_at'].split('T')[0]
+        )
+    await network.send_message(channel, out)
+
 
 @command('invite')
 async def bot_invite(network, channel, message):
