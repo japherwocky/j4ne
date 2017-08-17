@@ -1,27 +1,15 @@
 from peewee import *
-from playhouse.fields import ManyToManyField
-
 from db import db
-
-"""
-flow is something like: 
-
-|mod <twitch_user_name>
-bot confirms account exists -> gets id, creates User account and Permission
-
-from discord:
-|sync <twitch_username>
-bot whispers link to discord linker ?
--> grab official twitch ID
-"""
 
 
 class User(Model):
 
+    """ A generic user model, used by the |trust system """
+
     name = CharField(null=True)
     twitch_id = IntegerField()
-    twitch_name = CharField() 
-    discord_id = IntegerField(null=True)
+    twitch_name = CharField()
+    discord_id = IntegerField(null=True)  # these are stubs, pending cross network linking somehow
     discord_name = CharField(null=True)
     discord_invite = CharField(null=True)
 
@@ -32,7 +20,9 @@ class User(Model):
 
 class Moderator(Model):
 
-    channel = CharField() # will we regret not making this a proper FK?
+    """ A "trusted" user """
+
+    channel = CharField()  # will we regret not making this a proper FK?
     network = CharField()
     user_id = ForeignKeyField(User)
 
@@ -41,32 +31,10 @@ class Moderator(Model):
         db_table = 'moderators'
 
 
-#Twitter related tables
-'''
-twatter tables with many to many relations:
-create_tables([
-    Tooter,
-    DiscordChannel,
-    DiscordChannel.tooters.get_through_model()  ])
-'''
-class Tooter(Model):
-    screen_name = CharField(unique=True)
-    last_tweet_id = IntegerField(default=0)
-
-    class Meta:
-        database = db
-        db_table = 'tooters'
-
-
-class DiscordChannel(Model):
-    discord_id = CharField()
-    tooters = ManyToManyField(Tooter, related_name='channels')
-
-    class Meta:
-        database = db
-        db_table = 'channels'
-
 class Retweets(Model):
+
+    """ Twitter accounts to be retweeted into discord channels, see |retweet """
+
     tooter = CharField()
     last_tweet_id = IntegerField(default=0)
     discord_channel = CharField()  # maybe this is actually an integer?
