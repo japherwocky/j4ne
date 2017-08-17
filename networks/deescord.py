@@ -1,5 +1,6 @@
 from logging import info, debug, error
 from random import choice, shuffle
+from twython.exceptions import TwythonError
 
 import cl3ver
 from keys import cleverbot_key as cleverkey
@@ -55,9 +56,6 @@ class Discord(object):
             info('Logged into Discord as {} {}'.format(client.user.id, client.user.name) )
 
             if getattr(self.application, 'Twitter', False):
-                self.application.Twitter.setup_retweets()
-                info('Retweet config loaded')
-
                 await self.application.Twitter.check_tweets()
 
         @client.event
@@ -118,9 +116,6 @@ class Discord(object):
             reply = '{}, {}'.format(message.author.name, reply)
             await client.send_message(message.channel, reply)
 
-        # TODO refactor this out of here
-        elif message.content.startswith('|retweet'):
-            await self.retweet(message)
 
         elif '|' in message.content:
             cmd = message.content.split('|')[1].split(' ')[0].lower()
@@ -130,35 +125,4 @@ class Discord(object):
 
             elif message.content.startswith('|'):
                 await commands.deescord.custom(self, message.channel, message)
-
-
-    async def retweet(self, message):
-
-        tooter = message.content.split('|retweet')[1]
-        if not tooter:
-            return await self.say(message.channel, 'Who should I retweet?')
-
-        tooter = tooter.strip()
-
-        this_server = message.server
-
-        conf = self.application.Twitter._twitter_conf
-
-        if not this_server in conf:
-            conf[this_server] = {message.channel: []}
-
-        if not message.channel in conf[this_server]:
-            conf[this_server][message.channel] = []
-
-        if message.channel in conf[this_server] and tooter in [t['screen_name'] for t in conf[this_server][message.channel]]:
-            return await self.say(message.channel, 'I am already retweeting {} here.'.format(tooter))
-
-        conf[this_server][message.channel].append( {'screen_name':tooter, 'last':1})
-
-        self.application.Twitter.save_twitter_config()
-
-        await self.say(message.channel, "I will start retweeting {} in this channel.".format(tooter))
-
-        await self.application.Twitter.check_tweets()
-
 

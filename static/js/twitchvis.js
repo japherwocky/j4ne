@@ -1,5 +1,6 @@
 function init() {
     /* set up our SVG element, calc margins, initial scales */
+    console.log('initializing')
 
     var margin = {top: 30, right: 30, bottom: 30, left: 50},
         width = window.innerWidth - margin.left - margin.right,  // todo, set width & height based on actual screen size
@@ -25,12 +26,12 @@ function init() {
     // add our SVG element
     var svg = d3.select("body").append("svg")
         .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
+        .attr("height", height + margin.top + margin.bottom);
 
     // a group with translations for margins
     var maingroup = svg.append("g")
         .attr('id', 'main')
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 
     // a group for incoming chat msgs
@@ -273,49 +274,11 @@ function render_channel () {
 }
 
 
-/* LEGACY TO HANDLE SUBMITTING CHATS */
-
-$(document).ready(function() {
-    if (!window.console) window.console = {};
-    if (!window.console.log) window.console.log = function() {};
-
-    $("#messageform").live("submit", function() {
-        newMessage($(this));
-        return false;
-    });
-    $("#messageform").live("keypress", function(e) {
-        if (e.keyCode == 13) {
-            newMessage($(this));
-            return false;
-        }
-    });
-    $("#message").select();
-    updater.start();
-
-    init();
-
-});
-
-function newMessage(form) {
-    var message = form.formToDict();
-    updater.socket.send(JSON.stringify(message));
-    form.find("input[type=text]").val("").select();
-}
-
-jQuery.fn.formToDict = function() {
-    var fields = this.serializeArray();
-    var json = {}
-    for (var i = 0; i < fields.length; i++) {
-        json[fields[i].name] = fields[i].value;
-    }
-    if (json.next) delete json.next;
-    return json;
-};
-
 var updater = {
     socket: null,
     msgs: [],
     buffsize: 1000,
+    status: '',
 
     start: function() {
         var url = "ws://" + location.host + "/chatsocket/";
@@ -332,7 +295,10 @@ var updater = {
 
         Tstart = new Date()
         render();  // draw things
-        // console.log('rendered', updater.msgs.length, 'chats in', (new Date())-Tstart, 'ms');
+        updater.status = 'rendered ' + updater.msgs.length + 'msgs in ' + (new Date()-Tstart) + 'ms';
         
     }
 };
+
+init();
+updater.start();

@@ -3,6 +3,7 @@ import unittest
 import feedparser
 from random import choice
 from logging import info, debug, warning, error
+
 import tornado.httpserver
 import tornado.ioloop
 import tornado.options
@@ -42,6 +43,7 @@ class App (tornado.web.Application):
         """
 
         handlers = [
+            (r"/?", HomeHandler),
             (r"/login/?", LoginHandler),
             (r"/logout/?", LogoutHandler),
             (r"/jukebox/?", WebPlayer),
@@ -62,10 +64,14 @@ class AuthMixin(object):
     def user(self):
         return self.get_current_user()
 
+class HomeHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.render('index.html')
+
 
 class LoginHandler(tornado.web.RequestHandler):
     """
-    super awkward naming now, basically a util to auth with twitch 
+    super awkward naming now, basically a util to auth with twitch
     and spit the oauth token out to stdout
     """
     def get(self):
@@ -108,6 +114,7 @@ def main():
     define("twitch", default=True, help="Connect to Twitch chat servers")
     define("twitchapi", default=True, help="Connect to Twitch API")
     define("discord", default=True, help="Connect to Discord chat servers")
+    define("twitter_setup", default=False, help="setup twitter account integration")
     define("twitter", default=True, help="Connect to Twitter")
     define("newbot", default=False, help="Generates a Discord server invite link for a new bot instance")
 
@@ -121,14 +128,27 @@ def main():
         from networks.models import User, Moderator
 
         from peewee import OperationalError
+        from networks.models import Retweets
 
-        for table in [Message, Event, Quote, Command, User, Moderator]:
-            try:
-                db.create_table(table)
-            except OperationalError as e:
-                # table (probably/hopefully) exists, dump this into the console 
-                warning(e)
-                continue
+        tables = [
+            Message,
+            Event,
+            Quote,
+            Command,
+            User,
+            Moderator,
+            Retweets,
+        ]
+
+        # ensure tables exist in db including intermediate tables for many to many relations
+        try:
+            """
+            When `safe=True`, checks table exists before creating
+            """
+            db.create_tables(tables, safe=True)
+        except OperationalError as e:
+            # table (probably/hopefully) exists, dump this into the console
+            warning(e)
 
     if options.migration:
         from db import Migrations
@@ -151,7 +171,7 @@ def main():
             info('Starting archive shuffle with model {}'.format(LiveModel))
 
             try:
-                number_of_records = shuffle2archive(LiveModel, False, 224) # temporary cutoff period
+                number_of_records = shuffle2archive(LiveModel, False, 224)  # temporary cutoff period
                 info('Shuffle finished with {} records archived'
                  'and {} records deleted from model {}'
                  .format(number_of_records[0],
@@ -164,10 +184,10 @@ def main():
         tornado.testing.main()
         return
 
-    app = App(app_debug=options.debug)
-
-    http_server = tornado.httpserver.HTTPServer(app)
     tornado.platform.asyncio.AsyncIOMainLoop().install()  # uses default asyncio.loop()
+
+    app = App(app_debug=options.debug)
+    http_server = tornado.httpserver.HTTPServer(app)
 
     http_server.listen(options.port)
     info('Serving on port %d' % options.port)
@@ -177,9 +197,9 @@ def main():
     if options.newbot:
         from keys import discord_app_id
         from discord_invite import invite_link
-        print("Please go to the following link to authorize the bot, then press `Enter`:\n")
+        info("Please go to the following link to authorize the bot, then press `Enter`:\n")
         print(invite_link(discord_app_id))
-        input("\nPress `Enter` to continue...")
+        info("\nPress `Enter` to continue...")
 
     ## connect to discord 
     if options.discord:
@@ -217,6 +237,36 @@ def main():
         app.Twitch.application = app
 
         tornado.ioloop.IOLoop.instance().add_callback(app.Twitch.connect)  
+
+    if options.twitter_setup:
+        import keys
+        from twython import Twython
+
+        twitter = Twython(keys.twitter_appkey, keys.twitter_appsecret)
+
+        auth = twitter.get_authentication_tokens()
+        #Grab intermediate tokens. These are not the final tokens
+        ioauth_token = auth['oauth_token']
+        ioauth_token_secret = auth['oauth_token_secret']
+
+
+        print("\nPlease go to the following link to authorize Twitter account access, then record the authorization PIN:\n")
+        print(auth['auth_url'])
+        
+        pin = input("\nEnter the PIN then press `Enter`: ")
+        twitter = Twython(keys.twitter_appkey,
+                          keys.twitter_appsecret,
+                          ioauth_token,
+                          ioauth_token_secret)
+
+        final_auth = twitter.get_authorized_tokens(pin)
+
+        oauth_token = final_auth['oauth_token']
+        oauth_token_secret = final_auth['oauth_token_secret']
+
+        print("token: {}\n token secret: {}".format(oauth_token, oauth_token_secret))
+
+        return  # remove this eventually
 
     if options.twitter:
         from networks.twatter import Twitter

@@ -1,5 +1,6 @@
 *.py[o|c|d]
 *.swp
+.vagrant
 
 keys.py
 twitterconf.json

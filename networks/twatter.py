@@ -7,8 +7,7 @@ from twython import Twython,TwythonStreamer
 from keys import twitter_appkey, twitter_appsecret, twitter_token, twitter_tokensecret
 from logging import debug, info, warning
 
-# twitter = Twython(twitter_appkey, twitter_appsecret, twitter_token, twitter_tokensecret)
-# twitter.verify_credentials()
+from networks.models import Retweets
 
 
 # We need to wrap connect() as a task to prevent timeout error at runtime.
@@ -24,22 +23,19 @@ class Twitter(Network):
     Common interface for connecting and receiving realtimey events
     """
 
-    _twitter_conf = None  
-
     async def connect(self):
-
+        # kick off a periodic task for our ghetto ass Twitter polling
         self._twitter = Twython(
-            twitter_appkey, 
-            twitter_appsecret, 
-            twitter_token, 
+            twitter_appkey,
+            twitter_appsecret,
+            twitter_token,
             twitter_tokensecret
             )
 
-        # kick off a periodic task for our ghetto ass Twitter polling
-        self._twitter = Twython(twitter_appkey, twitter_appsecret, twitter_token, twitter_tokensecret)
-        self._twitter.verify_credentials()
+        verify = self._twitter.verify_credentials()
 
         # schedule polling for tweeters
+        # TODO, not like this, see j4ne.py for scheduling callbacks w/ tornado
         tornado.ioloop.PeriodicCallback( self.check_tweets , 1*60*1000).start()
         info('Twitter connected')
 
@@ -65,7 +61,7 @@ class Twitter(Network):
 
 
     async def parse(self, tweet):
-        
+
         tweet['text'] = html.unescape(tweet['text'])
 
         return tweet
@@ -81,115 +77,124 @@ class Twitter(Network):
 
     @taskify
     async def check_tweets(self):
-        """ Parse our stupid homebrew conf file """
+        debug('checking tweets')
 
-        if not self._twitter_conf:
-            warning('_twitter_conf not (yet?) loaded!')
+        tooters = Retweets.select().distinct(Retweets.tooter)
 
+        if not tooters.exists():
+            info('No Tooters exist in the database yet')
             return
 
-        for serv in self._twitter_conf.keys():
-            debug(serv)
+        for tooter in tooters:
+            tweets = self._twitter.get_user_timeline(screen_name=tooter.tooter)
+            tweets.reverse()
 
-            for chann in self._twitter_conf[serv].keys():
-                debug(chann)
+            last_tweet = tooter.last_tweet_id
 
-                for tooter in self._twitter_conf[serv][chann]:
+            for tweet in tweets:
+                if last_tweet == 0:
+                    last_tweet = tweets[-2]['id']
 
-                    tweets = self._twitter.get_user_timeline(screen_name = tooter['screen_name'])
-                    tweets.reverse()
+                if tweet['id'] <= last_tweet:
+                    continue
 
-                    # this will be the first tweet in the channel
-                    if tooter['last'] == 1:
-                        tweets = [tweets[-1],]
+                if tweet['in_reply_to_status_id']:
+                    # don't show tweets that are replies to other users
+                    continue
 
+                info('new tweet from {}'.format(tweet['user']['screen_name']))
 
-                    for tweet in tweets:
-                        if tooter['last'] > 1 and tweet['id'] <= tooter['last']:
+                tweet = await self.parse(tweet)
+
+                # kind of sloppy, but find any/all channels we're supposed to post this in
+                channels = Retweets.select().where(Retweets.tooter == tooter.tooter)
+
+                for channel in channels:
+
+                    destination = (self.application.Discord.client.get_channel(channel.discord_channel))
+
+                    # save last posted .. better if we did this after it works so we don't lose toots
+                    channel.last_tweet_id = tweet['id']
+                    channel.save()
+
+                    if 'retweeted_status' in tweet:
+                        user = tweet['retweeted_status']['user']['screen_name']
+                        tweet_id = tweet['retweeted_status']['id']
+                        retweet_link = ('https://twitter.com/{}/status/{}'
+                                        .format(user, tweet_id))
+
+                        # skip self retweets for tiny
+                        if user.lower() == channel.tooter.lower():
                             continue
 
-                        info('new tweet from {}'.format(tweet['user']['screen_name']))
-
-                        tooter['last'] = tweet['id']
-
-                        if tweet['in_reply_to_status_id']:
-                            # don't show tweets that are replies to other users
+                        if not tweet['is_quote_status']:
+                            await self.application.Discord.say(destination, '{} retweets:\n\n{}'.format(tweet['user']['screen_name'], retweet_link))
                             continue
 
-                        tweet = await self.parse(tweet)
+                        await self.application.Discord.say(destination, '{} retweets:\n\n{}'.format(tweet['user']['screen_name'], retweet_link))
+                        continue
 
-                        if 'retweeted_status' in tweet:
-                            user = tweet['retweeted_status']['user']['screen_name']
-                            tweet_id = tweet['retweeted_status']['id']
-                            retweet_link = 'https://twitter.com/{}/status/{}'.format(user, tweet_id)
-
-                            if not tweet['is_quote_status']:
-                                await self.application.Discord.say(chann, '{} retweets:\n\n{}'.format(tweet['user']['screen_name'], retweet_link))
-                                continue
-
-                            else:
-                                await self.application.Discord.say(chann, '{} retweets:\n\n{}'.format(tweet['user']['screen_name'], retweet_link))
-                                continue
-
-                        await self.application.Discord.say(chann, '{} tweets:\n\n{}\n\n'.format(tweet['user']['screen_name'], tweet['text']))
-
-                    self.save_twitter_config()
-
-        
-    def setup_retweets(self):
-
-        # this is all moot if we're not connected to Discord
-        if not getattr(self.application, 'Discord'):
-            warning('No discord connection, not retweeting')
-
-            return
-
-        # look up where we're supposed to be retweeting to
-        with open('./twitterconf.json') as f:
-            conf = json.loads(f.read())
-
-            # replace server strings with proper objects
-            servers = {server.name:server for server in self.application.Discord.client.servers}
-            for servstring in [k for k in conf.keys()]:
-                debug('Loading server {}'.format(servstring))
-
-                if servstring in servers:
-
-                    servobj = servers[servstring]
-                    conf[servobj] = conf[servstring]
-                    del conf[servstring]
-
-                    for chanstring in [k for k in conf[servobj].keys()]:
-                        channels = {channel.name:channel for channel in servers[servstring].channels}
-                        chanobj = channels[chanstring]
-                        conf[servobj][chanobj] = conf[servobj][chanstring]
-                        del conf[servobj][chanstring]
-
-            self._twitter_conf = conf
-
-        info('Twitter conf loaded')
+                    await self.application.Discord.say(destination, '{} tweets:\n\n{}\n\n'.format(tweet['user']['screen_name'], tweet['text']))
 
 
-    def save_twitter_config(self):
+from commands import discord_command
 
-        out = {}
-        servers = {server.name:server for server in self.application.Discord.client.servers}
+@discord_command('retweet')
+async def retweet(network, channel, message):
 
-        for serv in self._twitter_conf.keys():
-            out[serv.name] = {}
-       
-            for chann in self._twitter_conf[serv].keys():
-                out[serv.name][chann.name] = []
+    tooter = message.content.split('|retweet')[1]
+    if not tooter:
+        return await network.say(message.channel, 'Who should I retweet?')
 
-                for tooter in self._twitter_conf[serv][chann]:
-                    out[serv.name][chann.name].append(tooter)
-                 
-        with open('./twitterconf.json', 'w') as f:
-            out = json.dumps(out, sort_keys=True, indent=4)
+    tooter = tooter.strip()
 
-            f.write(out)
+    existing = Retweets().select().where(Retweets.tooter==tooter, Retweets.discord_channel==channel.id)
+
+    if len(existing) > 0:
+        return await network.say(message.channel, 'I am already retweeting {} here.'.format(tooter))
+
+    new_retweet = Retweets.insert(tooter=tooter, discord_channel=channel.id).execute()
+
+    await network.say(message.channel, "I will start retweeting {} in this channel.".format(tooter))
+
+@discord_command('_migratetwitterconf')
+async def load_twitter_config(network, channel, message):
+
+    # from networks.twatter import twitter
+    # self._twitter = twitter
+
+    with open('./twitterconf.json') as f:
+        conf = json.loads(f.read())
+
+        # replace server strings with proper objects
+        servers = {server.name:server for server in network.client.servers}
+        for servstring in [k for k in conf.keys()]:
+            debug('Loading server {}'.format(servstring))
+
+            if servstring in servers:
+
+                servobj = servers[servstring]
+                conf[servobj] = conf[servstring]
+                del conf[servstring]
+
+                for chanstring in [k for k in conf[servobj].keys()]:
+                    channels = {channel.name:channel for channel in servers[servstring].channels}
+                    chanobj = channels[chanstring]
+                    conf[servobj][chanobj] = conf[servobj][chanstring]
+                    del conf[servobj][chanstring]
+
+                    for retweet in conf[servobj][chanobj]:
+
+                        existing = Retweets().select().where(Retweets.tooter==retweet['screen_name'], Retweets.discord_channel==chanobj.id)
+
+                        if len(existing) > 0:
+                            await network.say(message.channel, 'I am already know about {}.'.format(retweet['screen_name']))
+
+                        else:
+                            new_retweet = Retweets.insert(tooter=retweet['screen_name'], discord_channel=chanobj.id, last_tweet_id=retweet['last']).execute()
 
 
+        # self._twitter_conf = conf
 
 
 
