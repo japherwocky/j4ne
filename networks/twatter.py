@@ -77,7 +77,7 @@ class Twitter(Network):
 
     @taskify
     async def check_tweets(self):
-        info('Checking Tweets')
+        debug('checking tweets')
 
         tooters = Retweets.select().distinct(Retweets.tooter)
 
@@ -122,8 +122,6 @@ class Twitter(Network):
                         tweet_id = tweet['retweeted_status']['id']
                         retweet_link = ('https://twitter.com/{}/status/{}'
                                         .format(user, tweet_id))
-
-                        import pdb;pdb.set_trace()
 
                         # skip self retweets for tiny
                         if user.lower() == channel.tooter.lower():
