@@ -26,8 +26,6 @@ from commands import discord_command as command
 import commands.deescord
 import commands.jukebox
 
-from networks.models import Tooter, DiscordChannel
-
 from loggers.handlers import Discord as Dlogger
 Dlogger = Dlogger()
 

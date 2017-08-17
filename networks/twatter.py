@@ -7,7 +7,7 @@ from twython import Twython,TwythonStreamer
 from keys import twitter_appkey, twitter_appsecret, twitter_token, twitter_tokensecret
 from logging import debug, info, warning
 
-from networks.models import DiscordChannel, Tooter, Retweets
+from networks.models import Retweets
 
 
 # We need to wrap connect() as a task to prevent timeout error at runtime.
@@ -156,4 +156,45 @@ async def retweet(network, channel, message):
     new_retweet = Retweets.insert(tooter=tooter, discord_channel=channel.id).execute()
 
     await network.say(message.channel, "I will start retweeting {} in this channel.".format(tooter))
+
+@discord_command('_migratetwitterconf')
+async def load_twitter_config(network, channel, message):
+
+    # from networks.twatter import twitter
+    # self._twitter = twitter
+
+    with open('./twitterconf.json') as f:
+        conf = json.loads(f.read())
+
+        # replace server strings with proper objects
+        servers = {server.name:server for server in network.client.servers}
+        for servstring in [k for k in conf.keys()]:
+            debug('Loading server {}'.format(servstring))
+
+            if servstring in servers:
+
+                servobj = servers[servstring]
+                conf[servobj] = conf[servstring]
+                del conf[servstring]
+
+                for chanstring in [k for k in conf[servobj].keys()]:
+                    channels = {channel.name:channel for channel in servers[servstring].channels}
+                    chanobj = channels[chanstring]
+                    conf[servobj][chanobj] = conf[servobj][chanstring]
+                    del conf[servobj][chanstring]
+
+                    for retweet in conf[servobj][chanobj]:
+
+                        existing = Retweets().select().where(Retweets.tooter==retweet['screen_name'], Retweets.discord_channel==chanobj.id)
+
+                        if len(existing) > 0:
+                            await network.say(message.channel, 'I am already know about {}.'.format(retweet['screen_name']))
+
+                        else:
+                            new_retweet = Retweets.insert(tooter=retweet['screen_name'], discord_channel=chanobj.id, last_tweet_id=retweet['last']).execute()
+
+
+        # self._twitter_conf = conf
+
+
 
