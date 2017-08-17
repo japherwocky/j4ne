@@ -157,7 +157,7 @@ async def retweet(network, channel, message):
 
     await network.say(message.channel, "I will start retweeting {} in this channel.".format(tooter))
 
-@discord_command('_migratetwitterconf')
+# @discord_command('_migratetwitterconf')
 async def load_twitter_config(network, channel, message):
 
     # from networks.twatter import twitter
