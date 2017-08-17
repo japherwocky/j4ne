@@ -207,14 +207,17 @@ class TwitchAPI(object):
     async def follows(self):
         follows = []
         twitch_id = await self.name2id(twitch_name)
-        nxt = 'https://api.twitch.tv/kraken/users/{}/follows/channels'.format(twitch_id)
+        offset = 0
+        nxt = 'https://api.twitch.tv/kraken/users/{}/follows/channels?offset={}'.format(twitch_id, offset)
         while nxt:
             response = await self.query(nxt)
             follows += [row['channel']['name'] for row in response['follows']]
 
-            # seems like pagination doesn't happen in v5
-            # nxt = response['_links']['next'] if response['follows'] else False
-            nxt = False
+            if response['_total'] > len(follows):
+                offset += 25
+                nxt = 'https://api.twitch.tv/kraken/users/{}/follows/channels?offset={}'.format(twitch_id, offset)
+            else:
+                nxt = False
 
         return follows
 
