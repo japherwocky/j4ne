@@ -64,21 +64,22 @@ async def mod(network, channel, message):
         return await network.send_message(channel, 'Who did you want me to trust, {}?'.format(message.author))
 
     # get user data from the API / check that it exists
-    try:
-        twitch_user = await network.application.TwitchAPI.query('https://api.twitch.tv/kraken/users/{}/'.format(parts[0]))
+    twitch_user = await network.application.TwitchAPI.query('https://api.twitch.tv/kraken/users?login={}'.format(parts[0]))
 
-        # a valid user - see if we have them in the database yet
-        user, created = User.get_or_create(twitch_id=twitch_user['_id'], twitch_name=parts[0].lower())
-        if created:
-            user.name = twitch_user['display_name']
-            user.save()
-
-        mod = Moderator.get_or_create(user_id=user, channel=channel, network='twitch')
-
-        await network.send_message(channel, '{} is now trusted in this channel.'.format(user.name))
-
-    except HTTPError:
+    if twitch_user['_total'] == 0:
         return await network.send_message(channel, 'I could not find that user on twitch.')
+
+    # a valid user - see if we have them in the database yet
+    twitch_user = twitch_user['users'][0]
+
+    user, created = User.get_or_create(twitch_id=twitch_user['_id'], twitch_name=parts[0].lower())
+    if created:
+        user.name = twitch_user['display_name']
+        user.save()
+
+    mod = Moderator.get_or_create(user_id=user, channel=channel, network='twitch')
+
+    await network.send_message(channel, '{} is now trusted in this channel.'.format(user.name))
         
 
 @command('untrust')
