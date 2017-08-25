@@ -203,9 +203,6 @@ def main():
 
     ## connect to discord 
     if options.discord:
-        from networks.deescord import Discord
-        app.Discord = Discord()
-        app.Discord.application = app
 
         @asyncio.coroutine
         def Drunner():
