@@ -92,6 +92,9 @@ async def youropinion(network, channel, message):
 async def youropinion(network, channel, message):
     await network.send_file(channel, 'static/anneCool.gif')
 
+@command('nani')
+async def nani(network, channel, message):
+    await network.send_file(channel, 'static/nani.gif')
 
 @command('live')
 async def live(network, channel, message):
