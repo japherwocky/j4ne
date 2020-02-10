@@ -16,7 +16,7 @@ oauthlib==2.0.2
 parsedatetime==2.4
 peewee==2.10.1
 pycparser==2.17
-requests==2.14.2
+requests==2.20.0
 requests-oauthlib==0.8.0
 six==1.10.0
 style==1.1.0
