@@ -64,6 +64,7 @@ class AuthMixin(object):
     def user(self):
         return self.get_current_user()
 
+
 class HomeHandler(tornado.web.RequestHandler):
     def get(self):
         self.render('index.html')
@@ -84,7 +85,6 @@ class LoginHandler(tornado.web.RequestHandler):
         username = self.get_argument('name')
 
         info('got token %s for user %s' % (token, username))
-
 
 
 class LogoutHandler(tornado.web.RequestHandler):
@@ -201,7 +201,7 @@ def main():
         print(invite_link(discord_app_id))
         info("\nPress `Enter` to continue...")
 
-    ## connect to discord 
+    ## connect to discord
     if options.discord:
 
         @asyncio.coroutine
@@ -211,14 +211,12 @@ def main():
                 app.Discord = Discord()
                 app.Discord.application = app
                 yield from app.Discord.connect()
+
             except Exception as e:
                 error(e)
                 raise
 
         asyncio.ensure_future(Drunner())
-
-
-        # tornado.ioloop.IOLoop.instance().add_callback(app.Discord.connect)  
 
     # connect to Twitch API
     if options.twitchapi:
@@ -229,14 +227,14 @@ def main():
         from tornado.httpclient import AsyncHTTPClient
         app.TwitchAPI.client = AsyncHTTPClient()
 
-        tornado.ioloop.IOLoop.instance().add_callback(app.TwitchAPI.connect)  
+        tornado.ioloop.IOLoop.instance().add_callback(app.TwitchAPI.connect)
 
     # connect to Twitch chat
     if options.twitch:
         app.Twitch = TwitchParser()
         app.Twitch.application = app
 
-        tornado.ioloop.IOLoop.instance().add_callback(app.Twitch.connect)  
+        tornado.ioloop.IOLoop.instance().add_callback(app.Twitch.connect)
 
     if options.twitter_setup:
         import keys
@@ -249,10 +247,9 @@ def main():
         ioauth_token = auth['oauth_token']
         ioauth_token_secret = auth['oauth_token_secret']
 
-
         print("\nPlease go to the following link to authorize Twitter account access, then record the authorization PIN:\n")
         print(auth['auth_url'])
-        
+
         pin = input("\nEnter the PIN then press `Enter`: ")
         twitter = Twython(keys.twitter_appkey,
                           keys.twitter_appsecret,
@@ -277,7 +274,7 @@ def main():
     # link the Jukebox to the application
     from commands.jukebox import J  # our instance of the Jukebox
     app.Jukebox = J  # on our instance of the Application
-    
+
     tornado.ioloop.IOLoop.instance().start()
 
 
