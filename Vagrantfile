@@ -8,7 +8,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
     # Ubuntu 14
     config.vm.define "local" do |local|
-        local.vm.box = "ubuntu/trusty64"
+        local.vm.box = "hashicorp/bionic64"
 
         # BASE PROVISIONING
         local.vm.provision "ansible" do |ansible|
