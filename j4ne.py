@@ -116,6 +116,7 @@ def main():
     define("discord", default=True, help="Connect to Discord chat servers")
     define("twitter_setup", default=False, help="setup twitter account integration")
     define("twitter", default=True, help="Connect to Twitter")
+    define("square", default=True, help="Connect to the Square API")
     define("newbot", default=False, help="Generates a Discord server invite link for a new bot instance")
 
     define("runtests", default=False, help="Run tests")
@@ -217,6 +218,12 @@ def main():
                 raise
 
         asyncio.ensure_future(Drunner())
+
+    if options.square:
+        from networks.squore import Squore
+        app.Square = Squore(app)
+
+        tornado.ioloop.IOLoop.instance().add_callback(app.Square.connect)
 
     # connect to Twitch API
     if options.twitchapi:
