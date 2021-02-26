@@ -1,6 +1,6 @@
 Markdown==2.6.8
 PyNaCl==1.0.1
-aiohttp==1.0.5
+aiohttp==3.7.4
 async-timeout==1.2.1
 cffi==1.10.0
 chardet==3.0.3
