@@ -24,5 +24,5 @@ terminaltables==3.1.0
 tornado==4.5.1
 twython==3.4.0
 update==0.0.1
-websockets==3.3
+websockets==9.1
 youtube-dl==2017.5.18.1
