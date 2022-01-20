@@ -6,7 +6,7 @@
     project_root: /opt/{{ project_name }}
     application_path: "{{ project_root }}"
     virtualenv_path: "{{ project_root }}/env"
-    project_repo: https://github.com/japherwocky/pforex.git
+    project_repo: https://github.com/japherwocky/j4ne.git
     project_uid: 1313
     project_gid: 1313
     project_port: 8013
