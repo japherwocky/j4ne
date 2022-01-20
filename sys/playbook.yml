@@ -1,6 +1,6 @@
 ---
 - hosts: all
-  sudo: yes
+  become: yes
   vars:
     project_name: j4ne
     project_root: /opt/{{ project_name }}
@@ -40,8 +40,8 @@
 
     - name: set locale for project user
       locale_gen: name="en_US.UTF-8" state=present
-      sudo: yes
-      sudo_user: "{{ project_name }}"
+      become: yes
+      become_user: "{{ project_name }}"
 
     - name: add user to vagrant group
       user: name={{ project_name }} groups=vagrant append=yes
@@ -52,16 +52,16 @@
       apt_repository: repo='ppa:nginx/stable'
 
     - name: add deadsnakes for.. python 3 stuff
-      apt_repository: repo='ppa:fkrull/deadsnakes'
+      apt_repository: repo='ppa:deadsnakes/ppa'
 
     - name: this for audio / video libs
-      apt_repository: repo='ppa:mc3man/trusty-media'
+      apt_repository: repo='ppa:savoury1/ffmpeg4'
 
     - apt: update_cache=yes
 
     - name: Install required system packages.
-      apt: pkg={{ item }} state=installed
-      with_items: "{{ system_packages }}"
+      apt: pkg={{ system_packages }} state=present
+
 
   tasks:
 
@@ -69,7 +69,8 @@
       git: 
         repo: "{{ project_repo }}"
         dest: "{{ application_path }}" 
-      sudo_user: "{{ project_name }}"
+      become_user: "{{ project_name }}"
+      become: yes
       when: vagrant_env != 'local'
 
     - name: Install nginx configuration file
@@ -81,7 +82,8 @@
     #TODO - trigger this on config change
     - name: Restart nginx
       service: name=nginx state=restarted
-      sudo_user: root
+      become_user: root
+      become: yes
       tags: nginx
 
     - name: Create / update app virtualenv.
@@ -89,7 +91,8 @@
         requirements: "{{ application_path }}/requirements.txt" 
         virtualenv: "{{ virtualenv_path }}"
         virtualenv_python: python3.5
-      sudo_user: "{{ project_name }}"
+      become_user: "{{ project_name }}"
+      become: yes
       tags: virtualenv
 
     - name: Install Upstart script
@@ -100,5 +103,6 @@
 
     - name: Restart app
       service: name={{ project_name }} state=restarted
-      sudo_user: root
+      become_user: root
+      become: yes
       tags: upstart

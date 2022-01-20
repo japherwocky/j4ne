@@ -1,32 +1,9 @@
 SYSTEM REQUIREMENTS 
 ===================
 
-_As root, or with sudo:_
+System dependencies are built into the Vagrant file, with ansible scripts in `/sys/`.  
 
-Python 3.5
-----------
-
-```
-add-apt-repository ppa:fkrull/deadsnakes
-apt-get update
-apt-get install python3.5 python3.5-dev python3-pip python-virtualenv
-```
-
-Compiler dependencies
----------------------
-
-```
-apt-get install build-essential git
-```
-
-Audio tools
------------
-
-```
-add-apt-repository ppa:mc3man/trusty-media
-apt-get update
-apt-get install ffmpeg libopus-dev libffi-dev
-```
+`vagrant up local` will bootstrap a local VM with the app (and python virtualenv) installed in `/opt/j4ne`
 
 
 PYTHON REQUIREMENTS

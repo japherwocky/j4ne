@@ -5,7 +5,7 @@ Vagrant.configure("2") do |config|
 
     # Ubuntu 14
     config.vm.define "local" do |local|
-        local.vm.box = "ubuntu/trusty64"
+        local.vm.box = "hashicorp/bionic64"
 
         # LOCAL / DEV / DEFAULT PROVIDER OPTIONS
         local.vm.provider "virtualbox" do |vb|
