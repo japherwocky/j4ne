@@ -174,8 +174,8 @@ def main():
             try:
                 number_of_records = shuffle2archive(LiveModel, False, 224)  # temporary cutoff period
                 info('Shuffle finished with {} records archived'
-                 'and {} records deleted from model {}'
-                 .format(number_of_records[0],
+                    'and {} records deleted from model {}'
+                    .format(number_of_records[0],
                          number_of_records[1],
                          LiveModel))
             except LiveModel.DoesNotExist:
@@ -194,7 +194,7 @@ def main():
     info('Serving on port %d' % options.port)
 
     # Discord options:
-    ## new bot instance authentication
+    #  new bot instance authentication
     if options.newbot:
         from keys import discord_app_id
         from discord_invite import invite_link
@@ -202,7 +202,7 @@ def main():
         print(invite_link(discord_app_id))
         info("\nPress `Enter` to continue...")
 
-    ## connect to discord
+    # connect to discord
     if options.discord:
 
         @asyncio.coroutine
@@ -250,7 +250,7 @@ def main():
         twitter = Twython(keys.twitter_appkey, keys.twitter_appsecret)
 
         auth = twitter.get_authentication_tokens()
-        #Grab intermediate tokens. These are not the final tokens
+        # Grab intermediate tokens. These are not the final tokens
         ioauth_token = auth['oauth_token']
         ioauth_token_secret = auth['oauth_token_secret']
 
