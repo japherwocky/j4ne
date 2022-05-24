@@ -1,4 +1,4 @@
-from peewee import *
+from peewee import Model, CharField, IntegerField, ForeignKeyField
 from db import db
 
 
@@ -33,7 +33,7 @@ class Moderator(Model):
 
 class Retweets(Model):
 
-    """ Twitter accounts to be retweeted into discord channels, see |retweet """
+    """Twitter accounts to be retweeted into discord channels, see |retweet """
 
     tooter = CharField()
     last_tweet_id = IntegerField(default=0)

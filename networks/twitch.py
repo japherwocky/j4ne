@@ -7,13 +7,13 @@ from tornado.websocket import websocket_connect
 from tornado.platform.asyncio import to_asyncio_future
 
 from keys import twitch_name, twitch_token, twitch_key
-from loggers.handlers import Twitch as Tlogger
-Tlogger = Tlogger()
+
 from loggers.models import Event
 from commands import Twitch_commands as Commands
 import commands.twitch
+from loggers.handlers import Twitch as Tlogger
+Tlogger = Tlogger()
 
-from commands.models import Command
 
 class TwitchParser(object):
 
@@ -49,10 +49,9 @@ class TwitchParser(object):
                     if line:
                         try:
                             await self.on_event(line)
-                        except:
+                        except:  # noqa: E722
                             logging.error(line)
                             raise
-
 
     async def send_message(self, channel, message):
 
@@ -60,12 +59,11 @@ class TwitchParser(object):
         response = await self.conn.write_message(out)
         logging.info(out)
                 
-
     async def on_message(self, msg):
         # kind of silly, TODO refactor the Logger function into here
         try:
             message = Tlogger(msg)
-        except Exception as e:
+        except:  # noqa: E722
             logging.error(msg)
             raise
 
@@ -81,13 +79,12 @@ class TwitchParser(object):
                 # look for custom counting commands
                 await commands.twitch.custom(self, message.channel, message)
 
-
     async def on_event(self, msg):
         msg = msg.strip()  # make sure newlines are gone
 
         if msg.startswith('@'):
             meta, msg = msg[1:].split(' ', 1)
-            meta = {foo:bar for foo,bar in [row.split('=') for row in meta.split(';')]}
+            meta = {foo: bar for foo, bar in [row.split('=') for row in meta.split(';')]}
 
         else:
             meta = {}
@@ -120,11 +117,11 @@ class TwitchParser(object):
     def on_part(self, user, channel, body):
 
         e = Event(
-            network = "twitch",
-            channel = channel,
-            user = user,
-            type = 'PART',
-            timestamp = datetime.now()
+            network="twitch",
+            channel=channel,
+            user=user,
+            type='PART',
+            timestamp=datetime.now()
         )
 
         e.save()
@@ -132,11 +129,11 @@ class TwitchParser(object):
     def on_join(self, user, channel, body):
 
         e = Event(
-            network = "twitch",
-            channel = channel,
-            user = user,
-            type = 'JOIN',
-            timestamp = datetime.now()
+            network="twitch",
+            channel=channel,
+            user=user,
+            type='JOIN',
+            timestamp=datetime.now()
         )
 
         e.save()
@@ -144,19 +141,19 @@ class TwitchParser(object):
     def on_sub(self, user, channel, body):
 
         # message is sent as user 'twitchnotify', pull this out of the body
-        user =  body[1:].split(' ')[0]
+        user = body[1:].split(' ')[0]
 
         e = Event(
-            network = "twitch",
-            channel = channel,
-            user = user,
-            type = 'SUB',
-            timestamp = datetime.now()
+            network="twitch",
+            channel=channel,
+            user=user,
+            type='SUB',
+            timestamp=datetime.now()
         )
 
         if 'subscribed for' in body:
             # wats regex
-            e.length = int(body.split('subscribed for')[1].strip().split(' ',1)[0])
+            e.length = int(body.split('subscribed for')[1].strip().split(' ', 1)[0])
 
         elif 'just subscribed!' in body:
             e.length = 1
@@ -168,18 +165,18 @@ class TwitchParser(object):
         user = body[1:]
         
         e = Event(
-            network = "twitch",
-            channel = channel,
-            user = user,
-            type = 'TIMEOUT',
-            timestamp = datetime.now()
+            network="twitch",
+            channel=channel,
+            user=user,
+            type='TIMEOUT',
+            timestamp=datetime.now()
         )
 
         if 'ban-duration' in meta:
             e.length = int(meta['ban-duration'])
             e.save()
 
-            logging.warning('{} banned from chat for a hot {}'.format(user,e.length))
+            logging.warning('{} banned from chat for a hot {}'.format(user, e.length))
 
         else:
 
@@ -199,7 +196,7 @@ class TwitchAPI(object):
 
     async def connect(self):
 
-        # this just sort of says that we're authorized, not clear if it's necessary any more
+        # the response says that we're authorized, not clear if it's necessary
         data = await self.query('https://api.twitch.tv/kraken')
 
 
@@ -234,7 +231,6 @@ class TwitchAPI(object):
 
         return int(response['users'][0]['_id'])
 
-
     async def live(self):
         # get streams of anyone the bot is following
         response = await self.query('https://api.twitch.tv/kraken/streams/followed')
@@ -261,4 +257,3 @@ class TwitchAPI(object):
             'hosts': hosts,
             'chatters': chatters,
         }
-

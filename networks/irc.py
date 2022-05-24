@@ -1,6 +1,4 @@
 import os
-join = os.path.join
-exists = os.path.exists
 import feedparser
 from random import choice
 from logging import info, debug
@@ -10,6 +8,9 @@ from logging import info, debug
 import re
 # _linesep_regexp = re.compile("\r?\n")
 _linesep_regexp = "\r?\n"
+
+join = os.path.join
+exists = os.path.exists
 
 
 class IRC(object):
@@ -44,7 +45,7 @@ class IRC(object):
 
         debug('IRC> %s' % out)
         
-        self._stream.write( (out + '\r\n').encode('utf-8') )  # python3 required
+        self._stream.write((out + '\r\n').encode('utf-8'))  # python3 required
 
     RE_ORIGIN = re.compile(r'([^!]*)!?([^@]*)@?(.*)')
 

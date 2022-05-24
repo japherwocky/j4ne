@@ -3,12 +3,14 @@ import tornado.ioloop
 import asyncio
 import html
 
-from twython import Twython,TwythonStreamer
+from commands import discord_command
+
+from twython import Twython
 from keys import twitter_appkey, twitter_appsecret, twitter_token, twitter_tokensecret
 from logging import debug, info, warning
 
 from networks.models import Retweets
-
+from networks import Network
 
 # We need to wrap connect() as a task to prevent timeout error at runtime.
 # based on the following suggested fix: https://github.com/KeepSafe/aiohttp/issues/1176
@@ -17,7 +19,7 @@ def taskify(func):
         return asyncio.get_event_loop().create_task(func(*args, **kwargs))
     return wrapper
 
-from networks import Network
+
 class Twitter(Network):
     """
     Common interface for connecting and receiving realtimey events
@@ -32,13 +34,12 @@ class Twitter(Network):
             twitter_tokensecret
             )
 
-        verify = self._twitter.verify_credentials()
+        self._twitter.verify_credentials()
 
         # schedule polling for tweeters
         # TODO, not like this, see j4ne.py for scheduling callbacks w/ tornado
-        tornado.ioloop.PeriodicCallback( self.check_tweets , 1*60*1000).start()
+        tornado.ioloop.PeriodicCallback(self.check_tweets, 1*60*1000).start()
         info('Twitter connected')
-
 
     async def disconnect(self):
         pass
@@ -48,7 +49,7 @@ class Twitter(Network):
         self.connect()
 
     async def on_message(self, msg):
-        #handle logging
+        # handle logging
     
         # classify & normalize
         self.parse(msg)  
@@ -59,21 +60,17 @@ class Twitter(Network):
         # trigger any tasks
         self.process(msg)
 
-
     async def parse(self, tweet):
 
         tweet['text'] = html.unescape(tweet['text'])
 
         return tweet
 
-
     async def log(self, msg):
         pass
 
-
     async def process(self, msg):
         pass
-
 
     @taskify
     async def check_tweets(self):
@@ -137,7 +134,6 @@ class Twitter(Network):
                     await self.application.Discord.say(destination, '{} tweets:\n\n{}\n\n'.format(tweet['user']['screen_name'], tweet['text']))
 
 
-from commands import discord_command
 
 @discord_command('retweet')
 async def retweet(network, channel, message):
@@ -148,7 +144,7 @@ async def retweet(network, channel, message):
 
     tooter = tooter.strip()
 
-    existing = Retweets().select().where(Retweets.tooter==tooter, Retweets.discord_channel==channel.id)
+    existing = Retweets().select().where(Retweets.tooter == tooter, Retweets.discord_channel == channel.id)
 
     if len(existing) > 0:
         return await network.say(message.channel, 'I am already retweeting {} here.'.format(tooter))
@@ -156,6 +152,7 @@ async def retweet(network, channel, message):
     new_retweet = Retweets.insert(tooter=tooter, discord_channel=channel.id).execute()
 
     await network.say(message.channel, "I will start retweeting {} in this channel.".format(tooter))
+
 
 # @discord_command('_migratetwitterconf')
 async def load_twitter_config(network, channel, message):
