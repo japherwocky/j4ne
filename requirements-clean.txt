@@ -11,6 +11,7 @@ youtube-dl
 terminaltables
 livestreamer
 squareup
+websockets
 
 # test helpers
 loremipsum
