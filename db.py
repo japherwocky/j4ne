@@ -4,6 +4,8 @@ Centralized db connection to avoid circular imports
 import logging
 from peewee import SqliteDatabase
 from peewee import CharField, IntegerField, BooleanField
+from playhouse.migrate import SqliteMigrator, migrate
+
 
 db = SqliteDatabase('database.db')
 archive_db = SqliteDatabase('archive.db')
@@ -11,6 +13,7 @@ archive_db = SqliteDatabase('archive.db')
 db.connect()
 
 Migrations = {}
+
 
 def migration(name):
 
@@ -28,9 +31,6 @@ def foo():
     """
 
     logging.info('Migrating nothing...')
-
-
-from playhouse.migrate import SqliteMigrator, migrate
 
 
 @migration('bits')
