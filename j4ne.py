@@ -112,12 +112,14 @@ def main():
     define("archive", default=False, help="archive live database")
 
     define("twitch", default=True, help="Connect to Twitch chat servers")
-    define("twitchapi", default=True, help="Connect to Twitch API")
+    define("twitch_API", default=True, help="Connect to Twitch API")
     define("discord", default=True, help="Connect to Discord chat servers")
-    define("twitter_setup", default=False, help="setup twitter account integration")
+    define("discord_setup", default=False, help="Generates a Discord server invite link for a new bot instance")
     define("twitter", default=True, help="Connect to Twitter")
-    define("square", default=True, help="Connect to the Square API")
-    define("newbot", default=False, help="Generates a Discord server invite link for a new bot instance")
+    define("twitter_setup", default=False, help="setup twitter account integration")
+
+    define("square", default=False, help="Connect to the Square API")
+    
 
     define("runtests", default=False, help="Run tests")
 
