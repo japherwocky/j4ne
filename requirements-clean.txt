@@ -1,0 +1,16 @@
+cl3ver
+feedparser
+giphypop
+discord.py[voice]
+markdown
+peewee
+requests
+tornado
+twython
+youtube-dl
+terminaltables
+livestreamer
+squareup
+
+# test helpers
+loremipsum
