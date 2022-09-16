@@ -19,7 +19,7 @@ loremipsum==1.0.5
 Markdown==3.3.7
 msgpack==1.0.4
 multidict==6.0.2
-oauthlib==3.2.0
+oauthlib==3.2.1
 packaging==21.3
 peewee==3.14.10
 pycparser==2.21
