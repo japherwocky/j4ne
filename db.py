@@ -8,9 +8,35 @@ from playhouse.migrate import SqliteMigrator, migrate
 
 
 db = SqliteDatabase('database.db')
-archive_db = SqliteDatabase('archive.db')
-
 db.connect()
+
+
+def mktables(destroy=False):
+    # pass destroy=True to do the inverse (for testing)
+    from loggers.models import Message, Event
+    from commands.models import Quote, Command
+    from networks.models import User, Moderator
+
+    return [
+        Message, Event, Quote, Command, User, Moderator
+    ]
+
+
+def seed():
+
+    Tables = mktables()
+    from peewee import OperationalError
+
+    # ensure tables exist in db including intermediate tables for many to many relations
+    try:
+        """
+        When `safe=True`, checks table exists before creating
+        """
+        db.create_tables(Tables, safe=True)
+    except OperationalError as e:
+        # table (probably/hopefully) exists, dump this into the console
+        logging.warning(e)
+
 
 Migrations = {}
 
@@ -31,25 +57,3 @@ def foo():
     """
 
     logging.info('Migrating nothing...')
-
-
-@migration('bits')
-def bits():
-    """ bits, badges, colors, yolo """
-    migrator = SqliteMigrator(db)
-
-    badges = CharField(null=True, default=None)
-    color = CharField(default="#FFF")
-    bits = IntegerField(default=0)
-    sub = BooleanField(default=False)
-    turbo = BooleanField(default=False)
-    mod = BooleanField(default=False)
-
-    migrate(
-        migrator.add_column('messages', 'bits', bits),
-        migrator.add_column('messages', 'badges', badges),
-        migrator.add_column('messages', 'color', color),
-        migrator.add_column('messages', 'sub', sub),
-        migrator.add_column('messages', 'turbo', turbo),
-        migrator.add_column('messages', 'mod', mod),
-    )

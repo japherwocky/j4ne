@@ -1,6 +1,6 @@
 from peewee import *
 
-from db import db, archive_db
+from db import db
 
 
 class BaseModel(Model):
@@ -55,6 +55,8 @@ class Event(Model):
         db_table = 'events'
 
 
+# clever reference for rotating data into a different database
+"""
 class ArchiveMessage(Message):
     class Meta:
         database = archive_db
@@ -65,3 +67,4 @@ class ArchiveEvent(Event):
     class Meta:
         database = archive_db
         db_table = 'events'
+"""

@@ -114,32 +114,8 @@ def main():
     tornado.options.parse_command_line()
 
     if options.mktables:
-        from loggers.models import Message, Event
-        from commands.models import Quote, Command
-        from networks.models import User, Moderator
-
-        from peewee import OperationalError
-        from networks.models import Retweets
-
-        tables = [
-            Message,
-            Event,
-            Quote,
-            Command,
-            User,
-            Moderator,
-            Retweets,
-        ]
-
-        # ensure tables exist in db including intermediate tables for many to many relations
-        try:
-            """
-            When `safe=True`, checks table exists before creating
-            """
-            db.create_tables(tables, safe=True)
-        except OperationalError as e:
-            # table (probably/hopefully) exists, dump this into the console
-            warning(e)
+        from db import seed
+        return seed()
 
     if options.migration:
         from db import Migrations
