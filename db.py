@@ -11,14 +11,12 @@ db = SqliteDatabase('database.db')
 db.connect()
 
 
-def mktables(destroy=False):
-    # pass destroy=True to do the inverse (for testing)
-    from loggers.models import Message, Event
-    from commands.models import Quote, Command
-    from networks.models import User, Moderator
+def mktables():
+    # utility for bootstrapping a database
+    from models.feeds import Feed
 
     return [
-        Message, Event, Quote, Command, User, Moderator
+        Feed,
     ]
 
 
@@ -36,6 +34,14 @@ def seed():
     except OperationalError as e:
         # table (probably/hopefully) exists, dump this into the console
         logging.warning(e)
+
+
+from peewee import Model as protoModel
+class Model(protoModel):
+    """base model for our classes, control database strings here"""
+
+    class Meta:
+        database = db
 
 
 Migrations = {}
