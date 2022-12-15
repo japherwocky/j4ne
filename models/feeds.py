@@ -5,6 +5,9 @@ from peewee import CharField, IntegerField, TextField
 class Feed(Model):
     """ A source of content, RSS feeds for now """
 
+    class Meta:
+        db_table = 'feeds'
+
     # integer id by default
     address = CharField(null=False, unique=True)
 
