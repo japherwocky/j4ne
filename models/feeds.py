@@ -2,6 +2,7 @@ from db import Model
 from peewee import CharField, IntegerField, TextField
 import logging
 import re
+import tornado
 
 
 class Feed(Model):
@@ -66,11 +67,21 @@ class Feed(Model):
 
 class Sitemap(Feed):
 
+    class Meta:
+        db_table = 'feeds'
+
     @classmethod
     def add(cls, input):
 
         domain = Sitemap.parse(input)
-        logging.info('Found domain: {}'.format(domain))
+
+        if not domain:
+            logging.error('Could not find domain in: {}'.format(input))
+            return
+
+        if not cls.get_or_none(name=domain):
+            logging.info('Found new domain: {}'.format(domain))
+            cls.chkSitemap(domain)
 
     @classmethod
     def parse(cls, input):
@@ -88,3 +99,17 @@ class Sitemap(Feed):
         domain = re.findall(reDomain, domain)[0]
 
         return domain
+
+    @classmethod
+    def chkSitemap(cls, domain):
+        http = tornado.httpclient.HTTPClient()
+
+        robots = http.fetch('https://{}/robots.txt'.format(domain), validate_cert=False)
+
+        import urllib.robotparser
+        rp = urllib.robotparser.RobotFileParser()
+        rp.parse(robots.body.decode('utf-8').splitlines())
+
+        # check for permission to get URLs like
+        # rp.cat_fetch(url='/', useragent='Optilog Spider')
+        import pdb;pdb.set_trace()
