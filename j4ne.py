@@ -1,6 +1,5 @@
 import asyncio
 import unittest
-import feedparser
 from random import choice
 from logging import info, debug, warning, error
 
@@ -11,31 +10,34 @@ import tornado.web
 import tornado.testing
 import tornado.platform.asyncio
 from tornado.web import HTTPError, authenticated
+
 from markdown import markdown
 
 # from networks.irc import IRC  # TODO
 
 from db import db
+
 from api.handlers import APIHandler
-from commands.jukebox import WebPlayer
-from charts import ChartHandler
-from webchat import WebHandler as ChatHandler
-from webchat import ChatSocketHandler
+
+# from commands.jukebox import WebPlayer
+# from charts import ChartHandler
+# from webchat import WebHandler as ChatHandler
+# from webchat import ChatSocketHandler
 
 
 class App (tornado.web.Application):
-    def __init__(self, app_debug=False):
+    def __init__(self, debug=False):
         """
         Settings for our application
         """
         settings = dict(
-            cookie_secret="changemeplz",  # ideally load this from elsewhere
+            cookie_secret="changeme_in_production",  # ideally load this from elsewhere
             login_url="/login",
             template_path="templates",
             static_path="static",
             xsrf_cookies=False,
             autoescape=None,
-            debug=app_debug,  # autoreloads on changes, among other things
+            debug=debug,  # autoreloads on changes, among other things
         )
 
         """
@@ -46,10 +48,6 @@ class App (tornado.web.Application):
             (r"/?", HomeHandler),
             (r"/login/?", LoginHandler),
             (r"/logout/?", LogoutHandler),
-            (r"/jukebox/?", WebPlayer),
-            (r"/stats/?", ChartHandler),
-            (r"/chat/?", ChatHandler),
-            (r"/chatsocket/?", ChatSocketHandler),
             (r"/api/(\w+)/(\w+)?/?", APIHandler),
         ]
 
@@ -106,20 +104,10 @@ def all():
 def main():
     from tornado.options import define, options
     define("port", default=8888, help="serve web requests from the given port", type=int)
+    define("serve", default=True, help="serve web requests on --port")
     define("debug", default=False, help="run server in debug mode", type=bool)
     define("mktables", default=False, help="bootstrap a new sqlite database")
     define("migration", default='', help="run a named database migration")
-    define("archive", default=False, help="archive live database")
-
-    define("twitch", default=True, help="Connect to Twitch chat servers")
-    define("twitch_API", default=True, help="Connect to Twitch API")
-    define("discord", default=True, help="Connect to Discord chat servers")
-    define("discord_setup", default=False, help="Generates a Discord server invite link for a new bot instance")
-    define("twitter", default=True, help="Connect to Twitter")
-    define("twitter_setup", default=False, help="setup twitter account integration")
-
-    define("square", default=False, help="Connect to the Square API")
-    
 
     define("runtests", default=False, help="Run tests")
 
@@ -162,129 +150,18 @@ def main():
             info('Attempting migration {}'.format(options.migration))
             return Migrations[options.migration]()
 
-    if options.archive:
-        from loggers.archive import shuffle2archive
-        from loggers import models
-
-        # (live_models, archive_models)
-        models2archive = [models.Message,
-                          models.Event]
-
-        for LiveModel in models2archive:
-            info('Starting archive shuffle with model {}'.format(LiveModel))
-
-            try:
-                number_of_records = shuffle2archive(LiveModel, False, 224)  # temporary cutoff period
-                info('Shuffle finished with {} records archived'
-                    'and {} records deleted from model {}'
-                    .format(number_of_records[0],
-                         number_of_records[1],
-                         LiveModel))
-            except LiveModel.DoesNotExist:
-                info('No records exist before archivable date')
-
     if options.runtests:
         tornado.testing.main()
         return
 
-    tornado.platform.asyncio.AsyncIOMainLoop().install()  # uses default asyncio.loop()
+    if options.serve:
 
-    app = App(app_debug=options.debug)
-    http_server = tornado.httpserver.HTTPServer(app)
+        http_server = tornado.httpserver.HTTPServer(App(debug=options.debug), xheaders=True)
+        http_server.listen(options.port)
+        info('Serving web interface on port %d' % options.port)
 
-    http_server.listen(options.port)
-    info('Serving on port %d' % options.port)
-
-    # Discord options:
-    #  new bot instance authentication
-    if options.newbot:
-        from keys import discord_app_id
-        from discord_invite import invite_link
-        info("Please go to the following link to authorize the bot, then press `Enter`:\n")
-        print(invite_link(discord_app_id))
-        info("\nPress `Enter` to continue...")
-
-    # connect to discord
-    if options.discord:
-
-        @asyncio.coroutine
-        def Drunner():
-            try:
-                from networks.deescord import Discord
-                app.Discord = Discord()
-                app.Discord.application = app
-                yield from app.Discord.connect()
-
-            except Exception as e:
-                error(e)
-                raise
-
-        asyncio.ensure_future(Drunner())
-
-    if options.square:
-        from networks.squore import Squore
-        app.Square = Squore(app)
-
-        tornado.ioloop.IOLoop.instance().add_callback(app.Square.connect)
-
-    # connect to Twitch API
-    if options.twitchapi:
-        from networks.twitch import TwitchParser, TwitchAPI
-        app.TwitchAPI = TwitchAPI()
-        app.TwitchAPI.application = app
-
-        from tornado.httpclient import AsyncHTTPClient
-        app.TwitchAPI.client = AsyncHTTPClient()
-
-        tornado.ioloop.IOLoop.instance().add_callback(app.TwitchAPI.connect)
-
-    # connect to Twitch chat
-    if options.twitch:
-        app.Twitch = TwitchParser()
-        app.Twitch.application = app
-
-        tornado.ioloop.IOLoop.instance().add_callback(app.Twitch.connect)
-
-    if options.twitter_setup:
-        import keys
-        from twython import Twython
-
-        twitter = Twython(keys.twitter_appkey, keys.twitter_appsecret)
-
-        auth = twitter.get_authentication_tokens()
-        # Grab intermediate tokens. These are not the final tokens
-        ioauth_token = auth['oauth_token']
-        ioauth_token_secret = auth['oauth_token_secret']
-
-        print("\nPlease go to the following link to authorize Twitter account access, then record the authorization PIN:\n")
-        print(auth['auth_url'])
-
-        pin = input("\nEnter the PIN then press `Enter`: ")
-        twitter = Twython(keys.twitter_appkey,
-                          keys.twitter_appsecret,
-                          ioauth_token,
-                          ioauth_token_secret)
-
-        final_auth = twitter.get_authorized_tokens(pin)
-
-        oauth_token = final_auth['oauth_token']
-        oauth_token_secret = final_auth['oauth_token_secret']
-
-        print("token: {}\n token secret: {}".format(oauth_token, oauth_token_secret))
-
-        return  # remove this eventually
-
-    if options.twitter:
-        from networks.twatter import Twitter
-        app.Twitter = Twitter(app)
-
-        tornado.ioloop.IOLoop.instance().add_callback(app.Twitter.connect)
-
-    # link the Jukebox to the application
-    from commands.jukebox import J  # our instance of the Jukebox
-    app.Jukebox = J  # on our instance of the Application
-
-    tornado.ioloop.IOLoop.instance().start()
+    # use asyncio directly since tornado 6.2
+    asyncio.get_event_loop().run_forever()
 
 
 if __name__ == "__main__":
