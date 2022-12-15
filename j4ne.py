@@ -108,6 +108,7 @@ def main():
     define("debug", default=False, help="run server in debug mode", type=bool)
     define("mktables", default=False, help="bootstrap a new sqlite database")
     define("migration", default='', help="run a named database migration")
+    define("addFeed", default='', help="attempt to create a feed from an address")
 
     define("runtests", default=False, help="Run tests")
 
@@ -125,6 +126,10 @@ def main():
         else:
             info('Attempting migration {}'.format(options.migration))
             return Migrations[options.migration]()
+
+    if options.addFeed:
+        from models.feeds import Feed
+        return Feed.add(options.addFeed)
 
     if options.runtests:
         tornado.testing.main()
