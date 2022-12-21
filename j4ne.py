@@ -11,8 +11,6 @@ import tornado.testing
 import tornado.platform.asyncio
 from tornado.web import HTTPError, authenticated
 
-from markdown import markdown
-
 # from networks.irc import IRC  # TODO
 
 from db import db
