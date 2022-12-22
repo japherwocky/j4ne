@@ -1,7 +1,6 @@
 import asyncio
 import unittest
-from random import choice
-from logging import info, debug, warning, error
+from logging import info, error
 
 import tornado.httpserver
 import tornado.ioloop
@@ -9,18 +8,8 @@ import tornado.options
 import tornado.web
 import tornado.testing
 import tornado.platform.asyncio
-from tornado.web import HTTPError, authenticated
-
-# from networks.irc import IRC  # TODO
-
-from db import db
 
 from api.handlers import APIHandler
-
-# from commands.jukebox import WebPlayer
-# from charts import ChartHandler
-# from webchat import WebHandler as ChatHandler
-# from webchat import ChatSocketHandler
 
 
 class App (tornado.web.Application):

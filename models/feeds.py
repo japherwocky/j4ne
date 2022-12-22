@@ -6,7 +6,7 @@ import tornado
 
 
 class Feed(Model):
-    """ A source of content, RSS feeds for now """
+    """ A source of pages, inherit and implement this interface """
 
     class Meta:
         db_table = 'feeds'
@@ -72,19 +72,21 @@ class Sitemap(Feed):
 
     @classmethod
     def add(cls, input):
-
+        """--addFeed=input"""
         domain = Sitemap.parse(input)
 
         if not domain:
             logging.error('Could not find domain in: {}'.format(input))
             return
 
+        # give it a shot
         if not cls.get_or_none(name=domain):
-            logging.info('Found new domain: {}'.format(domain))
+            logging.info('Checking for root sitemap on {}'.format(domain))
             cls.chkSitemap(domain)
 
     @classmethod
     def parse(cls, input):
+        """try to make a domain out of the command line input"""
         regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
         domains = re.findall(regex, input)
         domains = [x[0] for x in domains]
@@ -112,4 +114,12 @@ class Sitemap(Feed):
 
         # check for permission to get URLs like
         # rp.cat_fetch(url='/', useragent='Optilog Spider')
-        import pdb;pdb.set_trace()
+
+        delay = rp.crawl_delay('our UA')
+
+        if rp.site_maps():
+            import pdb;pdb.set_trace()
+
+        else:
+            
+            import pdb;pdb.set_trace()
