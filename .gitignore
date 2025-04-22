@@ -5,6 +5,8 @@
 keys.py
 twitterconf.json
 env/
+.venv
+.env
 
 .python_history
 .sqlite_history
