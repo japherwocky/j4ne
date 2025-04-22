@@ -69,7 +69,8 @@ def main():
         handle_greet(args.name)
     elif args.command == "chat" or args.command is None:  # Default to 'chat'
         logger.info("Starting the chat loop...")
-        asyncio.run(chat_loop())
+        from chatters import EmCeePee
+        asyncio.run(EmCeePee())
     else:
         parser.print_help()
 

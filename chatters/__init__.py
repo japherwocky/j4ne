@@ -19,3 +19,15 @@ async def chat_loop():
         # Simulate processing of the message (replace with real logic)
         console.print(f"[bold green]Echo:[/] {message}")
         logging.debug(f"User input: {message}")
+
+async def EmCeePee():
+    logging.info("Launching MCP Server")
+
+    from chatters.emceepee import MCPClient
+    client = MCPClient()
+
+    try:
+        await client.connect_to_server()
+        await client.chat_loop()
+    finally:
+        await client.cleanup()
