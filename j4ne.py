@@ -1,31 +1,40 @@
+
+import colorama
+colorama.init()
+import tornado  # this sets up logging
+import logging
+
 import argparse
 import asyncio
-import logging
-import sys
+from rich.console import Console
 
-# Configure the logger
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+# Instantiate Rich Console
+console = Console()
+logger = logging.getLogger()
+logger.setLevel("INFO")
+
+channel = logging.StreamHandler()
+channel.setFormatter(tornado.log.LogFormatter())
+logger.addHandler(channel)
 
 async def chat_loop():
     """
     Async chat loop that lets the user interact with the CLI in real time.
     """
-    print("Welcome to the chat CLI! Type 'exit' to quit.")
+    console.print("[bold cyan]Welcome to the chat CLI![/] Type '[green]exit[/]' to quit.")
     try:
         while True:
-            message = await asyncio.to_thread(input, "You: ")  # Use asyncio to avoid blocking
+            message = await asyncio.to_thread(input, "> ")  # Use asyncio to avoid blocking
             if message.strip().lower() == "exit":
-                print("Goodbye!")
+                console.print("[bold yellow]Goodbye![/]")
                 break
-            # Simulate processing of the message (you can replace with real logic)
-            response = f"Echo: {message}"
-            print(response)
+            # Simulate processing of the message (replace with real logic)
+            console.print(f"[bold green]Echo:[/] {message}")
+            logger.info(f"User input: {message}")  # Log to Tornado-style logs
     except KeyboardInterrupt:
-        print("\nChat interrupted. Goodbye!")
+        console.print("\n[bold red]Chat interrupted. Goodbye![/]")
+        logger.warning("Chat loop interrupted by KeyboardInterrupt")
+
 
 def main():
     """
@@ -83,14 +92,15 @@ def main():
         asyncio.run(chat_loop())
     else:
         parser.print_help()
-        sys.exit(1)
+
 
 def handle_greet(name):
     """
     Handle the 'greet' command.
     """
-    logger.info(f"Greeting {name}!")
-    print(f"Hello, {name}!")
+    logger.info(f"Greeting {name}!")  # Log message styled by Tornado LogFormatter
+    console.print(f"[bold blue]Hello, {name}![/]")  # Pretty CLI output for the user
+
 
 if __name__ == "__main__":
     main()
