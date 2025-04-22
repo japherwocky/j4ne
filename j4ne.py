@@ -6,10 +6,7 @@ import logging
 
 import argparse
 import asyncio
-from rich.console import Console
 
-# Instantiate Rich Console
-console = Console()
 logger = logging.getLogger()
 logger.setLevel("INFO")
 
@@ -17,24 +14,7 @@ channel = logging.StreamHandler()
 channel.setFormatter(tornado.log.LogFormatter())
 logger.addHandler(channel)
 
-async def chat_loop():
-    """
-    Async chat loop that lets the user interact with the CLI in real time.
-    """
-    console.print("[bold cyan]Welcome to the chat CLI![/] Type '[green]exit[/]' to quit.")
-    try:
-        while True:
-            message = await asyncio.to_thread(input, "> ")  # Use asyncio to avoid blocking
-            if message.strip().lower() == "exit":
-                console.print("[bold yellow]Goodbye![/]")
-                break
-            # Simulate processing of the message (replace with real logic)
-            console.print(f"[bold green]Echo:[/] {message}")
-            logger.info(f"User input: {message}")  # Log to Tornado-style logs
-    except KeyboardInterrupt:
-        console.print("\n[bold red]Chat interrupted. Goodbye![/]")
-        logger.warning("Chat loop interrupted by KeyboardInterrupt")
-
+from chatters import chat_loop
 
 def main():
     """
@@ -99,7 +79,6 @@ def handle_greet(name):
     Handle the 'greet' command.
     """
     logger.info(f"Greeting {name}!")  # Log message styled by Tornado LogFormatter
-    console.print(f"[bold blue]Hello, {name}![/]")  # Pretty CLI output for the user
 
 
 if __name__ == "__main__":
