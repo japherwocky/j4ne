@@ -32,7 +32,8 @@ class MCPClient:
         command = "./.venv/Scripts/python.exe"
         server_params = StdioServerParameters(
             command=command,
-            args=['./servers/localsqlite.py', '--db-path', './database.db'],  # defaults to 'test.db'
+            # args=['./servers/localsqlite.py', '--db-path', './database.db'],  # defaults to 'test.db'
+            args=['./servers/filesystem.py', './'],
             env=None
         )
         
@@ -89,7 +90,10 @@ class MCPClient:
                 # Execute tool call
                 result = await self.session.call_tool(tool_name, tool_args)
 
-                summary = f"""Called tool {tool_name} ({tool_args}), got results: {result.content[0].text}\n"""
+                if result.isError:
+                    summary = f"""Called tool {tool_name} ({tool_args}), got ERROR: {result.content[0].text}\n"""
+                else:
+                    summary = f"""Called tool {tool_name} ({tool_args}), got results: {result.content[0].text}\n"""
 
                 messages.append({"role":"assistant", "content":summary})
 
@@ -109,7 +113,7 @@ class MCPClient:
 
             out_messages, out_reason = await handle(r, out_messages)
                     
-        return "\n".join([x['content'] for x in out_messages[1:]])
+        return "\n".join([x['content'] for x in out_messages[-3:]])
 
     async def chat_loop(self):
         """Run an interactive chat loop"""
