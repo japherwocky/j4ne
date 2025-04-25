@@ -300,6 +300,11 @@ class FilesystemServer:
                 inputSchema=ListFiles.model_json_schema(),
             ),
             types.Tool(
+                name="list-project-structure",
+                description="Recursively list the folder structure of the entire project directory",
+                inputSchema=ListFiles.model_json_schema(),
+            ),
+            types.Tool(
                 name="read-file",
                 description="Read the entire contents of a file",
                 inputSchema=ReadFile.model_json_schema(),
@@ -327,6 +332,9 @@ class FilesystemServer:
         elif name == "read-file":
             args = ReadFile(**arguments)
             return await self.tool_read_file(args)
+        elif name == "list-project-structure":
+            args = ListFiles(**arguments)
+            return await self.tool_list_project_structure(args)
         elif name == "search-files":
             try:
                 args = FileSearch(**arguments)
