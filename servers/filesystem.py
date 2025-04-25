@@ -109,7 +109,7 @@ class FilesystemServer:
         """
         Recursively list the folder structure of the project.
         """
-        start_directory = args.directory
+        start_directory = args.directory or '.'
         abs_start_directory = os.path.abspath(os.path.join(self.root_path, start_directory))
         
         if not abs_start_directory.startswith(self.root_path):
