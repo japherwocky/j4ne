@@ -23,7 +23,7 @@ async def chat_loop():
 async def EmCeePee():
     logging.info("Launching MCP Server")
 
-    from chatters.emceepee import MCPClient
+    from chatters.cli import MCPClient
     client = MCPClient()
 
     try:

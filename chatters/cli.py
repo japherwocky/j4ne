@@ -65,7 +65,7 @@ class MCPClient:
         # Initial LLM call
         init = self.client.chat.completions.create(
             model="gpt-4",
-            max_tokens=1000,
+            max_tokens=2000,
             messages=init_messages,
             tools=available_tools
         )
@@ -113,7 +113,7 @@ class MCPClient:
 
             out_messages, out_reason = await handle(r, out_messages)
                     
-        return "\n".join([x['content'] for x in out_messages[-3:]])
+        return "\n".join([x['content'] for x in out_messages[-1:]])
 
     async def chat_loop(self):
         """Run an interactive chat loop"""
