@@ -103,6 +103,51 @@ class FilesystemServer:
             ".yml": "application/x-yaml",
         }
         return mime_types.get(ext, "application/octet-stream")
+    
+    # Tool: List Project Structure
+    async def tool_list_project_structure(self, args: ListFiles) -> List[types.TextContent]:
+        """
+        Recursively list the folder structure of the project.
+        """
+        start_directory = args.directory
+        abs_start_directory = os.path.abspath(os.path.join(self.root_path, start_directory))
+        
+        if not abs_start_directory.startswith(self.root_path):
+            raise McpError(types.ErrorData(code=types.INVALID_PARAMS, message="Directory is outside root directory"))
+        if not os.path.exists(abs_start_directory) or not os.path.isdir(abs_start_directory):
+            raise McpError(types.ErrorData(code=types.INVALID_PARAMS, message=f"Directory not found: {start_directory}"))
+
+        def gather_structure(directory, prefix=""):
+            output = []
+            entries = sorted(os.listdir(directory))  # Sorted to have consistent results
+            for entry in entries:
+                abs_path = os.path.join(directory, entry)
+                
+                if self.is_ignored(abs_path):
+                    continue
+
+                if os.path.isdir(abs_path):
+                    output.append(f"{prefix}{entry}/")  # Add trailing slash for directories
+                    output.extend(gather_structure(abs_path, prefix=prefix + "    "))  # Indent child entries
+                else:
+                    output.append(f"{prefix}{entry}")
+            return output
+
+        # Begin gathering structure
+        complete_structure = f"Project Directory Structure from {start_directory}:\n"
+        structure_lines = gather_structure(abs_start_directory)
+        # Join results for hierarchy
+        complete_project_tree = complete_structure + "\n".join(structure_lines)
+        
+        if not structure_lines:
+            complete_project_tree += "[Empty Project Directory]"
+        
+        return [
+            types.TextContent(
+                type="text",
+                text=complete_project_tree
+            )
+        ]
 
     async def tool_list_files(self, args: ListFiles) -> List[types.TextContent]:
         directory = args.directory
