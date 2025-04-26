@@ -34,6 +34,7 @@ class MCPClient:
             command=command,
             # args=['./servers/localsqlite.py', '--db-path', './database.db'],  # defaults to 'test.db'
             args=['./servers/filesystem.py', './'],
+            # args=['./servers/multiplexer.py'],
             env=None
         )
         

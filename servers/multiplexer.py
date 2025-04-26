@@ -5,7 +5,7 @@ import json
 from typing import Dict, Any, List
 
 # ---- Configuration ---- #
-FILESYSTEM_SERVER = '.servers/filesystem.py'
+FILESYSTEM_SERVER = './servers/filesystem.py'
 FILESYSTEM_ARG = '.'  # Root directory argument
 FS_PREFIX = 'fs_'
 
@@ -28,7 +28,7 @@ async def send_recv(proc, msg: Dict[str, Any]):
     proc.stdin.write(data)
     await proc.stdin.drain()
     line = await proc.stdout.readline()
-    return json.loads(line.decode())
+    return json.loads(line.decode()) if line else {}
 
 # ---- Multiplexer core ---- #
 class MCPMultiplexer:
@@ -45,8 +45,11 @@ class MCPMultiplexer:
     async def _register_tools(self):
         # Query list-tools from each, prefix, and build tool_map
         list_tools_msg = {"type": "list_tools"}
-        fs_tools = (await send_recv(self.children['fs'], list_tools_msg)).get("tools", [])
         db_tools = (await send_recv(self.children['db'], list_tools_msg)).get("tools", [])
+        fs_tools = (await send_recv(self.children['fs'], list_tools_msg)).get("tools", [])
+        
+        
+
         self.tool_map = {}
         for t in fs_tools:
             self.tool_map[FS_PREFIX + t] = 'fs'
