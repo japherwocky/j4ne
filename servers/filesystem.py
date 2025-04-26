@@ -103,51 +103,6 @@ class FilesystemServer:
             ".yml": "application/x-yaml",
         }
         return mime_types.get(ext, "application/octet-stream")
-    
-    # Tool: List Project Structure
-    async def tool_list_project_structure(self, args: ListFiles) -> List[types.TextContent]:
-        """
-        Recursively list the folder structure of the project.
-        """
-        start_directory = args.directory or '.'
-        abs_start_directory = os.path.abspath(os.path.join(self.root_path, start_directory))
-        
-        if not abs_start_directory.startswith(self.root_path):
-            raise McpError(types.ErrorData(code=types.INVALID_PARAMS, message="Directory is outside root directory"))
-        if not os.path.exists(abs_start_directory) or not os.path.isdir(abs_start_directory):
-            raise McpError(types.ErrorData(code=types.INVALID_PARAMS, message=f"Directory not found: {start_directory}"))
-
-        def gather_structure(directory, prefix=""):
-            output = []
-            entries = sorted(os.listdir(directory))  # Sorted to have consistent results
-            for entry in entries:
-                abs_path = os.path.join(directory, entry)
-                
-                if self.is_ignored(abs_path):
-                    continue
-
-                if os.path.isdir(abs_path):
-                    output.append(f"{prefix}{entry}/")  # Add trailing slash for directories
-                    output.extend(gather_structure(abs_path, prefix=prefix + "    "))  # Indent child entries
-                else:
-                    output.append(f"{prefix}{entry}")
-            return output
-
-        # Begin gathering structure
-        complete_structure = f"Project Directory Structure from {start_directory}:\n"
-        structure_lines = gather_structure(abs_start_directory)
-        # Join results for hierarchy
-        complete_project_tree = complete_structure + "\n".join(structure_lines)
-        
-        if not structure_lines:
-            complete_project_tree += "[Empty Project Directory]"
-        
-        return [
-            types.TextContent(
-                type="text",
-                text=complete_project_tree
-            )
-        ]
 
     async def tool_list_files(self, args: ListFiles) -> List[types.TextContent]:
         directory = args.directory
@@ -222,31 +177,6 @@ class FilesystemServer:
                 message="Failed to read file {}: {}".format(path, str(e))
             ))
 
-    async def tool_search_files(self, args: FileSearch) -> list[types.TextContent]:
-        results = []
-        for root, _, files in os.walk(self.root_path):
-            for file in files:
-                full_path = os.path.join(root, file)
-                if self.is_ignored(full_path):
-                    continue
-                if not pathspec.Pattern(args.file_pattern).match_file(file):
-                    continue
-                try:
-                    with open(full_path, "r", encoding="utf-8") as f:
-                        content = f.read()
-                        if args.query.lower() in content.lower():
-                            rel_path = os.path.relpath(full_path, self.root_path)
-                            results.append(f"Found in {rel_path}")
-                except (UnicodeDecodeError, IOError):
-                    continue
-        if not results:
-            return [types.TextContent(type="text", text="No matches found")]
-        return [
-            types.TextContent(
-                type="text", text="Search results:\n" + "\n".join(results)
-            )
-        ]
-
     async def tool_write_file(self, args: FileWrite) -> list[types.TextContent]:
         if not self.is_safe_path(args.path):
             raise McpError(types.ErrorData(
@@ -290,18 +220,8 @@ class FilesystemServer:
     async def list_tools(self) -> list[types.Tool]:
         return [
             types.Tool(
-                name="search-files",
-                description="Search for files containing specific text",
-                inputSchema=FileSearch.model_json_schema(),
-            ),
-            types.Tool(
                 name="list-files",
                 description="List files and directories in a given directory (default: ./)",
-                inputSchema=ListFiles.model_json_schema(),
-            ),
-            types.Tool(
-                name="list-project-structure",
-                description="Recursively list the folder structure of the entire project directory",
                 inputSchema=ListFiles.model_json_schema(),
             ),
             types.Tool(
@@ -332,15 +252,6 @@ class FilesystemServer:
         elif name == "read-file":
             args = ReadFile(**arguments)
             return await self.tool_read_file(args)
-        elif name == "list-project-structure":
-            args = ListFiles(**arguments)
-            return await self.tool_list_project_structure(args)
-        elif name == "search-files":
-            try:
-                args = FileSearch(**arguments)
-            except ValueError as e:
-                raise McpError(types.ErrorData(code=types.INVALID_PARAMS, message=str(e)))
-            return await self.tool_search_files(args)
         elif name == "write-file":
             try:
                 args = FileWrite(**arguments)
