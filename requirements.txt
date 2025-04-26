@@ -2,3 +2,4 @@ tornado
 mcp
 openai
 pathspec
+rich
