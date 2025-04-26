@@ -65,7 +65,7 @@ class MCPClient:
         # Initial LLM call
         init = self.client.chat.completions.create(
             model="gpt-4",
-            max_tokens=2000,
+            max_tokens=3000,
             messages=init_messages,
             tools=available_tools
         )
@@ -88,6 +88,7 @@ class MCPClient:
                 tool_args = json.loads(content['function']['arguments'])
                 
                 # Execute tool call
+                logging.info(f'calling tool {tool_name}({tool_args})')
                 result = await self.session.call_tool(tool_name, tool_args)
 
                 if result.isError:
@@ -105,8 +106,8 @@ class MCPClient:
         while out_reason != 'stop':
             # keep passing tool responses back
             r = self.client.chat.completions.create(
-                model="gpt-4-turbo",
-                max_tokens=1000,
+                model="gpt-4.1-mini",
+                max_tokens=3000,
                 messages=out_messages,
                 tools=available_tools
             )
@@ -120,7 +121,7 @@ class MCPClient:
         console.print("\nMCP Client Started!")
         console.print("Type your queries or 'quit' to exit.")
 
-        history = deque(maxlen=4)
+        history = deque(maxlen=8)
 
         while True:
             try:
