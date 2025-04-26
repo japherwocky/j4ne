@@ -5,11 +5,11 @@ import json
 from typing import Dict, Any, List
 
 # ---- Configuration ---- #
-FILESYSTEM_SERVER = './filesystem.py'
-FILESYSTEM_ARG = './'  # Root directory argument
+FILESYSTEM_SERVER = '.servers/filesystem.py'
+FILESYSTEM_ARG = '.'  # Root directory argument
 FS_PREFIX = 'fs_'
 
-SQLITE_SERVER = './localsqlite.py'
+SQLITE_SERVER = './servers/localsqlite.py'
 SQLITE_ARG = './db.sqlite3'
 DB_PREFIX = 'db_'
 
