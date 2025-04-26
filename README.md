@@ -1,65 +1,101 @@
-SYSTEM REQUIREMENTS 
-===================
+# Project Setup and Usage Guide
 
-System dependencies are built into the Vagrant file, with ansible scripts in `/sys/`.  
+---
 
-`vagrant up local` will bootstrap a local VM with the app (and python virtualenv) installed in `/opt/j4ne`
+## SYSTEM REQUIREMENTS
+- The application can be set up using Python's virtual environment feature, with dependencies listed in `requirements.txt`.
 
+---
 
-PYTHON REQUIREMENTS
-===================
+## PYTHON REQUIREMENTS
 
-_As the user your bot should run as_:
+1. **Set up a Python Virtual Environment**:
+   - Ensure you're using Python 3.5 or later.
+   - Execute the following commands:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
 
-Create a virtualenv and install python dependencies
----------------------------------------------------
+---
 
-```
-virtualenv -p python3.5 env
-env/bin/pip install -r requirements.txt
-```
+## GETTING J4NE UP AND RUNNING
 
+**Important:** Ensure that a file named `keys.py` exists in the project root. This file will store the credentials for various networks (e.g., Discord, Twitch, etc.).
 
-
-Getting j4ne up and running
-===========================
-
-
-J4ne needs a bunch of credentials, which are stored in the `keys.py` files.  Sorry, it will probably crash if you don't have a full set.
-
-You can turn some networks off by passing `--< network >=False`, eg, `--twitter=False` to not load twitter.
-
-This is awkward and bad UX, sorry.
-
-
-Discord Credentials
--------------------
-
-You can create a Discord application here: [Discord Applications](https://discordapp.com/developers/applications/)
-
-``` python
-# proj-dir/keys.py
-
-discord_token = 'your-secret-token'
-discord_app_id = 'your-discord-client/application-ID'
+#### Example `keys.py`:
+```python
+discord_token = "your-discord-token"
+discord_app_id = "your-discord-application-id"
+twitch_client_id = "your-twitch-client-id"
+twitch_client_secret = "your-twitch-client-secret"
 ```
 
-Afterwards use the `--newbot` option to generate an invitation link to your server:
+---
 
-    ./env/bin/python j4ne.py --newbot
+## DISCORD CONFIGURATION
 
+1. **Create a Discord Application**:
+   - Visit [Discord Developer Portal](https://discord.com/developers/applications).
+   - Copy the "Client ID" and "Token" into your `keys.py`.
 
-Running the server for the first time
--------------------------------------
+2. **Generate an Invitation Link**:
+   - Run the bot with the `--newbot` option to get an invitation link for your server:
+   ```bash
+   python j4ne.py --newbot
+   ```
 
-The following options should be passed to `j4ne.py` if you are running the bot for the first time.
+---
 
-* `newbot` : This option will generate a link at the command line so you can add j4ne to your Discord server
+## BOT OPTIONS
 
-* `mktables` : Generates a new sqlite database
+1. **First-Time Setup**:
+   - On your first run, use the following options:
+     ```bash
+     python j4ne.py --mktables
+     ```
 
+2. **Network-Specific Configuration**:
+   - To disable a network, pass an argument like `--twitter=False` when launching:
+     ```bash
+     python j4ne.py --twitter=False
+     ```
 
-Updating or migrating a database
---------------------------------
+---
 
-Migrations can be run by name, see `db.py` for notes
+## STATIC ASSETS
+Static files (like GIFs, customized CSS, and JavaScript) are stored in the `/static` directory:
+- Images for reactions (e.g., `anneLewd4.gif`, `lul.PNG`).
+- Web application frontend components (e.g., `charts.js`, `webchat.js`).
+- Libraries such as `moment.2.13.0.min.js`.
+
+---
+
+## DATABASE MANAGEMENT
+
+1. The bot uses SQLite by default.
+   - The main database is located in `database.db`.
+
+2. Migrations or updates to the database structure can be handled via the `db.py` script.
+
+---
+
+## PROJECT STRUCTURE OVERVIEW
+
+- **`api/`:** REST API handlers.
+- **`chatters/` and `commands/`:** Chat functionality and command-specific handlers.
+- **`networks/`:** Classes handling network integrations (e.g., Discord, Twitch, IRC).
+- **`static/` and `templates/`:** Assets and templates for the bot's web interface.
+- **`tests/`:** Unit tests for the project.
+
+---
+
+## RUNNING THE BOT
+
+To start the bot, run:
+```bash
+python j4ne.py
+```
+
+Add any optional arguments as needed (e.g., enabling/disabling networks, setting debug mode).
