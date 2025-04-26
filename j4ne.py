@@ -1,8 +1,11 @@
-
 import colorama
 colorama.init()
 import tornado  # this sets up logging
 import logging
+from starlette.applications import Starlette
+from starlette.responses import JSONResponse
+from starlette.routing import Route
+import uvicorn
 
 import argparse
 import asyncio
@@ -15,6 +18,21 @@ channel.setFormatter(tornado.log.LogFormatter())
 logger.addHandler(channel)
 
 from chatters import chat_loop
+
+def home(request):
+    return JSONResponse({"message": "Hi there! Welcome to the Jane Web Interface. How can we assist you today?"})
+
+routes = [
+    Route("/", endpoint=home),
+]
+
+def start_web_server():
+    """
+    Starts the Starlette web server.
+    """
+    app = Starlette(debug=True, routes=routes)
+    logger.info("Starting Starlette web server...")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 def main():
     """
@@ -56,6 +74,12 @@ def main():
         help="Name to greet."
     )
 
+    # Web subcommand
+    web_parser = subparsers.add_parser(
+        "web",
+        help="Start the Starlette web server."
+    )
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -71,6 +95,8 @@ def main():
         logger.info("Starting the chat loop...")
         from chatters import EmCeePee
         asyncio.run(EmCeePee())
+    elif args.command == "web":  # Start the web server
+        start_web_server()
     else:
         parser.print_help()
 
