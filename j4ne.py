@@ -18,12 +18,16 @@ channel.setFormatter(tornado.log.LogFormatter())
 logger.addHandler(channel)
 
 from chatters import chat_loop
+# --- Import the kanban routes ---
+from api.kanban import routes as kanban_routes
 
 def home(request):
     return JSONResponse({"message": "Hi there! Welcome to the Jane Web Interface. How can we assist you today?"})
 
+# Main app routes
 routes = [
     Route("/", endpoint=home),
+    *kanban_routes,  # Add Kanban-related API endpoints
 ]
 
 def start_web_server():
