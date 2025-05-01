@@ -58,7 +58,5 @@ PLAN.md
 ```
 
 ## Next Steps
-1. Scaffold `api/kanban.py` with endpoints and state logic.
-2. Update `j4ne.py` to import and register Kanban routes.
-3. Build out `/static/` frontend mockup.
-4. Implement JSON-based persistence for Kanban data.
+1. Build out `/static/` frontend mockup.
+2. Implement JSON-based persistence for Kanban data.
