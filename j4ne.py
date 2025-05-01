@@ -3,8 +3,9 @@ colorama.init()
 import tornado  # this sets up logging
 import logging
 from starlette.applications import Starlette
-from starlette.responses import JSONResponse
-from starlette.routing import Route
+from starlette.responses import RedirectResponse
+from starlette.routing import Route, Mount
+from starlette.staticfiles import StaticFiles
 import uvicorn
 
 import argparse
@@ -22,12 +23,14 @@ from chatters import chat_loop
 from api.kanban import routes as kanban_routes
 
 def home(request):
-    return JSONResponse({"message": "Hi there! Welcome to the Jane Web Interface. How can we assist you today?"})
+    # Redirect / to the Kanban board UI
+    return RedirectResponse(url="/static/index.html")
 
 # Main app routes
 routes = [
     Route("/", endpoint=home),
     *kanban_routes,  # Add Kanban-related API endpoints
+    Mount("/static", app=StaticFiles(directory="static"), name="static"),
 ]
 
 def start_web_server():
