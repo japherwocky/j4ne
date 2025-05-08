@@ -43,19 +43,24 @@ class MCPMultiplexer:
         await self._register_tools()
 
     async def _register_tools(self):
-        # Query list-tools from each, prefix, and build tool_map
+        # 1. Send "initialize" to both children and wait for confirmation
+        for key, child in self.children.items():
+            try:
+                resp = await send_recv(child, {"type": "initialize"})
+                print(f"Child {key} initialized: {resp}", file=sys.stderr, flush=True)
+            except Exception as e:
+                print(f"Failed to initialize child {key}: {e}", file=sys.stderr, flush=True)
+                                                                                                                                                                
+        # 2. Proceed to list tools as before
         list_tools_msg = {"type": "list_tools"}
         db_tools = (await send_recv(self.children['db'], list_tools_msg)).get("tools", [])
         fs_tools = (await send_recv(self.children['fs'], list_tools_msg)).get("tools", [])
-        
-        
-
+                                                                                                                                                                
         self.tool_map = {}
         for t in fs_tools:
             self.tool_map[FS_PREFIX + t] = 'fs'
         for t in db_tools:
             self.tool_map[DB_PREFIX + t] = 'db'
-        # Could also create resource/prompt maps in the same way
 
     async def handle_message(self, msg: Dict[str, Any]):
         if msg['type'] == 'list_tools':
