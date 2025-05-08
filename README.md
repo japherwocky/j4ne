@@ -99,3 +99,42 @@ python j4ne.py
 ```
 
 Add any optional arguments as needed (e.g., enabling/disabling networks, setting debug mode).
+
+---
+
+## COMMAND-LINE USAGE
+
+You can launch different modules and features using subcommands:
+
+- **Default / Chat Loop** (start interactive chat):
+  ```bash
+  python j4ne.py chat
+  ```
+  Or just:
+  ```bash
+  python j4ne.py
+  ```
+
+- **Greet** (print a styled greeting in the logs):
+  ```bash
+  python j4ne.py greet <NAME>
+  ```
+
+- **Kanban Board Web App** (launch web server):
+  ```bash
+  python j4ne.py web
+  ```
+  This starts a web server on `http://localhost:8000/`, hosting the Kanban board interface and API. Static files are served from `/static`. The Kanban board persists data in `kanban.json`.
+
+  - Main board view: [http://localhost:8000/](http://localhost:8000/)
+  - API endpoints:
+    - `GET /api/kanban` — fetch the board
+    - `POST /api/kanban/add` — add a card
+    - `POST /api/kanban/move` — move a card
+    - `POST /api/kanban/delete` — delete a card
+
+- **Verbose Logging**: Add `--verbose` to any command for debug output.
+
+---
+
+Let me know if you want any further customization or info included! I can write this to README.md if you’re happy with it.
