@@ -1,104 +1,113 @@
 #!/usr/bin/env python3
-import asyncio
 import sys
+import asyncio
 import json
-from typing import Dict, Any, List
-
-# ---- Configuration ---- #
-FILESYSTEM_SERVER = './servers/filesystem.py'
-FILESYSTEM_ARG = '.'  # Root directory argument
-FS_PREFIX = 'fs_'
-
-SQLITE_SERVER = './servers/localsqlite.py'
-SQLITE_ARG = './db.sqlite3'
-DB_PREFIX = 'db_'
-
-# ---- Helper Functions ---- #
-async def start_child(path: str, arg: str):
+                                                                                                                        
+# Change these as needed for future extension:
+TOOL_CHILDREN = {
+    "filesystem": {
+        "filename": "./servers/filesystem.py",  # path to the child
+        "arg": ".",                             # root directory arg for now
+        "prefix": "filesystem",
+        "tools": None,                          # to be discovered
+        "proc": None                            # will become a subprocess handle
+    }
+}
+                                                                                                                        
+async def start_child_server(child):
     proc = await asyncio.create_subprocess_exec(
-        sys.executable, path, arg,
+        sys.executable, child["filename"], child["arg"],
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
     )
     return proc
-
-async def send_recv(proc, msg: Dict[str, Any]):
-    data = (json.dumps(msg) + '\n').encode()
-    proc.stdin.write(data)
+                                                                                                                        
+async def send_recv(proc, msg):
+    # MCP usually means newline-delimited JSON
+    wire = (json.dumps(msg) + "\n").encode()
+    proc.stdin.write(wire)
     await proc.stdin.drain()
     line = await proc.stdout.readline()
-    return json.loads(line.decode()) if line else {}
-
-# ---- Multiplexer core ---- #
-class MCPMultiplexer:
-    def __init__(self):
-        self.children = {}
-        self.tool_map = {}  # tool_name -> child_key
-
-    async def start(self):
-        self.children['fs'] = await start_child(FILESYSTEM_SERVER, FILESYSTEM_ARG)
-        self.children['db'] = await start_child(SQLITE_SERVER, SQLITE_ARG)
-        # On start, get tool lists and map them.
-        await self._register_tools()
-
-    async def _register_tools(self):
-        # 1. Send "initialize" to both children and wait for confirmation
-        for key, child in self.children.items():
-            try:
-                resp = await send_recv(child, {"type": "initialize"})
-                print(f"Child {key} initialized: {resp}", file=sys.stderr, flush=True)
-            except Exception as e:
-                print(f"Failed to initialize child {key}: {e}", file=sys.stderr, flush=True)
-                                                                                                                                                                
-        # 2. Proceed to list tools as before
-        list_tools_msg = {"type": "list_tools"}
-        db_tools = (await send_recv(self.children['db'], list_tools_msg)).get("tools", [])
-        fs_tools = (await send_recv(self.children['fs'], list_tools_msg)).get("tools", [])
-                                                                                                                                                                
-        self.tool_map = {}
-        for t in fs_tools:
-            self.tool_map[FS_PREFIX + t] = 'fs'
-        for t in db_tools:
-            self.tool_map[DB_PREFIX + t] = 'db'
-
-    async def handle_message(self, msg: Dict[str, Any]):
-        if msg['type'] == 'list_tools':
-            # Merge tool lists from both
-            fs_tools = (await send_recv(self.children['fs'], msg)).get('tools', [])
-            db_tools = (await send_recv(self.children['db'], msg)).get('tools', [])
-            return {"type": "list_tools", "tools": [FS_PREFIX+t for t in fs_tools] + [DB_PREFIX+t for t in db_tools]}
-        elif msg['type'] == 'call_tool':
-            tool = msg.get('tool')
-            if tool.startswith(FS_PREFIX):
-                real_tool = tool[len(FS_PREFIX):]
-                msg2 = dict(msg)
-                msg2['tool'] = real_tool
-                return await send_recv(self.children['fs'], msg2)
-            elif tool.startswith(DB_PREFIX):
-                real_tool = tool[len(DB_PREFIX):]
-                msg2 = dict(msg)
-                msg2['tool'] = real_tool
-                return await send_recv(self.children['db'], msg2)
-            else:
-                return {"type": "error", "error": f"Unknown tool prefix for tool '{tool}'"}
-        # could handle list_resources, etc, similarly
-        else:
-            return {"type": "error", "error": "Unsupported message type"}
-
-async def amain():
-    mux = MCPMultiplexer()
-    await mux.start()
+    return json.loads(line)
+                                                                                                                        
+async def main():
+    # Start all child servers, handshake them with MCP
+    for child in TOOL_CHILDREN.values():
+        child["proc"] = await start_child_server(child)
+        # MCP handshake
+        resp = await send_recv(child["proc"], {"type": "initialize"})
+        # Store tools list and prefix them
+        child["tools"] = [
+            child["prefix"] + "." + t for t in resp.get("tools", [])
+        ]
+                                                                                                                        
+    # MCP handshake for *this* multiplexer itself!
+    # Wait for initialize from client:
     while True:
-        line = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
+        # This blocks until first client msg
+        line = sys.stdin.readline()
+        if not line:
+            return
+        msg = json.loads(line)
+                                                                                                                        
+        if msg.get("type") == "initialize":
+            # Aggregate all available tool specs
+            all_tools = []
+            for child in TOOL_CHILDREN.values():
+                all_tools.extend(child["tools"] or [])
+            reply = {"type": "initialize", "id": msg.get("id"), "tools": all_tools}
+            print(json.dumps(reply), flush=True)
+            break
+        else:
+            # refuse until we see initialize
+            print(json.dumps({"type": "error", "id": msg.get("id"), "error": "expected initialize as first msg"}),      
+flush=True)
+                                                                                                                        
+    # Main MCP loop
+    while True:
+        line = sys.stdin.readline()
         if not line:
             break
-        try:
-            msg = json.loads(line)
-            resp = await mux.handle_message(msg)
-        except Exception as e:
-            resp = {"type": "error", "error": str(e)}
-        print(json.dumps(resp), flush=True)
-
+        msg = json.loads(line)
+                                                                                                                        
+        # Handle list_tools
+        if msg.get("type") == "list_tools":
+            all_tools = []
+            for child in TOOL_CHILDREN.values():
+                all_tools.extend(child["tools"] or [])
+            reply = {"type": "list_tools", "id": msg.get("id"), "tools": all_tools}
+            print(json.dumps(reply), flush=True)
+            continue
+                                                                                                                        
+        # All tool calls look like {type: "call_tool", id, tool, ...}
+        if msg.get("type") == "call_tool":
+            tool = msg.get("tool")
+            if not tool:
+                print(json.dumps({"type": "error", "id": msg.get("id"), "error": "no tool given"}), flush=True)
+                continue
+                                                                                                                        
+            matched = None
+            for child in TOOL_CHILDREN.values():
+                if child['tools'] and tool in child['tools']:
+                    matched = child
+                    real_tool = tool[len(child["prefix"]) + 1:]  # strip prefix + '.'
+                    break
+                                                                                                                        
+            if not matched:
+                print(json.dumps({"type": "error", "id": msg.get("id"), "error": f"unknown tool: {tool}"}), flush=True) 
+                continue
+                                                                                                                        
+            # Forward request (with tool name rewritten):
+            forward = dict(msg)
+            forward['tool'] = real_tool
+            resp = await send_recv(matched["proc"], forward)
+            # Must preserve the original 'id'
+            resp["id"] = msg["id"]
+            print(json.dumps(resp), flush=True)
+            continue
+                                                                                                                        
+        # fallback: error
+        print(json.dumps({"type": "error", "id": msg.get("id"), "error": "unknown message type"}), flush=True)
+                                                                                                                        
 if __name__ == "__main__":
-    asyncio.run(amain())
+    asyncio.run(main())
