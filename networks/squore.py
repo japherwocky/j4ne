@@ -1,6 +1,14 @@
-from env_keys import square_appid, square_token
+import os
+from dotenv import load_dotenv
 from networks import Network
 from square import client
+
+# Load environment variables
+load_dotenv()
+
+# Get Square API credentials from environment
+square_appid = os.getenv('SQUARE_APPID', '')
+square_token = os.getenv('SQUARE_TOKEN', '')
 
 class Squore(Network):
     """ subclass to handle connecting to the Square API """

@@ -10,7 +10,15 @@ from tornado.httpclient import HTTPError
 import giphypop
 G = giphypop.Giphy()
 
-from env_keys import discord_app_id
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Get Discord app ID from environment
+discord_app_id = os.getenv('DISCORD_APP_ID', 'your-discord-client/application-ID')
+
 from discord_invite import invite_link
 from peewee import fn
 from commands.twitch import mod_only
@@ -192,7 +200,7 @@ async def wgaff(network, channel, message):
 @tcommand('wgaff')
 @mod_only
 async def twitchwgaff(network, channel, message):
-    await network.send_message(channel, '┏(--)┓┏(--)┛┗(--﻿ )┓ WGAFF! ┏(--)┓��(--)┛┗(--﻿ )┓')
+    await network.send_message(channel, '┏(--)┓┏(--)┛┗(--﻿ )┓ WGAFF! ┏(--)����(--)┛┗(--﻿ )┓')
 
 #@command('reminder')    
 
