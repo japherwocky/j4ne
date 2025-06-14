@@ -72,18 +72,47 @@ python j4ne.py --twitter=False --twitch=False
 
 ## Agent Capabilities
 
-J4NE includes a local agent system that can access various tools:
+J4NE includes a local agent system that can access various tools. The agent uses Azure OpenAI for LLM capabilities.
 
-### 1. Starting the Agent Server
+### 1. Setting Up Azure OpenAI
 
-The agent system uses a multiplexer to connect to different tool servers:
+Create a `.env` file in the project root with your Azure OpenAI credentials:
 
-```bash
-# Start the multiplexer server
-python servers/multiplexer.py
+```
+AZURE_OPENAI_API_KEY=your-api-key
+AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/
+AZURE_OPENAI_API_VERSION=2023-05-15
+AZURE_OPENAI_API_MODEL=deployments/gpt-4
 ```
 
-### 2. Available Tool Servers
+### 2. Configuring the Agent
+
+The agent is configured in `chatters/cli.py`. By default, it's set to use only the filesystem server, but you can enable the multiplexer to use multiple tool servers:
+
+1. Edit `chatters/cli.py` and modify the `connect_to_server` method:
+
+```python
+server_params = StdioServerParameters(
+    command=command,
+    # Uncomment this line to use the multiplexer
+    args=['./servers/multiplexer.py'],
+    # Comment out this line when using the multiplexer
+    # args=['./servers/filesystem.py', './'],
+    env=None
+)
+```
+
+### 3. Starting the Agent
+
+The agent is integrated into the main chat loop and can be started with:
+
+```bash
+python j4ne.py chat
+```
+
+This will start the chat interface where you can interact with the agent.
+
+### 4. Available Tool Servers
 
 - **Filesystem Server**: Provides file system access tools
   ```bash
@@ -95,9 +124,14 @@ python servers/multiplexer.py
   python servers/localsqlite.py --db-path=./database.db
   ```
 
-### 3. Agent Tools
+- **Multiplexer**: Connects to multiple tool servers
+  ```bash
+  python servers/multiplexer.py
+  ```
 
-The agent has access to the following tools:
+### 5. Agent Tools
+
+When using the multiplexer, the agent has access to the following tools:
 
 - **Filesystem Tools**:
   - `fs_list-files`: List files in a directory
@@ -113,7 +147,16 @@ The agent has access to the following tools:
   - `db_describe_table`: Get table schema
   - `db_append_insight`: Add business insights
 
-### 4. OpenAI Diff Tool
+### 6. Troubleshooting
+
+If you encounter issues with the agent:
+
+1. Check that your `.env` file contains the correct Azure OpenAI credentials
+2. Ensure the multiplexer is properly configured in `chatters/cli.py`
+3. Verify that the tool servers are running and accessible
+4. Check the logs for any error messages
+
+### 7. OpenAI Diff Tool
 
 The project includes a tool for applying patches to files:
 
@@ -144,6 +187,8 @@ This starts a web server on `http://localhost:8000/` with the following features
 
 - **`api/`**: REST API handlers
 - **`chatters/` and `commands/`**: Chat functionality and command handlers
+  - `chatters/cli.py`: Agent client implementation
+  - `chatters/__init__.py`: Chat loop and agent initialization
 - **`networks/`**: Platform integrations (Discord, Twitch, IRC, Twitter)
 - **`servers/`**: Agent tool servers
   - `filesystem.py`: File system access tools
@@ -179,6 +224,16 @@ The project is structured to allow easy extension with new features:
 1. Add new commands in the `commands/` directory
 2. Add new network integrations in the `networks/` directory
 3. Add new agent tools in the `servers/` directory
+4. Extend the agent capabilities in `chatters/cli.py`
+
+### Adding New Tools
+
+To add a new tool server:
+
+1. Create a new server file in the `servers/` directory
+2. Implement the MCP protocol (see existing servers for examples)
+3. Update the multiplexer to include your new server
+4. Configure the agent to use the multiplexer
 
 ## Future Work
 
