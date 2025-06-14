@@ -81,23 +81,40 @@ Create a `.env` file in the project root with your Azure OpenAI credentials:
 ```
 AZURE_OPENAI_API_KEY=your-api-key
 AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/
-AZURE_OPENAI_API_VERSION=2023-05-15
-AZURE_OPENAI_API_MODEL=deployments/gpt-4
+AZURE_OPENAI_API_VERSION=2024-12-01-preview
+AZURE_OPENAI_API_MODEL=deployments/gpt-4.1
 ```
+
+A sample `.env.example` file is included in the repository for reference.
 
 ### 2. Configuring the Agent
 
-The agent is configured in `chatters/cli.py`. By default, it's set to use only the filesystem server, but you can enable the multiplexer to use multiple tool servers:
+The agent is configured in `chatters/cli.py`. By default, it's set to use only the filesystem server. There are two ways to use the agent:
 
-1. Edit `chatters/cli.py` and modify the `connect_to_server` method:
+#### Option 1: Use a Single Tool Server
+
+This is the most reliable approach. Choose one of the tool servers to use:
 
 ```python
 server_params = StdioServerParameters(
     command=command,
-    # Uncomment this line to use the multiplexer
-    args=['./servers/multiplexer.py'],
-    # Comment out this line when using the multiplexer
-    # args=['./servers/filesystem.py', './'],
+    # Use the filesystem server
+    args=['./servers/filesystem.py', './'],
+    # OR use the SQLite server
+    # args=['./servers/localsqlite.py', '--db-path', './database.db'],
+    env=None
+)
+```
+
+#### Option 2: Use the Multiplexer (Fixed Version)
+
+The original multiplexer has issues that can cause the application to hang. A fixed version is provided in `servers/multiplexer_fixed.py`:
+
+```python
+server_params = StdioServerParameters(
+    command=command,
+    # Use the fixed multiplexer to access both filesystem and SQLite tools
+    args=['./servers/multiplexer_fixed.py'],
     env=None
 )
 ```
@@ -126,7 +143,7 @@ This will start the chat interface where you can interact with the agent.
 
 - **Multiplexer**: Connects to multiple tool servers
   ```bash
-  python servers/multiplexer.py
+  python servers/multiplexer_fixed.py
   ```
 
 ### 5. Agent Tools
@@ -151,10 +168,20 @@ When using the multiplexer, the agent has access to the following tools:
 
 If you encounter issues with the agent:
 
-1. Check that your `.env` file contains the correct Azure OpenAI credentials
-2. Ensure the multiplexer is properly configured in `chatters/cli.py`
-3. Verify that the tool servers are running and accessible
-4. Check the logs for any error messages
+1. **Multiplexer Hanging**: If the multiplexer causes the application to hang, use the fixed version (`multiplexer_fixed.py`) or use a single tool server instead.
+
+2. **Azure OpenAI Connection**: Ensure your `.env` file contains the correct Azure OpenAI credentials with the proper format:
+   - `AZURE_OPENAI_ENDPOINT` should be the base URL (e.g., `https://your-resource-name.openai.azure.com/`)
+   - `AZURE_OPENAI_API_MODEL` should include the `deployments/` prefix (e.g., `deployments/gpt-4.1`)
+
+3. **Path Issues**: Make sure the paths to the server scripts are correct. If you're on Windows, you might need to adjust the paths in the code.
+
+4. **Logging**: Enable verbose logging to see more details about what's happening:
+   ```bash
+   python j4ne.py chat --verbose
+   ```
+
+5. **Process Management**: If the agent seems to hang, check if there are any orphaned Python processes that need to be terminated.
 
 ### 7. OpenAI Diff Tool
 
@@ -193,7 +220,8 @@ This starts a web server on `http://localhost:8000/` with the following features
 - **`servers/`**: Agent tool servers
   - `filesystem.py`: File system access tools
   - `localsqlite.py`: Database query tools
-  - `multiplexer.py`: Tool server multiplexer
+  - `multiplexer.py`: Original tool server multiplexer (may cause hanging)
+  - `multiplexer_fixed.py`: Fixed version of the multiplexer with better error handling
   - `openaidiff.py`: File patching utility
 - **`static/` and `templates/`**: Web interface assets
 - **`tests/`**: Unit tests
