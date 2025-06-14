@@ -1,12 +1,20 @@
 import logging
 import json
 from datetime import datetime
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Get Twitch API credentials from environment
+twitch_name = os.getenv('TWITCH_NAME', '')
+twitch_token = os.getenv('TWITCH_TOKEN', '')
+twitch_key = os.getenv('TWITCH_KEY', '')
 
 import tornado
 from tornado.websocket import websocket_connect
 from tornado.platform.asyncio import to_asyncio_future
-
-from env_keys import twitch_name, twitch_token, twitch_key
 
 from loggers.models import Event
 from commands import Twitch_commands as Commands
