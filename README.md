@@ -126,6 +126,13 @@ If you encounter issues with the agent:
 
 4. **Process Management**: If the agent seems to hang, check if there are any orphaned Python processes that need to be terminated.
 
+5. **Multiplexer Freezing**: If the multiplexer freezes after "Launching MCP Server", use the debugging tools:
+   ```bash
+   # Run the debugging script to test the multiplexer directly
+   python debug_multiplexer.py
+   ```
+   See [DEBUGGING.md](DEBUGGING.md) for detailed troubleshooting steps.
+
 ## Web Interface
 
 J4NE includes a Kanban board web interface:
@@ -198,4 +205,3 @@ To add a new tool server:
 ## Future Work
 
 See [PLAN.md](PLAN.md) for planned features and improvements.
-
