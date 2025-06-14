@@ -4,6 +4,7 @@ import sys
 import json
 import os
 import platform
+import traceback
 from typing import Dict, Any, List
 
 # ---- Configuration ---- #
@@ -13,19 +14,30 @@ if platform.system() == "Windows":
 else:
     PYTHON_EXECUTABLE = os.path.join(".venv", "bin", "python")
 
+# For debugging, print the executable path
+print(f"Using Python executable: {PYTHON_EXECUTABLE}", file=sys.stderr, flush=True)
+print(f"Current working directory: {os.getcwd()}", file=sys.stderr, flush=True)
+
 # Server paths and arguments
 FILESYSTEM_SERVER = './servers/filesystem.py'
 FILESYSTEM_ARG = '.'  # Root directory argument
 FS_PREFIX = 'fs_'
 
 SQLITE_SERVER = './servers/localsqlite.py'
-SQLITE_ARG = './database.db'
+SQLITE_ARG = './db.sqlite3'  # Match the database path used in the code
 DB_PREFIX = 'db_'
 
 # ---- Helper Functions ---- #
 async def start_child(path: str, arg: str):
     """Start a child process with the given path and argument."""
     try:
+        print(f"Starting child process: {PYTHON_EXECUTABLE} {path} {arg}", file=sys.stderr, flush=True)
+        
+        # Check if the file exists
+        if not os.path.exists(path):
+            print(f"ERROR: File {path} does not exist!", file=sys.stderr, flush=True)
+            raise FileNotFoundError(f"File {path} does not exist")
+            
         proc = await asyncio.create_subprocess_exec(
             PYTHON_EXECUTABLE, path, arg,
             stdin=asyncio.subprocess.PIPE,
@@ -36,22 +48,28 @@ async def start_child(path: str, arg: str):
         return proc
     except Exception as e:
         print(f"Error starting child process {path}: {e}", file=sys.stderr, flush=True)
+        print(f"Traceback: {traceback.format_exc()}", file=sys.stderr, flush=True)
         raise
 
 async def send_recv(proc, msg: Dict[str, Any]):
     """Send a message to a child process and receive a response."""
     try:
+        print(f"Sending message to child: {msg}", file=sys.stderr, flush=True)
         data = (json.dumps(msg) + '\n').encode()
         proc.stdin.write(data)
         await proc.stdin.drain()
+        print(f"Waiting for response from child...", file=sys.stderr, flush=True)
         line = await proc.stdout.readline()
         if not line:
             stderr = await proc.stderr.read()
             print(f"Child process error: {stderr.decode()}", file=sys.stderr, flush=True)
             return {"type": "error", "error": "No response from child process"}
-        return json.loads(line.decode())
+        response = json.loads(line.decode())
+        print(f"Received response from child: {response}", file=sys.stderr, flush=True)
+        return response
     except Exception as e:
         print(f"Error in send_recv: {e}", file=sys.stderr, flush=True)
+        print(f"Traceback: {traceback.format_exc()}", file=sys.stderr, flush=True)
         return {"type": "error", "error": str(e)}
 
 # ---- Multiplexer core ---- #
@@ -63,12 +81,19 @@ class MCPMultiplexer:
     async def start(self):
         """Start all child processes and register their tools."""
         try:
+            print("Starting filesystem child process...", file=sys.stderr, flush=True)
             self.children['fs'] = await start_child(FILESYSTEM_SERVER, FILESYSTEM_ARG)
+            
+            print("Starting database child process...", file=sys.stderr, flush=True)
             self.children['db'] = await start_child(SQLITE_SERVER, SQLITE_ARG)
+            
             # On start, get tool lists and map them.
+            print("Registering tools from child processes...", file=sys.stderr, flush=True)
             await self._register_tools()
+            print("Multiplexer initialization complete", file=sys.stderr, flush=True)
         except Exception as e:
             print(f"Error in start: {e}", file=sys.stderr, flush=True)
+            print(f"Traceback: {traceback.format_exc()}", file=sys.stderr, flush=True)
             raise
 
     async def _register_tools(self):
@@ -162,32 +187,37 @@ class MCPMultiplexer:
 async def amain():
     """Main async function."""
     try:
+        print("Starting multiplexer...", file=sys.stderr, flush=True)
         mux = MCPMultiplexer()
         await mux.start()
         
-        print("Multiplexer started successfully", file=sys.stderr, flush=True)
+        print("Multiplexer started successfully, entering main loop", file=sys.stderr, flush=True)
         
         while True:
+            print("Waiting for input...", file=sys.stderr, flush=True)
             line = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
             if not line:
                 print("End of input, exiting", file=sys.stderr, flush=True)
                 break
                 
             try:
+                print(f"Received input: {line.strip()}", file=sys.stderr, flush=True)
                 msg = json.loads(line)
                 resp = await mux.handle_message(msg)
+                print(f"Sending response: {resp}", file=sys.stderr, flush=True)
             except json.JSONDecodeError as e:
                 print(f"JSON decode error: {e}", file=sys.stderr, flush=True)
                 resp = {"type": "error", "error": f"Invalid JSON: {str(e)}"}
             except Exception as e:
                 print(f"Error processing message: {e}", file=sys.stderr, flush=True)
+                print(f"Traceback: {traceback.format_exc()}", file=sys.stderr, flush=True)
                 resp = {"type": "error", "error": str(e)}
                 
             print(json.dumps(resp), flush=True)
     except Exception as e:
         print(f"Fatal error in amain: {e}", file=sys.stderr, flush=True)
+        print(f"Traceback: {traceback.format_exc()}", file=sys.stderr, flush=True)
         sys.exit(1)
 
 if __name__ == "__main__":
     asyncio.run(amain())
-
