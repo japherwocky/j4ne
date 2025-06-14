@@ -28,13 +28,16 @@ class MCPClient:
         self.client = AzureOpenAI(api_version=os.getenv('AZURE_OPENAI_API_VERSION'), base_url=api_path)
 
     async def connect_to_server(self):
-
-        command = "./.venv/Scripts/python.exe"
+        # Determine the Python executable path based on the platform
+        if os.name == 'nt':  # Windows
+            command = "./.venv/Scripts/python.exe"
+        else:  # Unix/Linux/Mac
+            command = "./.venv/bin/python"
+            
+        # Use the fixed multiplexer by default to access both filesystem and SQLite tools
         server_params = StdioServerParameters(
             command=command,
-            # args=['./servers/localsqlite.py', '--db-path', './database.db'],  # defaults to 'test.db'
-            args=['./servers/filesystem.py', './'],
-            # args=['./servers/multiplexer.py'],
+            args=['./servers/multiplexer_fixed.py'],
             env=None
         )
         
