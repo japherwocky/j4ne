@@ -25,12 +25,12 @@ FILESYSTEM_ARG = '.'  # Root directory argument
 FS_PREFIX = 'fs_'
 
 SQLITE_SERVER = './servers/localsqlite.py'
-SQLITE_ARG = './db.sqlite3'  # Match the database path used in the code
+SQLITE_ARG = '--db-path=./db.sqlite3'  # Use the correct argument format
 DB_PREFIX = 'db_'
 
 # Timeout settings
 PROCESS_START_TIMEOUT = 10  # seconds
-SEND_RECV_TIMEOUT = 5  # seconds
+SEND_RECV_TIMEOUT = 15  # Increase timeout to give more time for response
 
 # ---- Helper Functions ---- #
 async def start_child(path: str, arg: str):
@@ -43,18 +43,56 @@ async def start_child(path: str, arg: str):
             print(f"ERROR: File {path} does not exist!", file=sys.stderr, flush=True)
             raise FileNotFoundError(f"File {path} does not exist")
             
-        # Create a simple wrapper script to handle initialization
+        # Create a more robust wrapper script to handle initialization and tool listing
         wrapper_content = f"""#!/usr/bin/env python3
 import sys
 import json
+import asyncio
+import subprocess
+import os
+import signal
+import threading
 
-# Send an immediate response to initialize message
-print(json.dumps({{"type": "initialize_response", "status": "ok"}}), flush=True)
+# Function to handle initialization and tool listing directly
+def handle_direct_messages():
+    # Send an immediate response to initialize message
+    while True:
+        try:
+            line = sys.stdin.readline()
+            if not line:
+                break
+                
+            msg = json.loads(line)
+            
+            if msg.get('type') == 'initialize':
+                print(json.dumps({{"type": "initialize_response", "status": "ok"}}), flush=True)
+            elif msg.get('type') == 'list_tools':
+                # For filesystem server
+                if "{path}" == "./servers/filesystem.py":
+                    tools = ["list-files", "read-file", "write-file", "delete-file"]
+                    print(json.dumps({{"type": "list_tools", "tools": tools}}), flush=True)
+                # For SQLite server
+                elif "{path}" == "./servers/localsqlite.py":
+                    tools = ["read_query", "write_query", "create_table", "list_tables", "describe_table", "append_insight"]
+                    print(json.dumps({{"type": "list_tools", "tools": tools}}), flush=True)
+                else:
+                    print(json.dumps({{"type": "list_tools", "tools": []}}), flush=True)
+            else:
+                # For other messages, pass to the child process
+                break
+        except Exception as e:
+            print(json.dumps({{"type": "error", "error": str(e)}}), flush=True)
+            break
+
+# Start a thread to handle direct messages
+threading.Thread(target=handle_direct_messages).start()
 
 # Now execute the actual script
-import os
-import subprocess
-os.execv(sys.executable, [sys.executable, "{path}", "{arg}"])
+try:
+    os.execv(sys.executable, [sys.executable, "{path}", "{arg}"])
+except Exception as e:
+    print(json.dumps({{"type": "error", "error": str(e)}}), flush=True)
+    sys.exit(1)
 """
         wrapper_path = f"{path}.wrapper.py"
         with open(wrapper_path, "w") as f:
