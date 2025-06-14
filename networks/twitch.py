@@ -6,7 +6,7 @@ import tornado
 from tornado.websocket import websocket_connect
 from tornado.platform.asyncio import to_asyncio_future
 
-from keys import twitch_name, twitch_token, twitch_key
+from env_keys import twitch_name, twitch_token, twitch_key
 
 from loggers.models import Event
 from commands import Twitch_commands as Commands

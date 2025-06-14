@@ -1,5 +1,4 @@
-
-from keys import square_appid, square_token
+from env_keys import square_appid, square_token
 from networks import Network
 from square import client
 

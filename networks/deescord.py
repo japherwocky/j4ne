@@ -3,7 +3,7 @@ from random import choice, shuffle
 from twython.exceptions import TwythonError
 
 import cl3ver
-from keys import cleverbot_key as cleverkey
+from env_keys import cleverbot_key as cleverkey
 
 import aiohttp
 import asyncio
@@ -19,7 +19,7 @@ import feedparser  # for depressing j4ne
 from tornado import gen
 import tornado.ioloop
 
-from keys import discord_token
+from env_keys import discord_token
 
 from commands import Discord_commands as Commands
 from commands import discord_command as command
@@ -125,4 +125,3 @@ class Discord(object):
 
             elif message.content.startswith('|'):
                 await commands.deescord.custom(self, message.channel, message)
-

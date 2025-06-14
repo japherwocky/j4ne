@@ -6,7 +6,7 @@ import html
 from commands import discord_command
 
 from twython import Twython
-from keys import twitter_appkey, twitter_appsecret, twitter_token, twitter_tokensecret
+from env_keys import twitter_appkey, twitter_appsecret, twitter_token, twitter_tokensecret
 from logging import debug, info, warning
 
 from networks.models import Retweets
@@ -189,9 +189,3 @@ async def load_twitter_config(network, channel, message):
 
                         else:
                             new_retweet = Retweets.insert(tooter=retweet['screen_name'], discord_channel=chanobj.id, last_tweet_id=retweet['last']).execute()
-
-
-        # self._twitter_conf = conf
-
-
-
