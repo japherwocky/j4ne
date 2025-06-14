@@ -87,39 +87,7 @@ AZURE_OPENAI_API_MODEL=deployments/gpt-4.1
 
 A sample `.env.example` file is included in the repository for reference.
 
-### 2. Configuring the Agent
-
-The agent is configured in `chatters/cli.py`. By default, it's set to use only the filesystem server. There are two ways to use the agent:
-
-#### Option 1: Use a Single Tool Server
-
-This is the most reliable approach. Choose one of the tool servers to use:
-
-```python
-server_params = StdioServerParameters(
-    command=command,
-    # Use the filesystem server
-    args=['./servers/filesystem.py', './'],
-    # OR use the SQLite server
-    # args=['./servers/localsqlite.py', '--db-path', './database.db'],
-    env=None
-)
-```
-
-#### Option 2: Use the Multiplexer (Fixed Version)
-
-The original multiplexer has issues that can cause the application to hang. A fixed version is provided in `servers/multiplexer_fixed.py`:
-
-```python
-server_params = StdioServerParameters(
-    command=command,
-    # Use the fixed multiplexer to access both filesystem and SQLite tools
-    args=['./servers/multiplexer_fixed.py'],
-    env=None
-)
-```
-
-### 3. Starting the Agent
+### 2. Starting the Agent
 
 The agent is integrated into the main chat loop and can be started with:
 
@@ -127,28 +95,11 @@ The agent is integrated into the main chat loop and can be started with:
 python j4ne.py chat
 ```
 
-This will start the chat interface where you can interact with the agent.
+This will start the chat interface where you can interact with the agent. By default, the agent uses a multiplexer that provides access to both filesystem and database tools.
 
-### 4. Available Tool Servers
+### 3. Available Agent Tools
 
-- **Filesystem Server**: Provides file system access tools
-  ```bash
-  python servers/filesystem.py /path/to/directory
-  ```
-
-- **SQLite Server**: Provides database query tools
-  ```bash
-  python servers/localsqlite.py --db-path=./database.db
-  ```
-
-- **Multiplexer**: Connects to multiple tool servers
-  ```bash
-  python servers/multiplexer_fixed.py
-  ```
-
-### 5. Agent Tools
-
-When using the multiplexer, the agent has access to the following tools:
+The agent has access to the following tools:
 
 - **Filesystem Tools**:
   - `fs_list-files`: List files in a directory
@@ -164,26 +115,24 @@ When using the multiplexer, the agent has access to the following tools:
   - `db_describe_table`: Get table schema
   - `db_append_insight`: Add business insights
 
-### 6. Troubleshooting
+### 4. Troubleshooting
 
 If you encounter issues with the agent:
 
-1. **Multiplexer Hanging**: If the multiplexer causes the application to hang, use the fixed version (`multiplexer_fixed.py`) or use a single tool server instead.
-
-2. **Azure OpenAI Connection**: Ensure your `.env` file contains the correct Azure OpenAI credentials with the proper format:
+1. **Azure OpenAI Connection**: Ensure your `.env` file contains the correct Azure OpenAI credentials with the proper format:
    - `AZURE_OPENAI_ENDPOINT` should be the base URL (e.g., `https://your-resource-name.openai.azure.com/`)
    - `AZURE_OPENAI_API_MODEL` should include the `deployments/` prefix (e.g., `deployments/gpt-4.1`)
 
-3. **Path Issues**: Make sure the paths to the server scripts are correct. If you're on Windows, you might need to adjust the paths in the code.
+2. **Path Issues**: Make sure the paths to the server scripts are correct. The code automatically detects Windows vs. Unix paths for the Python executable.
 
-4. **Logging**: Enable verbose logging to see more details about what's happening:
+3. **Logging**: Enable verbose logging to see more details about what's happening:
    ```bash
    python j4ne.py chat --verbose
    ```
 
-5. **Process Management**: If the agent seems to hang, check if there are any orphaned Python processes that need to be terminated.
+4. **Process Management**: If the agent seems to hang, check if there are any orphaned Python processes that need to be terminated.
 
-### 7. OpenAI Diff Tool
+### 5. OpenAI Diff Tool
 
 The project includes a tool for applying patches to files:
 
@@ -220,8 +169,7 @@ This starts a web server on `http://localhost:8000/` with the following features
 - **`servers/`**: Agent tool servers
   - `filesystem.py`: File system access tools
   - `localsqlite.py`: Database query tools
-  - `multiplexer.py`: Original tool server multiplexer (may cause hanging)
-  - `multiplexer_fixed.py`: Fixed version of the multiplexer with better error handling
+  - `multiplexer_fixed.py`: Tool server multiplexer with improved error handling
   - `openaidiff.py`: File patching utility
 - **`static/` and `templates/`**: Web interface assets
 - **`tests/`**: Unit tests
@@ -261,7 +209,6 @@ To add a new tool server:
 1. Create a new server file in the `servers/` directory
 2. Implement the MCP protocol (see existing servers for examples)
 3. Update the multiplexer to include your new server
-4. Configure the agent to use the multiplexer
 
 ## Future Work
 
