@@ -1,140 +1,186 @@
-# Project Setup and Usage Guide
+# J4NE - Multi-Platform Chat Bot with Agent Capabilities
 
----
+J4NE is a versatile chat bot that supports multiple platforms including IRC, Twitch, Discord, and Twitter. It also includes a local agent system that can access software tools and perform various tasks.
 
-## SYSTEM REQUIREMENTS
-- The application can be set up using Python's virtual environment feature, with dependencies listed in `requirements.txt`.
+## System Requirements
 
----
+- Python 3.9 or later
+- Dependencies listed in `requirements.txt`
 
-## PYTHON REQUIREMENTS
+## Setup Instructions
 
-1. **Set up a Python Virtual Environment**:
-   - Ensure you're using Python 3.5 or later.
-   - Execute the following commands:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
+### 1. Python Environment Setup
 
----
+```bash
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-## GETTING J4NE UP AND RUNNING
+# Install dependencies
+pip install -r requirements.txt
+```
 
-**Important:** Ensure that a file named `keys.py` exists in the project root. This file will store the credentials for various networks (e.g., Discord, Twitch, etc.).
+### 2. Configuration
 
-#### Example `keys.py`:
+Create a `keys.py` file in the project root with your API credentials:
+
 ```python
+# Platform credentials
 discord_token = "your-discord-token"
 discord_app_id = "your-discord-application-id"
 twitch_client_id = "your-twitch-client-id"
 twitch_client_secret = "your-twitch-client-secret"
+
+# Optional: Twitter credentials
+twitter_appkey = ""
+twitter_appsecret = ""
+twitter_token = ""
+twitter_tokensecret = ""
+
+# Optional: Other API keys
+cleverbot_key = ""
 ```
 
----
+### 3. First-Time Setup
 
-## DISCORD CONFIGURATION
+Initialize the database tables:
 
-1. **Create a Discord Application**:
-   - Visit [Discord Developer Portal](https://discord.com/developers/applications).
-   - Copy the "Client ID" and "Token" into your `keys.py`.
+```bash
+python j4ne.py --mktables
+```
 
-2. **Generate an Invitation Link**:
-   - Run the bot with the `--newbot` option to get an invitation link for your server:
+## Running the Bot
+
+### Basic Usage
+
+```bash
+# Start the bot with default settings
+python j4ne.py
+
+# Disable specific networks
+python j4ne.py --twitter=False --twitch=False
+```
+
+### Discord Setup
+
+1. Create a Discord application at [Discord Developer Portal](https://discord.com/developers/applications)
+2. Copy the "Client ID" and "Token" into your `keys.py`
+3. Generate an invitation link:
    ```bash
    python j4ne.py --newbot
    ```
 
----
+## Agent Capabilities
 
-## BOT OPTIONS
+J4NE includes a local agent system that can access various tools:
 
-1. **First-Time Setup**:
-   - On your first run, use the following options:
-     ```bash
-     python j4ne.py --mktables
-     ```
+### 1. Starting the Agent Server
 
-2. **Network-Specific Configuration**:
-   - To disable a network, pass an argument like `--twitter=False` when launching:
-     ```bash
-     python j4ne.py --twitter=False
-     ```
+The agent system uses a multiplexer to connect to different tool servers:
 
----
-
-## STATIC ASSETS
-Static files (like GIFs, customized CSS, and JavaScript) are stored in the `/static` directory:
-- Images for reactions (e.g., `anneLewd4.gif`, `lul.PNG`).
-- Web application frontend components (e.g., `charts.js`, `webchat.js`).
-- Libraries such as `moment.2.13.0.min.js`.
-
----
-
-## DATABASE MANAGEMENT
-
-1. The bot uses SQLite by default.
-   - The main database is located in `database.db`.
-
-2. Migrations or updates to the database structure can be handled via the `db.py` script.
-
----
-
-## PROJECT STRUCTURE OVERVIEW
-
-- **`api/`:** REST API handlers.
-- **`chatters/` and `commands/`:** Chat functionality and command-specific handlers.
-- **`networks/`:** Classes handling network integrations (e.g., Discord, Twitch, IRC).
-- **`static/` and `templates/`:** Assets and templates for the bot's web interface.
-- **`tests/`:** Unit tests for the project.
-
----
-
-## RUNNING THE BOT
-
-To start the bot, run:
 ```bash
-python j4ne.py
+# Start the multiplexer server
+python servers/multiplexer.py
 ```
 
-Add any optional arguments as needed (e.g., enabling/disabling networks, setting debug mode).
+### 2. Available Tool Servers
 
----
-
-## COMMAND-LINE USAGE
-
-You can launch different modules and features using subcommands:
-
-- **Default / Chat Loop** (start interactive chat):
+- **Filesystem Server**: Provides file system access tools
   ```bash
-  python j4ne.py chat
-  ```
-  Or just:
-  ```bash
-  python j4ne.py
+  python servers/filesystem.py /path/to/directory
   ```
 
-- **Greet** (print a styled greeting in the logs):
+- **SQLite Server**: Provides database query tools
   ```bash
-  python j4ne.py greet <NAME>
+  python servers/localsqlite.py --db-path=./database.db
   ```
 
-- **Kanban Board Web App** (launch web server):
-  ```bash
-  python j4ne.py web
-  ```
-  This starts a web server on `http://localhost:8000/`, hosting the Kanban board interface and API. Static files are served from `/static`. The Kanban board persists data in `kanban.json`.
+### 3. Agent Tools
 
-  - Main board view: [http://localhost:8000/](http://localhost:8000/)
-  - API endpoints:
-    - `GET /api/kanban` — fetch the board
-    - `POST /api/kanban/add` — add a card
-    - `POST /api/kanban/move` — move a card
-    - `POST /api/kanban/delete` — delete a card
+The agent has access to the following tools:
 
-- **Verbose Logging**: Add `--verbose` to any command for debug output.
+- **Filesystem Tools**:
+  - `fs_list-files`: List files in a directory
+  - `fs_read-file`: Read file contents
+  - `fs_write-file`: Write to a file
+  - `fs_delete-file`: Delete a file or directory
 
----
+- **Database Tools**:
+  - `db_read_query`: Execute SELECT queries
+  - `db_write_query`: Execute INSERT/UPDATE/DELETE queries
+  - `db_create_table`: Create database tables
+  - `db_list_tables`: List all tables
+  - `db_describe_table`: Get table schema
+  - `db_append_insight`: Add business insights
 
-Let me know if you want any further customization or info included! I can write this to README.md if you’re happy with it.
+### 4. OpenAI Diff Tool
+
+The project includes a tool for applying patches to files:
+
+```bash
+# Apply a patch from stdin
+cat patch.txt | python servers/openaidiff.py
+```
+
+## Web Interface
+
+J4NE includes a Kanban board web interface:
+
+```bash
+# Start the web server
+python j4ne.py web
+```
+
+This starts a web server on `http://localhost:8000/` with the following features:
+
+- Main board view: [http://localhost:8000/](http://localhost:8000/)
+- API endpoints:
+  - `GET /api/kanban` — fetch the board
+  - `POST /api/kanban/add` — add a card
+  - `POST /api/kanban/move` — move a card
+  - `POST /api/kanban/delete` — delete a card
+
+## Project Structure
+
+- **`api/`**: REST API handlers
+- **`chatters/` and `commands/`**: Chat functionality and command handlers
+- **`networks/`**: Platform integrations (Discord, Twitch, IRC, Twitter)
+- **`servers/`**: Agent tool servers
+  - `filesystem.py`: File system access tools
+  - `localsqlite.py`: Database query tools
+  - `multiplexer.py`: Tool server multiplexer
+  - `openaidiff.py`: File patching utility
+- **`static/` and `templates/`**: Web interface assets
+- **`tests/`**: Unit tests
+
+## Command-Line Options
+
+```bash
+# Show help
+python j4ne.py --help
+
+# Enable verbose logging
+python j4ne.py --verbose
+
+# Start the chat loop (default)
+python j4ne.py chat
+
+# Start the web server
+python j4ne.py web
+
+# Send a greeting
+python j4ne.py greet <name>
+```
+
+## Development
+
+The project is structured to allow easy extension with new features:
+
+1. Add new commands in the `commands/` directory
+2. Add new network integrations in the `networks/` directory
+3. Add new agent tools in the `servers/` directory
+
+## Future Work
+
+See [PLAN.md](PLAN.md) for planned features and improvements.
+
