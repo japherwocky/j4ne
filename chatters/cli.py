@@ -5,6 +5,7 @@ from collections import deque
 from typing import Optional
 from contextlib import AsyncExitStack
 import logging
+import platform
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -28,13 +29,17 @@ class MCPClient:
         self.client = AzureOpenAI(api_version=os.getenv('AZURE_OPENAI_API_VERSION'), base_url=api_path)
 
     async def connect_to_server(self):
+        # Determine the Python executable path based on the platform
+        if platform.system() == "Windows":
+            command = "./.venv/Scripts/python.exe"
+        else:
+            command = "./.venv/bin/python"
 
-        command = "./.venv/Scripts/python.exe"
         server_params = StdioServerParameters(
             command=command,
             # args=['./servers/localsqlite.py', '--db-path', './database.db'],  # defaults to 'test.db'
-            args=['./servers/filesystem.py', './'],
-            # args=['./servers/multiplexer.py'],
+            # args=['./servers/filesystem.py', './'],
+            args=['./servers/multiplexer_fixed.py'],
             env=None
         )
         

@@ -2,13 +2,21 @@ from logging import info, debug, error
 from random import choice, shuffle
 from twython.exceptions import TwythonError
 
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Get API keys from environment
+cleverkey = os.getenv('CLEVERBOT_KEY', '')
+discord_token = os.getenv('DISCORD_TOKEN', 'your-secret-token')
+
 import cl3ver
-from keys import cleverbot_key as cleverkey
 
 import aiohttp
 import asyncio
 import re
-import os
 import json
 import requests
 
@@ -18,8 +26,6 @@ import feedparser  # for depressing j4ne
 
 from tornado import gen
 import tornado.ioloop
-
-from keys import discord_token
 
 from commands import Discord_commands as Commands
 from commands import discord_command as command
@@ -62,7 +68,6 @@ class Discord(object):
         async def on_message(message):
             # info(message) 
             await self.on_message(message)
-
 
 
         """ eventually, when the connection gets reset (when, not if),

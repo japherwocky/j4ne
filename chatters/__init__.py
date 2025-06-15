@@ -29,5 +29,12 @@ async def EmCeePee():
     try:
         await client.connect_to_server()
         await client.chat_loop()
+    except Exception as e:
+        logging.error(f"Error in MCP client: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        console.print(f"[bold red]Error:[/] {e}")
+        console.print("[yellow]Try running the debug script to diagnose the issue:[/]")
+        console.print("[cyan]python debug_multiplexer.py[/]")
     finally:
         await client.cleanup()
