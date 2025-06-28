@@ -1,0 +1,13 @@
+include requirements.txt
+include README.md
+include PLAN.md
+recursive-include static *
+recursive-include templates *
+recursive-include api *
+recursive-include chatters *
+recursive-include commands *
+recursive-include networks *
+recursive-include servers *
+recursive-include sys *
+recursive-include tests *
+
