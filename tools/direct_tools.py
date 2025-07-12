@@ -52,6 +52,11 @@ class SqlDescribeTable(BaseModel):
     """Input model for describing a SQL table"""
     table_name: str = Field(description="Name of the table to describe")
 
+# Add a new model for AppendInsight
+class AppendInsight(BaseModel):
+    """Input model for adding a business insight"""
+    insight: str = Field(description="Business insight discovered from data analysis")
+
 # ---- Base Classes ----
 
 class DirectTool:
@@ -486,10 +491,7 @@ class AppendInsightTool(DirectTool):
         super().__init__(
             name="append-insight",
             description="Add a business insight to the memo",
-            input_model=BaseModel.model_construct(
-                __annotations__={"insight": str},
-                insight=Field(description="Business insight discovered from data analysis")
-            )
+            input_model=AppendInsight
         )
         self.provider = provider
     
