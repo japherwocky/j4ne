@@ -57,6 +57,11 @@ class AppendInsight(BaseModel):
     """Input model for adding a business insight"""
     insight: str = Field(description="Business insight discovered from data analysis")
 
+# Add an empty model for tools that don't need parameters
+class EmptyModel(BaseModel):
+    """Empty model for tools that don't need parameters"""
+    pass
+
 # ---- Base Classes ----
 
 class DirectTool:
@@ -450,7 +455,7 @@ class ListTablesTool(DirectTool):
         super().__init__(
             name="list-tables",
             description="List all tables in the SQLite database",
-            input_model=BaseModel
+            input_model=EmptyModel
         )
         self.provider = provider
     
