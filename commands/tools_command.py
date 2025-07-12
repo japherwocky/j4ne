@@ -17,6 +17,9 @@ from tools.direct_tools import (
     SQLiteToolProvider,
 )
 
+# Import the global database connection
+from db import db
+
 logger = logging.getLogger(__name__)
 console = Console()
 
@@ -28,7 +31,10 @@ def register_tools_command():
         # Create instances of the tool providers
         current_dir = os.path.abspath(os.getcwd())
         fs_provider = FilesystemToolProvider(root_path=current_dir)
-        sqlite_provider = SQLiteToolProvider("database.db")
+        
+        # Use the database path from the global db connection
+        db_path = db.database
+        sqlite_provider = SQLiteToolProvider(db_path)
         
         # Get all tools from the providers
         all_tools = []
@@ -56,4 +62,3 @@ def register_tools_command():
         "List all available tools for the LLM",
         ["t"]
     )
-
