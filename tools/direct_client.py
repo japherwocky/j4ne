@@ -40,9 +40,23 @@ console = Console()
 class DirectClient:
     """Client that uses the DirectMultiplexer to call tools directly"""
     
+    # Class variable to store the singleton instance
+    _instance = None
+    
+    @classmethod
+    def get_instance(cls):
+        """Get the singleton instance of DirectClient"""
+        return cls._instance
+    
     def __init__(self, root_path: str = "./", db_path: str = "./database.db"):
         """Initialize the client with tool providers"""
         logger.info("Initializing DirectClient")
+        
+        # Set this instance as the singleton instance
+        DirectClient._instance = self
+        
+        # Initialize history
+        self.history = deque(maxlen=8)
         
         # Set up the multiplexer with tool providers
         self.multiplexer = DirectMultiplexer()
