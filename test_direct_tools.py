@@ -6,7 +6,7 @@ Test script for the direct tools implementation.
 import os
 import json
 import asyncio
-from direct_tools import (
+from tools.direct_tools import (
     DirectMultiplexer,
     FilesystemToolProvider,
     SQLiteToolProvider
@@ -168,4 +168,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

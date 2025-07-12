@@ -6,7 +6,7 @@ Entry point script for running the direct client.
 import asyncio
 import argparse
 import os
-from direct_client import DirectClient
+from tools.direct_client import DirectClient
 
 def parse_args():
     """Parse command line arguments"""
@@ -42,4 +42,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
