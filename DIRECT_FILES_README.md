@@ -1,32 +1,36 @@
-# Direct Files Explanation
+# Direct Files Cleanup
 
-This document explains the presence of duplicate files in the root directory and the `tools/` directory.
+This document explains the cleanup of duplicate files that were previously in both the root directory and the `tools/` directory.
 
-## Current Status
+## Previous Status
 
-There are duplicate files in the root directory and the `tools/` directory:
+There were duplicate files in the root directory and the `tools/` directory:
 - `direct_client.py` and `tools/direct_client.py`
 - `direct_tools.py` and `tools/direct_tools.py`
 - `test_direct_tools.py` and `tests/test_direct_tools.py`
 
-## Why We're Keeping Both Versions (Temporarily)
+## Current Status
 
-1. **Backward Compatibility**: The files in the root directory are being kept temporarily to maintain backward compatibility with existing code that might still import from these locations.
+The duplicate files have been removed from the root directory, and all imports have been updated to use the versions in the `tools/` directory.
 
-2. **Gradual Migration**: We're gradually migrating all imports to use the versions in the `tools/` directory, which are more up-to-date and better organized.
+## Files Removed
 
-3. **Testing**: We need to ensure that all functionality works correctly with the new imports before removing the old files.
+The following files have been removed from the root directory:
+- `direct_client.py` (use `tools/direct_client.py` instead)
+- `direct_tools.py` (use `tools/direct_tools.py` instead)
+- `test_direct_tools.py` (use `tests/test_direct_tools.py` instead)
 
-## Next Steps
+## Import Changes
 
-1. Update all imports to use the versions in the `tools/` directory (in progress).
-2. Run comprehensive tests to ensure everything works correctly.
-3. Once all imports have been updated and tested, remove the duplicate files from the root directory.
+All imports have been updated to use the versions in the `tools/` directory:
 
-## Files to Eventually Remove
+```python
+# Before
+from direct_client import DirectClient
+from direct_tools import (...)
 
-Once all imports have been updated and tested, the following files can be removed from the root directory:
-- `direct_client.py`
-- `direct_tools.py`
-- `test_direct_tools.py`
+# After
+from tools.direct_client import DirectClient
+from tools.direct_tools import (...)
+```
 
