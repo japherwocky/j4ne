@@ -9,6 +9,7 @@ a message starts with '/'.
 from commands.handler import command_handler
 from commands.core import register_core_commands
 from commands.tools_command import register_tools_command
+from commands.context_command import register_context_command
 
 # Register the core commands
 register_core_commands()
@@ -16,3 +17,5 @@ register_core_commands()
 # Register the tools command
 register_tools_command()
 
+# Register the context command
+register_context_command()

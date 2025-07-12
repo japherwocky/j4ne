@@ -1,6 +1,6 @@
 from peewee import *
 
-from db import db
+from db import db, get_db
 
 
 class Quote(Model):
@@ -12,6 +12,11 @@ class Quote(Model):
     class Meta:
         database = db
         db_table = 'quotes'
+
+    def save(self, *args, **kwargs):
+        # Use thread-local database connection
+        self._meta.database = get_db()
+        return super().save(*args, **kwargs)
 
 """
 |addcount command message
@@ -33,3 +38,8 @@ class Command(Model):
     class Meta:
         database = db
         db_table = 'commands'
+        
+    def save(self, *args, **kwargs):
+        # Use thread-local database connection
+        self._meta.database = get_db()
+        return super().save(*args, **kwargs)

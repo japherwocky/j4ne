@@ -1,5 +1,5 @@
 from peewee import Model, CharField, IntegerField, ForeignKeyField
-from db import db
+from db import db, get_db
 
 
 class User(Model):
@@ -16,6 +16,11 @@ class User(Model):
     class Meta:
         database = db
         db_table = 'users'
+        
+    def save(self, *args, **kwargs):
+        # Use thread-local database connection
+        self._meta.database = get_db()
+        return super().save(*args, **kwargs)
 
 
 class Moderator(Model):
@@ -29,6 +34,11 @@ class Moderator(Model):
     class Meta:
         database = db
         db_table = 'moderators'
+        
+    def save(self, *args, **kwargs):
+        # Use thread-local database connection
+        self._meta.database = get_db()
+        return super().save(*args, **kwargs)
 
 
 class Retweets(Model):
@@ -42,3 +52,8 @@ class Retweets(Model):
     class Meta:
         database = db
         db_table = 'retweets'
+        
+    def save(self, *args, **kwargs):
+        # Use thread-local database connection
+        self._meta.database = get_db()
+        return super().save(*args, **kwargs)

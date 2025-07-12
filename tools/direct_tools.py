@@ -14,7 +14,7 @@ import pathspec
 from pydantic import BaseModel, Field
 
 # Import the global database connection
-from db import db
+from db import db, get_db
 
 # Configure logging
 logger = logging.getLogger('direct_tools')
@@ -358,9 +358,11 @@ class SQLiteToolProvider(ToolProvider):
     def _execute_query(self, query: str, params=None) -> List[Dict[str, Any]]:
         """Execute a SQL query and return results"""
         try:
-            # Use the global database connection
-            # Convert the query to work with peewee's SqliteDatabase
-            cursor = db.execute_sql(query, params)
+            # Use the thread-local database connection
+            conn = get_db()
+            
+            # Execute the query using peewee's SqliteDatabase
+            cursor = conn.execute_sql(query, params)
             
             if query.strip().upper().startswith(('INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER')):
                 affected = cursor.rowcount
