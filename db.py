@@ -7,9 +7,12 @@ from peewee import CharField, IntegerField, BooleanField
 from playhouse.migrate import SqliteMigrator, migrate
 
 
-db = SqliteDatabase('database.db')
-archive_db = SqliteDatabase('archive.db')
+# Create database connections with check_same_thread=False to allow
+# access from different contexts within the Tornado event loop
+db = SqliteDatabase('database.db', check_same_thread=False)
+archive_db = SqliteDatabase('archive.db', check_same_thread=False)
 
+# Connect at import time - this is fine for a single-process Tornado application
 db.connect()
 
 Migrations = {}
