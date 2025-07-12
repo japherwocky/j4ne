@@ -5,6 +5,7 @@ This module provides a command to list all available tools for the LLM.
 """
 
 import logging
+import os
 from rich.console import Console
 from rich.table import Table
 from commands.handler import command_handler
@@ -16,6 +17,9 @@ from tools.direct_tools import (
     SQLiteToolProvider,
 )
 
+# Import the global database connection
+from db import db
+
 logger = logging.getLogger(__name__)
 console = Console()
 
@@ -25,13 +29,18 @@ def register_tools_command():
     def tools_command(args: str) -> str:
         """Handler for the tools command."""
         # Create instances of the tool providers
-        fs_provider = FilesystemToolProvider()
-        sqlite_provider = SQLiteToolProvider("j4ne.db")
+        current_dir = os.path.abspath(os.getcwd())
+        fs_provider = FilesystemToolProvider(root_path=current_dir)
+        
+        # Use the database path from the global db connection
+        db_path = db.database
+        sqlite_provider = SQLiteToolProvider(db_path)
         
         # Get all tools from the providers
         all_tools = []
-        all_tools.extend(fs_provider.get_tools())
-        all_tools.extend(sqlite_provider.get_tools())
+        # The get_tools() method returns a dictionary, so we need to get the values
+        all_tools.extend(fs_provider.get_tools().values())
+        all_tools.extend(sqlite_provider.get_tools().values())
         
         # Create a table to display the tools
         table = Table(title="Available LLM Tools")
@@ -54,4 +63,3 @@ def register_tools_command():
         "List all available tools for the LLM",
         ["t"]
     )
-
