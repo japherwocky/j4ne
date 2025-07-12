@@ -23,8 +23,9 @@ from db import db
 from tools.direct_tools import (
     DirectMultiplexer,
     FilesystemToolProvider,
-    SQLiteToolProvider
+    SQLiteToolProvider,
 )
+from tools.commands import command_handler
 
 # Load environment variables
 load_dotenv()
@@ -162,7 +163,8 @@ class DirectClient:
     async def chat_loop(self):
         """Run an interactive chat loop"""
         console.print("\nDirect Tool Client Started!")
-        console.print("Type your queries or 'quit' to exit.")
+        console.print("Type your queries or '/quit' to exit.")
+        console.print("Type '/help' to see available commands.")
         
         history = deque(maxlen=8)
         
@@ -170,7 +172,16 @@ class DirectClient:
             try:
                 query = input("\n> ").strip()
                 
-                if query.lower() in ('quit', 'exit'):
+                # Check if this is a command
+                if query.startswith('/'):
+                    result = command_handler.handle_message(query)
+                    if result == "QUIT":
+                        break
+                    elif result:
+                        console.print(result)
+                        continue
+                # Legacy support for 'quit' and 'exit' without slash
+                elif query.lower() in ('quit', 'exit'):
                     break
                 
                 history.append({'role': 'user', 'content': query})
