@@ -1,9 +1,8 @@
 """
-Command system for j4ne.
+Command handler for j4ne.
 
-This module provides a framework for handling commands that start with '/'.
-Commands are registered with the CommandHandler and can be executed when
-a message starts with '/'.
+This module provides the core CommandHandler class that manages command registration
+and execution.
 """
 
 import logging
@@ -108,64 +107,4 @@ class CommandHandler:
 
 # Create a global command handler instance
 command_handler = CommandHandler()
-
-# Register the quit command
-def quit_command(_: str) -> str:
-    """Handler for the quit command."""
-    return "QUIT"
-
-command_handler.register_function(
-    "quit", 
-    quit_command,
-    "Exit the application",
-    ["exit", "bye"]
-)
-
-# Register the help command
-def help_command(args: str) -> str:
-    """Handler for the help command."""
-    if args:
-        # Show help for a specific command
-        command_name = args.strip().lower()
-        for name, cmd in command_handler.commands.items():
-            if cmd.matches(command_name):
-                aliases = f" (aliases: {', '.join(cmd.aliases)})" if cmd.aliases else ""
-                return f"/{name}{aliases}: {cmd.description}"
-        return f"Unknown command: /{command_name}"
-    
-    # Show help for all commands
-    return command_handler.get_help()
-
-command_handler.register_function(
-    "help",
-    help_command,
-    "Show help for available commands",
-    ["?"]
-)
-
-# Register a clear command to clear the console
-def clear_command(_: str) -> str:
-    """Handler for the clear command."""
-    import os
-    os.system('cls' if os.name == 'nt' else 'clear')
-    return "Console cleared."
-
-command_handler.register_function(
-    "clear",
-    clear_command,
-    "Clear the console",
-    ["cls"]
-)
-
-# Register a version command
-def version_command(_: str) -> str:
-    """Handler for the version command."""
-    return "j4ne v0.1.0"
-
-command_handler.register_function(
-    "version",
-    version_command,
-    "Show the version of j4ne",
-    ["v"]
-)
 
