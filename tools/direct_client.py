@@ -181,7 +181,9 @@ class DirectClient:
         console.print("Type your queries or '/quit' to exit.")
         console.print("Type '/help' to see available commands.")
         
-        history = deque(maxlen=8)
+        # Initialize history if not already done
+        if not hasattr(self, 'history'):
+            self.history = deque(maxlen=8)
         
         while True:
             try:
@@ -199,11 +201,11 @@ class DirectClient:
                 elif query.lower() in ('quit', 'exit'):
                     break
                 
-                history.append({'role': 'user', 'content': query})
+                self.history.append({'role': 'user', 'content': query})
                 console.print('\n')
                 
-                response = await self.process_query(list(history))
-                history.append({'role': 'assistant', 'content': response})
+                response = await self.process_query(list(self.history))
+                self.history.append({'role': 'assistant', 'content': response})
                 console.print(Markdown("\n" + response))
             
             except Exception as e:
