@@ -38,8 +38,9 @@ def register_tools_command():
         
         # Get all tools from the providers
         all_tools = []
-        all_tools.extend(fs_provider.get_tools())
-        all_tools.extend(sqlite_provider.get_tools())
+        # The get_tools() method returns a dictionary, so we need to get the values
+        all_tools.extend(fs_provider.get_tools().values())
+        all_tools.extend(sqlite_provider.get_tools().values())
         
         # Create a table to display the tools
         table = Table(title="Available LLM Tools")
