@@ -25,7 +25,8 @@ from tools.direct_tools import (
     FilesystemToolProvider,
     SQLiteToolProvider,
 )
-from tools.commands import command_handler
+# Import the command handler from the new location
+from commands import command_handler
 
 # Load environment variables
 load_dotenv()
