@@ -13,6 +13,9 @@ import logging
 import pathspec
 from pydantic import BaseModel, Field
 
+# Import the global database connection
+from db import db
+
 # Configure logging
 logger = logging.getLogger('direct_tools')
 
@@ -48,6 +51,16 @@ class SqlCreateTable(BaseModel):
 class SqlDescribeTable(BaseModel):
     """Input model for describing a SQL table"""
     table_name: str = Field(description="Name of the table to describe")
+
+# Add a new model for AppendInsight
+class AppendInsight(BaseModel):
+    """Input model for adding a business insight"""
+    insight: str = Field(description="Business insight discovered from data analysis")
+
+# Add an empty model for tools that don't need parameters
+class EmptyModel(BaseModel):
+    """Empty model for tools that don't need parameters"""
+    pass
 
 # ---- Base Classes ----
 
@@ -328,13 +341,10 @@ class SQLiteToolProvider(ToolProvider):
     
     def _init_database(self) -> None:
         """Initialize the SQLite database"""
-        db_dir = os.path.dirname(self.db_path)
-        if db_dir and not os.path.exists(db_dir):
-            os.makedirs(db_dir, exist_ok=True)
-        
-        # Just connect to create the database if it doesn't exist
-        with sqlite3.connect(self.db_path) as conn:
-            conn.close()
+        # We don't need to initialize the database here anymore
+        # since we're using the global database connection from db.py
+        # The database is already initialized and connected in db.py
+        pass
     
     def _register_tools(self) -> None:
         """Register all SQLite tools"""
@@ -348,22 +358,24 @@ class SQLiteToolProvider(ToolProvider):
     def _execute_query(self, query: str, params=None) -> List[Dict[str, Any]]:
         """Execute a SQL query and return results"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                
-                if params:
-                    cursor.execute(query, params)
-                else:
-                    cursor.execute(query)
-                
-                if query.strip().upper().startswith(('INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER')):
-                    conn.commit()
-                    affected = cursor.rowcount
-                    return [{"affected_rows": affected}]
-                
-                results = [dict(row) for row in cursor.fetchall()]
-                return results
+            # Use the global database connection
+            # Convert the query to work with peewee's SqliteDatabase
+            cursor = db.execute_sql(query, params)
+            
+            if query.strip().upper().startswith(('INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER')):
+                affected = cursor.rowcount
+                return [{"affected_rows": affected}]
+            
+            # Fetch results
+            results = []
+            for row in cursor.fetchall():
+                # Convert sqlite3.Row to dict
+                row_dict = {}
+                for idx, col in enumerate(cursor.description):
+                    row_dict[col[0]] = row[idx]
+                results.append(row_dict)
+            
+            return results
         except Exception as e:
             logger.error(f"Database error executing query: {str(e)}")
             raise
@@ -443,7 +455,7 @@ class ListTablesTool(DirectTool):
         super().__init__(
             name="list-tables",
             description="List all tables in the SQLite database",
-            input_model=BaseModel
+            input_model=EmptyModel
         )
         self.provider = provider
     
@@ -484,10 +496,7 @@ class AppendInsightTool(DirectTool):
         super().__init__(
             name="append-insight",
             description="Add a business insight to the memo",
-            input_model=BaseModel.model_construct(
-                __annotations__={"insight": str},
-                insight=Field(description="Business insight discovered from data analysis")
-            )
+            input_model=AppendInsight
         )
         self.provider = provider
     
@@ -528,4 +537,3 @@ class DirectMultiplexer:
         except Exception as e:
             logger.error(f"Error executing {tool_name}: {str(e)}")
             return {"error": f"Tool execution error: {str(e)}"}
-

@@ -17,6 +17,9 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.markdown import Markdown
 
+# Import the global database connection
+from db import db
+
 from tools.direct_tools import (
     DirectMultiplexer,
     FilesystemToolProvider,
@@ -196,4 +199,3 @@ class DirectClient:
         """Clean up resources"""
         logger.info("Cleaning up resources")
         # Nothing to clean up for now, but this method could be used in the future
-
