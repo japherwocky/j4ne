@@ -3,3 +3,7 @@ mcp
 openai
 pathspec
 rich
+peewee
+python-dotenv
+starlette
+uvicorn
