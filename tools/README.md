@@ -43,6 +43,15 @@ The direct tools architecture consists of:
 - `sqlite.describe-table`: Get the schema information for a specific table
 - `sqlite.append-insight`: Add a business insight to the memo
 
+### Git Tools
+
+- `git.status`: Show the working tree status
+- `git.add`: Add file contents to the index
+- `git.commit`: Record changes to the repository
+- `git.branch`: List, create, switch, or delete branches
+- `git.log`: Show commit logs
+- `git.diff`: Show changes between commits, commit and working tree, etc
+
 ## Extending the Architecture
 
 ### Adding a New Tool
@@ -87,4 +96,3 @@ multiplexer = DirectMultiplexer()
 my_provider = MyNewProvider(config)
 multiplexer.add_provider(my_provider)
 ```
-
