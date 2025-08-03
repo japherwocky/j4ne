@@ -24,6 +24,7 @@ from tools.direct_tools import (
     DirectMultiplexer,
     FilesystemToolProvider,
     SQLiteToolProvider,
+    GitToolProvider,
 )
 # Import the command handler from the new location
 from commands import command_handler
@@ -68,6 +69,10 @@ class DirectClient:
         # Add SQLite tools
         sqlite_provider = SQLiteToolProvider(db_path)
         self.multiplexer.add_provider(sqlite_provider)
+        
+        # Add Git tools
+        git_provider = GitToolProvider(root_path)
+        self.multiplexer.add_provider(git_provider)
         
         # Set up OpenAI client
         self._setup_openai_client()
