@@ -7,8 +7,6 @@ class User(Model):
     """ A generic user model, used by the |trust system """
 
     name = CharField(null=True)
-    twitch_id = IntegerField()
-    twitch_name = CharField()
     discord_id = IntegerField(null=True)  # these are stubs, pending cross network linking somehow
     discord_name = CharField(null=True)
     discord_invite = CharField(null=True)

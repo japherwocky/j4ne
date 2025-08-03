@@ -30,7 +30,7 @@ class IRC(object):
     def _handle_connect(self):
         # Send nick and channels
 
-        self._write(('PASS', 'oauth:%s' % self.twitchtoken))
+        # OAuth authentication removed with Twitch integration
         self._write(('NICK', self.botname))
         self._write(('JOIN',), '#%s' % self.botname)
 
@@ -106,7 +106,7 @@ class IRC(object):
     def on_invite(self, nickname, channel):
 
         info('Received invitation to %s from %s' % (channel, nickname))
-        # check that it's from owner.. but this is moot on twitch
+        # check that it's from owner
         self._write(('JOIN',), channel)
 
     def on_msg(self, from_nick, channel, msg):

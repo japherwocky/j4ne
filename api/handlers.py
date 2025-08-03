@@ -112,12 +112,11 @@ class APIHandler(tornado.web.RequestHandler):
 
     def channels(self):
 
-        message_chans = [m.channel for m in Message.select(Message.channel).where(Message.network=='twitch').distinct()]
-        event_chans = [e.channel for e in Event.select(Event.channel).where(Event.network=='twitch').distinct()]
+        message_chans = [m.channel for m in Message.select(Message.channel).distinct()]
+        event_chans = [e.channel for e in Event.select(Event.channel).distinct()]
 
         chans = [channel for channel in set(message_chans).union( set(event_chans))]
 
         out = {'data':chans}
         self.set_header('Content-Type', 'application/json')
-        return self.finish(out) 
-
+        return self.finish(out)

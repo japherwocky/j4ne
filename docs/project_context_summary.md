@@ -3,7 +3,7 @@
 ---
 
 ## **Project Overview**
-This project appears to be a multi-functional bot called **J4NE** (or some similar name) that integrates with various platforms like Discord and Twitch, while also offering additional services like API handlers and a Kanban board web application.
+This project appears to be a multi-functional bot called **J4NE** (or some similar name) that integrates with various platforms like Discord and Twitter, while also offering additional services like API handlers and a Kanban board web application.
 
 ---
 
@@ -14,7 +14,7 @@ This project appears to be a multi-functional bot called **J4NE** (or some simil
 
 2. **Core Features:**
    - **Discord Integration:** Provides support for Discord bots using APIs.
-   - **Twitch Integration:** Includes handling for streaming network functionality.
+   - **Twitter Integration:** Includes handling for social media network functionality.
    - **Chat Functionality:** Interactive chat capabilities with command-specific handlers.
    - **Web Server:** Hosts a Kanban board and APIs.
    - **Database Management:** Uses SQLite (`database.db`) for persistent storage.
@@ -26,7 +26,7 @@ This project appears to be a multi-functional bot called **J4NE** (or some simil
 4. **Structure Overview:**
    - `/api`: REST API handlers for the system.
    - `/chatters` and `/commands`: Manages chat and command handling functionalities.
-   - `/networks`: Handles network-specific integrations like Discord, Twitch, or IRC.
+   - `/networks`: Handles network-specific integrations like Discord, Twitter, or IRC.
    - `/tools`: Likely contains utility scripts or tools to facilitate the core application.
    - `/tests`: Unit tests for application stability.
 
@@ -42,11 +42,11 @@ This project appears to be a multi-functional bot called **J4NE** (or some simil
      ```
 
 2. **Configuration:**
-   - Create a `keys.py` file in the root directory with API credentials for Discord, Twitch, etc.
+   - Create a `keys.py` file in the root directory with API credentials for Discord, Twitter, etc.
    - Example:
      ```python
      discord_token = "your-discord-token"
-     twitch_client_id = "your-twitch-client-id"
+     twitter_appkey = "your-twitter-app-key"
      ```
 
 3. **First-Time Setup:**

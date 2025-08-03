@@ -1,5 +1,4 @@
 from commands import discord_command as command
-from commands import twitch_command as tcommand
 from random import choice
 from time import time
 from terminaltables import AsciiTable, SingleTable, DoubleTable, GithubFlavoredMarkdownTable
@@ -13,13 +12,15 @@ G = giphypop.Giphy()
 from keys import discord_app_id
 from discord_invite import invite_link
 from peewee import fn
-from commands.twitch import mod_only
 from commands.models import Quote, Command
+
+# Simple decorator to replace the removed Twitch mod_only functionality
+def mod_only(func):
+    """Placeholder decorator - mod functionality removed with Twitch integration"""
+    return func
 
 
 @command('wizard')
-@tcommand('wizard')
-@mod_only
 async def wizard(network, channel, message):
 
     wizards = [
@@ -96,78 +97,10 @@ async def youropinion(network, channel, message):
 async def nani(network, channel, message):
     await network.send_file(channel, 'static/nani.gif')
 
-@command('live')
-async def live(network, channel, message):
-    streams = await network.application.TwitchAPI.live()
-
-    headers = ['Streamer', 'Game', 'Viewers', 'Uptime']
-
-    out = [headers,]
-    now = datetime.datetime.utcnow()
-    for stream in streams:
-
-        started = datetime.datetime.strptime(stream['created_at'],'%Y-%m-%dT%H:%M:%SZ')
-        hours = (now-started).seconds // 3600
-        minutes = ( (now-started).seconds // 60 ) % 60
-
-        oneline = '{} has been live for {}:{}, now playing {} w/ {} viewers.\n'.format( 
-            stream['channel']['display_name'], 
-            hours,
-            minutes,
-            stream['game'], 
-            stream['viewers']
-            )
-
-        oneline = [
-            stream['channel']['display_name'], 
-            stream['game'], 
-            str(stream['viewers']), 
-            '{}h{}m'.format(hours,minutes),
-        ]
-
-        out.append(oneline)
-
-    table = AsciiTable(out)
-    for i in range(len(out[0])):
-        table.justify_columns[i] = 'center'
-
-    await network.send_message(channel, '\n`{}`'.format(table.table))
-
-@command('watch')
-async def watch(network, channel, message):
-    # details on a particular streamer
-    if not message.content.lower().split('watch')[1]:
-        return await network.send_message(channel, 'Which streamer did you want to watch?')
-
-    # grab data from the twitch API
-    strimmer = message.content.lower().split('watch')[1].strip()
-
-    try:
-        data = await network.application.TwitchAPI.detail( strimmer )
-    except HTTPError:
-        return await network.send_message(channel, "I could not find a streamer named {}".format(strimmer))
-
-    if not data['stream']:
-
-        out = """{} is offline right now, but you can follow them at <http://twitch.tv/{}/profile>""".format(
-                data['channel']['display_name'], 
-                strimmer
-            )
-
-    else:
-
-        out = """{} is live, w/ {} viewers!\nWatch them at: http://twitch.tv/{}/""".format(
-            data['channel']['display_name'], 
-            str(data['stream']['viewers']), 
-            data['channel']['name']
-        )
-
-    await network.send_message(channel, out)
+# Twitch-dependent commands removed: live, watch
 
 
 @command('neat')
-@tcommand('neat')
-@mod_only
 async def neat(network, channel, message):
     verbs = ['dandy', 'glorious', 'hunky-dory', 'keen', 'marvelous', 'neat', 'nifty', 'sensational', 'swell', 'spiffy']
 
@@ -189,54 +122,7 @@ async def wgaff(network, channel, message):
 async def wgaff(network, channel, message):
     await network.send_file(channel, 'static/panic.gif')
 
-@tcommand('wgaff')
-@mod_only
-async def twitchwgaff(network, channel, message):
-    await network.send_message(channel, '┏(--)┓┏(--)┛┗(--﻿ )┓ WGAFF! ┏(--)┓┏(--)┛┗(--﻿ )┓')
-
-#@command('reminder')    
-
-
-@command('following')
-async def twitchfollowing(network, channel, message):
-
-    msg = message.content.lower().split('|following ')[1]
-
-    follower, followee = msg.split(' ')
-
-    async def get_details(username):
-        try:
-            userdata = await network.application.TwitchAPI.detail( username )
-            return userdata
-        except HTTPError:
-            await network.send_message(channel, "I could not find a Twitch user named {}".format(username))
-            return False
-
-    follower = await get_details(follower)
-    followee = await get_details(followee)
-
-    if not follower and followee:
-        return
-
-    path = 'https://api.twitch.tv/kraken/users/{}/follows/channels/{}'.format(
-        follower['channel']['_id'],
-        followee['channel']['_id']
-        )
-    try:
-        deets = await network.application.TwitchAPI.query(path)
-    except HTTPError:
-        return await network.send_message(channel, "Awkward, {} isn't even following {}".format(
-            follower['channel']['name'],
-            followee['channel']['name']
-            ))
-
-
-    out = '{} has been following {} since {}'.format(
-        follower['channel']['name'],
-        followee['channel']['name'],
-        deets['created_at'].split('T')[0]
-        )
-    await network.send_message(channel, out)
+# Twitch-specific commands removed: twitchwgaff, twitchfollowing
 
 
 @command('invite')
@@ -380,7 +266,7 @@ async def custom(network, channel, message):
 
     trigger = message.content.split(' ')[0].strip('|')
 
-    countQ = Command.select().where( Command.network != 'twitch', Command.trigger == trigger )
+    countQ = Command.select().where( Command.trigger == trigger )
 
     if not countQ.exists():
         return

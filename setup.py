@@ -6,7 +6,7 @@ with open("requirements.txt") as f:
 setup(
     name="j4ne",
     version="0.1.0",
-    description="A chat bot with data visualizations for IRC, Twitch, Discord, and Twitter",
+    description="A chat bot with data visualizations for IRC, Discord, and Twitter",
     author="japherwocky",
     packages=find_packages(),
     include_package_data=True,
@@ -18,4 +18,3 @@ setup(
     },
     python_requires=">=3.7",
 )
-

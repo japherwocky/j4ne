@@ -14,14 +14,14 @@
    ```
 
 ## GETTING J4NE UP AND RUNNING
-**Important:** Ensure that a file named `keys.py` exists in the project root. This file will store credentials for various networks (e.g., Discord, Twitch, etc.).
+**Important:** Ensure that a file named `keys.py` exists in the project root. This file will store credentials for various networks (e.g., Discord, Twitter, etc.).
 
 #### Example `keys.py`:
 ```python
 discord_token = "your-discord-token"
 discord_app_id = "your-discord-application-id"
-twitch_client_id = "your-twitch-client-id"
-twitch_client_secret = "your-twitch-client-secret"
+twitter_appkey = "your-twitter-app-key"
+twitter_appsecret = "your-twitter-app-secret"
 ```
 
 ## DISCORD CONFIGURATION

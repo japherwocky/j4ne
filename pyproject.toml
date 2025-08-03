@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "j4ne"
 version = "0.1.0"
-description = "A chat bot with data visualizations for IRC, Twitch, Discord, and Twitter"
+description = "A chat bot with data visualizations for IRC, Discord, and Twitter"
 readme = "README.md"
 requires-python = ">=3.7"
 license = {text = "MIT"}
@@ -24,4 +24,3 @@ dependencies = [
 
 [project.scripts]
 j4ne = "j4ne:main"
-
