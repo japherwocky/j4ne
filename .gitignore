@@ -7,6 +7,7 @@ twitterconf.json
 env/
 .venv
 .env
+database.db
 
 .python_history
 .sqlite_history
