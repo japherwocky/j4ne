@@ -24,7 +24,7 @@ class Quote(Model):
 
 class Command(Model):
 
-    network = CharField()  # only twitch for now
+    network = CharField()  # network identifier
     channel = CharField()
     message = CharField()
     count = IntegerField(default=0)

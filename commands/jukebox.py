@@ -320,8 +320,8 @@ async def stream(network, channel, message):
         # this actually blocks.. for a while :|
         streams = livestreamer.streams('twitch.tv/{}'.format(req))
     except NoPluginError:
-        # we should/could actually check that this is a twitch streamer in particular
-        return await network.send_message(channel, 'I could not find a streamer named {}, {}'.format(req, message.author.name))
+        # streaming functionality removed with Twitch integration
+        return await network.send_message(channel, 'Streaming functionality has been removed, {}'.format(message.author.name))
         
     audio_url = streams['audio'].url 
 
@@ -393,8 +393,7 @@ def on_end():
 
 class WebPlayer(tornado.web.RequestHandler):
     """
-    super awkward naming now, basically a util to auth with twitch
-    and spit the oauth token out to stdout
+    Web player utility class
     """
 
     def get(self):
