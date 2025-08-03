@@ -3,3 +3,5 @@ mcp
 openai
 pathspec
 rich
+peewee
+tiktoken
