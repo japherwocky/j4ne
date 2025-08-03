@@ -11,6 +11,8 @@ import sqlite3
 import json
 import logging
 import pathspec
+import subprocess
+import shlex
 from pydantic import BaseModel, Field
 
 # Import the global database connection
@@ -61,6 +63,41 @@ class AppendInsight(BaseModel):
 class EmptyModel(BaseModel):
     """Empty model for tools that don't need parameters"""
     pass
+
+# ---- Git Input Models ----
+
+class GitStatus(BaseModel):
+    """Input model for git status command"""
+    repository_path: str = Field(default=".", description="Path to the git repository")
+
+class GitAdd(BaseModel):
+    """Input model for git add command"""
+    repository_path: str = Field(default=".", description="Path to the git repository")
+    files: str = Field(description="Files to add (can be specific files or '.' for all)")
+
+class GitCommit(BaseModel):
+    """Input model for git commit command"""
+    repository_path: str = Field(default=".", description="Path to the git repository")
+    message: str = Field(description="Commit message")
+    add_all: bool = Field(default=False, description="Add all modified files before committing")
+
+class GitBranch(BaseModel):
+    """Input model for git branch operations"""
+    repository_path: str = Field(default=".", description="Path to the git repository")
+    action: str = Field(default="list", description="Action: 'list', 'create', 'switch', or 'delete'")
+    branch_name: str = Field(default="", description="Branch name for create/switch/delete operations")
+
+class GitLog(BaseModel):
+    """Input model for git log command"""
+    repository_path: str = Field(default=".", description="Path to the git repository")
+    max_count: int = Field(default=10, description="Maximum number of commits to show")
+    oneline: bool = Field(default=True, description="Show commits in oneline format")
+
+class GitDiff(BaseModel):
+    """Input model for git diff command"""
+    repository_path: str = Field(default=".", description="Path to the git repository")
+    staged: bool = Field(default=False, description="Show staged changes (--cached)")
+    file_path: str = Field(default="", description="Specific file to diff (optional)")
 
 # ---- Base Classes ----
 
@@ -504,6 +541,293 @@ class AppendInsightTool(DirectTool):
         """Add an insight to the memo"""
         self.provider.insights.append(insight)
         return {"success": True, "message": "Insight added to memo"}
+
+# ---- Git Tool Provider ----
+
+class GitToolProvider(ToolProvider):
+    """Provider for git-related tools"""
+    
+    def __init__(self, root_path: str = "."):
+        super().__init__("git")
+        self.root_path = os.path.abspath(root_path)
+        logger.info(f"Initializing GitToolProvider with root path: {self.root_path}")
+        
+        # Register tools
+        self._register_tools()
+    
+    def _register_tools(self) -> None:
+        """Register all git tools"""
+        self.register_tool(GitStatusTool(self))
+        self.register_tool(GitAddTool(self))
+        self.register_tool(GitCommitTool(self))
+        self.register_tool(GitBranchTool(self))
+        self.register_tool(GitLogTool(self))
+        self.register_tool(GitDiffTool(self))
+    
+    def is_git_repository(self, path: str) -> bool:
+        """Check if a path is a git repository"""
+        abs_path = os.path.abspath(path)
+        return os.path.exists(os.path.join(abs_path, '.git'))
+    
+    def is_safe_path(self, path: str) -> bool:
+        """Check if a path is within the root directory"""
+        abs_path = os.path.abspath(path)
+        return abs_path.startswith(self.root_path)
+    
+    def execute_git_command(self, command: List[str], cwd: str) -> Dict[str, Any]:
+        """Execute a git command safely"""
+        if not self.is_safe_path(cwd):
+            return {"error": "Path is outside root directory"}
+        
+        if not self.is_git_repository(cwd):
+            return {"error": "Not a git repository"}
+        
+        try:
+            # Execute the git command with timeout
+            result = subprocess.run(
+                command,
+                cwd=cwd,
+                capture_output=True,
+                text=True,
+                timeout=30,  # 30 second timeout
+                check=False  # Don't raise exception on non-zero exit
+            )
+            
+            return {
+                "success": result.returncode == 0,
+                "returncode": result.returncode,
+                "stdout": result.stdout.strip(),
+                "stderr": result.stderr.strip()
+            }
+        
+        except subprocess.TimeoutExpired:
+            return {"error": "Git command timed out"}
+        except Exception as e:
+            return {"error": f"Failed to execute git command: {str(e)}"}
+
+# ---- Git Tools ----
+
+class GitStatusTool(DirectTool):
+    """Tool for git status command"""
+    
+    def __init__(self, provider: GitToolProvider):
+        super().__init__(
+            name="status",
+            description="Show the working tree status",
+            input_model=GitStatus
+        )
+        self.provider = provider
+    
+    def _execute(self, repository_path: str) -> Dict[str, Any]:
+        """Execute git status"""
+        result = self.provider.execute_git_command(
+            ["git", "status", "--porcelain"],
+            repository_path
+        )
+        
+        if "error" in result:
+            return result
+        
+        if not result["success"]:
+            return {"error": f"Git status failed: {result['stderr']}"}
+        
+        # Parse the porcelain output for better formatting
+        status_lines = result["stdout"].split('\n') if result["stdout"] else []
+        files = []
+        for line in status_lines:
+            if line.strip():
+                status = line[:2]
+                filename = line[3:]
+                files.append({"status": status, "file": filename})
+        
+        return {
+            "success": True,
+            "files": files,
+            "raw_output": result["stdout"]
+        }
+
+class GitAddTool(DirectTool):
+    """Tool for git add command"""
+    
+    def __init__(self, provider: GitToolProvider):
+        super().__init__(
+            name="add",
+            description="Add file contents to the index",
+            input_model=GitAdd
+        )
+        self.provider = provider
+    
+    def _execute(self, repository_path: str, files: str) -> Dict[str, Any]:
+        """Execute git add"""
+        # Sanitize the files parameter
+        if files == ".":
+            git_files = ["."]
+        else:
+            # Split files by spaces and validate each one
+            git_files = shlex.split(files)
+        
+        command = ["git", "add"] + git_files
+        result = self.provider.execute_git_command(command, repository_path)
+        
+        if "error" in result:
+            return result
+        
+        if not result["success"]:
+            return {"error": f"Git add failed: {result['stderr']}"}
+        
+        return {
+            "success": True,
+            "message": f"Added files: {files}",
+            "output": result["stdout"]
+        }
+
+class GitCommitTool(DirectTool):
+    """Tool for git commit command"""
+    
+    def __init__(self, provider: GitToolProvider):
+        super().__init__(
+            name="commit",
+            description="Record changes to the repository",
+            input_model=GitCommit
+        )
+        self.provider = provider
+    
+    def _execute(self, repository_path: str, message: str, add_all: bool = False) -> Dict[str, Any]:
+        """Execute git commit"""
+        # Optionally add all files first
+        if add_all:
+            add_result = self.provider.execute_git_command(
+                ["git", "add", "-A"],
+                repository_path
+            )
+            if "error" in add_result or not add_result["success"]:
+                return {"error": f"Failed to add files: {add_result.get('stderr', 'Unknown error')}"}
+        
+        # Execute the commit
+        result = self.provider.execute_git_command(
+            ["git", "commit", "-m", message],
+            repository_path
+        )
+        
+        if "error" in result:
+            return result
+        
+        if not result["success"]:
+            return {"error": f"Git commit failed: {result['stderr']}"}
+        
+        return {
+            "success": True,
+            "message": "Commit successful",
+            "output": result["stdout"]
+        }
+
+class GitBranchTool(DirectTool):
+    """Tool for git branch operations"""
+    
+    def __init__(self, provider: GitToolProvider):
+        super().__init__(
+            name="branch",
+            description="List, create, switch, or delete branches",
+            input_model=GitBranch
+        )
+        self.provider = provider
+    
+    def _execute(self, repository_path: str, action: str = "list", branch_name: str = "") -> Dict[str, Any]:
+        """Execute git branch operations"""
+        if action == "list":
+            command = ["git", "branch", "-a"]
+        elif action == "create":
+            if not branch_name:
+                return {"error": "Branch name required for create action"}
+            command = ["git", "branch", branch_name]
+        elif action == "switch":
+            if not branch_name:
+                return {"error": "Branch name required for switch action"}
+            command = ["git", "checkout", branch_name]
+        elif action == "delete":
+            if not branch_name:
+                return {"error": "Branch name required for delete action"}
+            command = ["git", "branch", "-d", branch_name]
+        else:
+            return {"error": f"Unknown action: {action}. Use 'list', 'create', 'switch', or 'delete'"}
+        
+        result = self.provider.execute_git_command(command, repository_path)
+        
+        if "error" in result:
+            return result
+        
+        if not result["success"]:
+            return {"error": f"Git branch {action} failed: {result['stderr']}"}
+        
+        return {
+            "success": True,
+            "action": action,
+            "output": result["stdout"]
+        }
+
+class GitLogTool(DirectTool):
+    """Tool for git log command"""
+    
+    def __init__(self, provider: GitToolProvider):
+        super().__init__(
+            name="log",
+            description="Show commit logs",
+            input_model=GitLog
+        )
+        self.provider = provider
+    
+    def _execute(self, repository_path: str, max_count: int = 10, oneline: bool = True) -> Dict[str, Any]:
+        """Execute git log"""
+        command = ["git", "log", f"--max-count={max_count}"]
+        if oneline:
+            command.append("--oneline")
+        
+        result = self.provider.execute_git_command(command, repository_path)
+        
+        if "error" in result:
+            return result
+        
+        if not result["success"]:
+            return {"error": f"Git log failed: {result['stderr']}"}
+        
+        return {
+            "success": True,
+            "commits": result["stdout"].split('\n') if result["stdout"] else [],
+            "raw_output": result["stdout"]
+        }
+
+class GitDiffTool(DirectTool):
+    """Tool for git diff command"""
+    
+    def __init__(self, provider: GitToolProvider):
+        super().__init__(
+            name="diff",
+            description="Show changes between commits, commit and working tree, etc",
+            input_model=GitDiff
+        )
+        self.provider = provider
+    
+    def _execute(self, repository_path: str, staged: bool = False, file_path: str = "") -> Dict[str, Any]:
+        """Execute git diff"""
+        command = ["git", "diff"]
+        if staged:
+            command.append("--cached")
+        if file_path:
+            command.append(file_path)
+        
+        result = self.provider.execute_git_command(command, repository_path)
+        
+        if "error" in result:
+            return result
+        
+        if not result["success"]:
+            return {"error": f"Git diff failed: {result['stderr']}"}
+        
+        return {
+            "success": True,
+            "diff": result["stdout"],
+            "has_changes": bool(result["stdout"].strip())
+        }
 
 # ---- Direct Multiplexer ----
 
