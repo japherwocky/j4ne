@@ -10,6 +10,7 @@ from commands.handler import command_handler
 from commands.core import register_core_commands
 from commands.tools_command import register_tools_command
 from commands.context_command import register_context_command
+from commands.llm_command import register_llm_commands
 
 # Register the core commands
 register_core_commands()
@@ -20,3 +21,5 @@ register_tools_command()
 # Register the context command
 register_context_command()
 
+# Register the LLM provider commands
+register_llm_commands()

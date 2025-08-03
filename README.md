@@ -32,6 +32,45 @@ twitch_client_id = "your-twitch-client-id"
 twitch_client_secret = "your-twitch-client-secret"
 ```
 
+## LLM PROVIDER CONFIGURATION
+
+j4ne supports multiple LLM providers including Azure OpenAI, OpenAI, and Anthropic. Configure your preferred provider using environment variables in a `.env` file:
+
+### Azure OpenAI (Default)
+```bash
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_MODEL=your-deployment-name
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+OPENAI_MODEL=gpt-4
+OPENAI_FOLLOWUP_MODEL=gpt-4.1-mini
+```
+
+### OpenAI
+```bash
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL=gpt-4
+OPENAI_FOLLOWUP_MODEL=gpt-4-turbo
+```
+
+### Anthropic Claude
+```bash
+ANTHROPIC_API_KEY=your-anthropic-api-key
+ANTHROPIC_MODEL=claude-3-sonnet-20240229
+ANTHROPIC_FOLLOWUP_MODEL=claude-3-haiku-20240307
+```
+
+### Managing Providers
+
+Use the built-in commands to manage LLM providers:
+
+- `/llm list` - List available providers
+- `/llm show` - Show current provider details
+- `/llm set <provider>` - Switch providers (e.g., `/llm set openai`)
+- `/llm status` - Check provider health
+- `/llm help` - Show detailed help
+
+The system will automatically detect and use the first available provider based on your environment variables.
+
 ---
 
 ## DISCORD CONFIGURATION

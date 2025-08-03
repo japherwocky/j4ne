@@ -3,3 +3,6 @@ mcp
 openai
 pathspec
 rich
+anthropic
+python-dotenv
+pytest

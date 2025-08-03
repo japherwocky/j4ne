@@ -9,13 +9,15 @@ import logging
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from openai import AzureOpenAI
 from dotenv import load_dotenv
 
 load_dotenv()  # load environment variables from .env
 
 from rich.console import Console
 from rich.markdown import Markdown
+from llm_providers import provider_registry
+from llm_providers.config import ProviderConfig
+
 console = Console()
 
 class MCPClient:
@@ -24,8 +26,23 @@ class MCPClient:
         self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
 
-        api_path=os.getenv('AZURE_OPENAI_ENDPOINT') + os.getenv('AZURE_OPENAI_API_MODEL')
-        self.client = AzureOpenAI(api_version=os.getenv('AZURE_OPENAI_API_VERSION'), base_url=api_path)
+        # Initialize LLM provider system
+        self.provider_config = ProviderConfig()
+        self.current_provider = None
+        self._initialize_provider()
+
+    def _initialize_provider(self):
+        """Initialize the LLM provider based on configuration."""
+        try:
+            # Try to initialize from auto-detection
+            provider = provider_registry.initialize_auto_provider()
+            if provider:
+                self.current_provider = provider
+                logging.info(f"Initialized LLM provider: {provider.name}")
+            else:
+                logging.warning("No LLM provider could be initialized")
+        except Exception as e:
+            logging.error(f"Failed to initialize LLM provider: {str(e)}")
 
     async def connect_to_server(self):
 
@@ -64,12 +81,38 @@ class MCPClient:
         } for tool in response.tools]
 
         # Initial LLM call
-        init = self.client.chat.completions.create(
-            model="gpt-4",
-            max_tokens=3000,
+        if not self.current_provider:
+            raise RuntimeError("No LLM provider available")
+        
+        init_response = self.current_provider.chat_completion(
             messages=init_messages,
+            max_tokens=3000,
             tools=available_tools
         )
+        
+        # Convert to expected format for compatibility
+        class MockResponse:
+            def __init__(self, response_dict):
+                self.choices = [MockChoice(choice) for choice in response_dict['choices']]
+        
+        class MockChoice:
+            def __init__(self, choice_dict):
+                self.finish_reason = choice_dict['finish_reason']
+                self.message = MockMessage(choice_dict['message'])
+        
+        class MockMessage:
+            def __init__(self, message_dict):
+                self.content = message_dict['content']
+                self.tool_calls = message_dict.get('tool_calls')
+            
+            def model_dump(self):
+                return {
+                    'message': {
+                        'tool_calls': [self.tool_calls] if self.tool_calls else None
+                    }
+                }
+        
+        init = MockResponse(init_response)
 
         # Process response and handle tool calls
 
@@ -106,13 +149,14 @@ class MCPClient:
 
         while out_reason != 'stop':
             # keep passing tool responses back
-            r = self.client.chat.completions.create(
-                model="gpt-4.1-mini",
-                max_tokens=3000,
+            followup_response = self.current_provider.chat_completion(
                 messages=out_messages,
+                model=self.current_provider.get_followup_model(),
+                max_tokens=3000,
                 tools=available_tools
             )
-
+            
+            r = MockResponse(followup_response)
             out_messages, out_reason = await handle(r, out_messages)
                     
         return "\n".join([x['content'] for x in out_messages[-1:]])

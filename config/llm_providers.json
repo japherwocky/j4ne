@@ -1,0 +1,7 @@
+{
+  "default_provider": null,
+  "providers": {},
+  "_schema_version": "1.0",
+  "_description": "Configuration file for LLM providers. This file is automatically managed by the j4ne LLM provider system. You can edit it manually, but it's recommended to use the /llm commands instead."
+}
+

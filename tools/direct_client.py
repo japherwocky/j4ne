@@ -12,7 +12,6 @@ import logging
 from collections import deque
 from typing import List, Dict, Any, Optional
 
-from openai import AzureOpenAI
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.markdown import Markdown
@@ -27,6 +26,8 @@ from tools.direct_tools import (
 )
 # Import the command handler from the new location
 from commands import command_handler
+from llm_providers import provider_registry
+from llm_providers.config import ProviderConfig
 
 # Load environment variables
 load_dotenv()
@@ -69,32 +70,25 @@ class DirectClient:
         sqlite_provider = SQLiteToolProvider(db_path)
         self.multiplexer.add_provider(sqlite_provider)
         
-        # Set up OpenAI client
-        self._setup_openai_client()
+        # Initialize LLM provider system
+        self.provider_config = ProviderConfig()
+        self.current_provider = None
+        self._initialize_provider()
         
         logger.info("DirectClient initialized successfully")
     
-    def _setup_openai_client(self):
-        """Set up the OpenAI client using environment variables"""
+    def _initialize_provider(self):
+        """Initialize the LLM provider based on configuration."""
         try:
-            api_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
-            api_model = os.getenv('AZURE_OPENAI_API_MODEL')
-            api_version = os.getenv('AZURE_OPENAI_API_VERSION')
-            
-            if not all([api_endpoint, api_model, api_version]):
-                logger.warning("Missing Azure OpenAI environment variables")
-                raise ValueError("Missing Azure OpenAI environment variables")
-            
-            api_path = api_endpoint + api_model
-            
-            self.client = AzureOpenAI(
-                api_version=api_version,
-                base_url=api_path
-            )
-            logger.info("OpenAI client initialized successfully")
+            # Try to initialize from auto-detection
+            provider = provider_registry.initialize_auto_provider()
+            if provider:
+                self.current_provider = provider
+                logger.info(f"Initialized LLM provider: {provider.name}")
+            else:
+                logger.warning("No LLM provider could be initialized")
         except Exception as e:
-            logger.error(f"Failed to initialize OpenAI client: {str(e)}")
-            raise
+            logger.error(f"Failed to initialize LLM provider: {str(e)}")
     
     async def process_query(self, history: List[Dict[str, str]]) -> str:
         """Process a query using available tools"""
@@ -106,27 +100,29 @@ class DirectClient:
         
         # Initial LLM call
         try:
-            init = self.client.chat.completions.create(
-                model=os.getenv('OPENAI_MODEL', "gpt-4"),
-                max_tokens=3000,
+            if not self.current_provider:
+                raise RuntimeError("No LLM provider available")
+            
+            init_response = self.current_provider.chat_completion(
                 messages=history,
+                max_tokens=3000,
                 tools=available_tools
             )
             
             # Process the response
-            out_messages, out_reason = await self._handle_response(init, history)
+            out_messages, out_reason = await self._handle_response(init_response, history)
             
             # Continue processing if needed
             while out_reason != 'stop':
                 # Keep passing tool responses back
-                r = self.client.chat.completions.create(
-                    model=os.getenv('OPENAI_FOLLOWUP_MODEL', "gpt-4.1-mini"),
-                    max_tokens=3000,
+                followup_response = self.current_provider.chat_completion(
                     messages=out_messages,
+                    model=self.current_provider.get_followup_model(),
+                    max_tokens=3000,
                     tools=available_tools
                 )
                 
-                out_messages, out_reason = await self._handle_response(r, out_messages)
+                out_messages, out_reason = await self._handle_response(followup_response, out_messages)
             
             # Return the final response
             return "\n".join([x['content'] for x in out_messages[-1:]])
@@ -137,17 +133,28 @@ class DirectClient:
     
     async def _handle_response(self, response, messages):
         """Handle a response from the LLM"""
-        reason = response.choices[0].finish_reason
-        content = response.choices[0]
+        # Handle both dict format (from provider) and object format (legacy)
+        if isinstance(response, dict):
+            choice = response['choices'][0]
+            reason = choice['finish_reason']
+            message = choice['message']
+        else:
+            reason = response.choices[0].finish_reason
+            choice = response.choices[0]
+            message = choice.message
         
         if reason == 'stop':
             # Regular response
-            messages.append({"role": "assistant", "content": content.message.content})
+            content = message['content'] if isinstance(message, dict) else message.content
+            messages.append({"role": "assistant", "content": content})
         
         elif reason == 'tool_calls':
             # Tool call
-            content = content.model_dump()
-            tool_calls = content['message'].get('tool_calls', [])
+            if isinstance(message, dict):
+                tool_calls = message.get('tool_calls', [])
+            else:
+                content = choice.model_dump()
+                tool_calls = content['message'].get('tool_calls', [])
             
             if not tool_calls:
                 logger.warning("Tool calls indicated but none found")
@@ -157,8 +164,12 @@ class DirectClient:
             # Process the first tool call (or potentially multiple in the future)
             tool_call = tool_calls[0]
             
-            tool_name = tool_call['function']['name']
-            tool_args = json.loads(tool_call['function']['arguments'])
+            if isinstance(tool_call, dict):
+                tool_name = tool_call['function']['name']
+                tool_args = json.loads(tool_call['function']['arguments'])
+            else:
+                tool_name = tool_call.function.name
+                tool_args = json.loads(tool_call.function.arguments)
             
             logger.info(f"Calling tool: {tool_name} with args: {tool_args}")
             
