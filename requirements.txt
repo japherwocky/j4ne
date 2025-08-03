@@ -7,3 +7,4 @@ peewee
 python-dotenv
 starlette
 uvicorn
+tiktoken
