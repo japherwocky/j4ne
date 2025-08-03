@@ -1,14 +1,9 @@
 # Project Setup and Usage Guide
 
----
-
 ## SYSTEM REQUIREMENTS
 - The application can be set up using Python's virtual environment feature, with dependencies listed in `requirements.txt`.
 
----
-
 ## PYTHON REQUIREMENTS
-
 1. **Set up a Python Virtual Environment**:
    - Ensure you're using Python 3.5 or later.
    - Execute the following commands:
@@ -18,11 +13,8 @@
    pip install -r requirements.txt
    ```
 
----
-
 ## GETTING J4NE UP AND RUNNING
-
-**Important:** Ensure that a file named `keys.py` exists in the project root. This file will store the credentials for various networks (e.g., Discord, Twitch, etc.).
+**Important:** Ensure that a file named `keys.py` exists in the project root. This file will store credentials for various networks (e.g., Discord, Twitch, etc.).
 
 #### Example `keys.py`:
 ```python
@@ -32,109 +24,62 @@ twitch_client_id = "your-twitch-client-id"
 twitch_client_secret = "your-twitch-client-secret"
 ```
 
----
-
 ## DISCORD CONFIGURATION
-
 1. **Create a Discord Application**:
    - Visit [Discord Developer Portal](https://discord.com/developers/applications).
    - Copy the "Client ID" and "Token" into your `keys.py`.
-
 2. **Generate an Invitation Link**:
    - Run the bot with the `--newbot` option to get an invitation link for your server:
    ```bash
    python j4ne.py --newbot
    ```
 
----
-
 ## BOT OPTIONS
-
 1. **First-Time Setup**:
    - On your first run, use the following options:
-     ```bash
-     python j4ne.py --mktables
-     ```
-
+   ```bash
+   python j4ne.py --mktables
+   ```
 2. **Network-Specific Configuration**:
    - To disable a network, pass an argument like `--twitter=False` when launching:
-     ```bash
-     python j4ne.py --twitter=False
-     ```
-
----
+   ```bash
+   python j4ne.py --twitter=False
+   ```
 
 ## STATIC ASSETS
-Static files (like GIFs, customized CSS, and JavaScript) are stored in the `/static` directory:
+Static files (e.g., GIFs, customized CSS) are stored in the `/static` directory:
 - Images for reactions (e.g., `anneLewd4.gif`, `lul.PNG`).
-- Web application frontend components (e.g., `charts.js`, `webchat.js`).
 - Libraries such as `moment.2.13.0.min.js`.
 
----
-
 ## DATABASE MANAGEMENT
+1. The bot uses SQLite by default:
+   - The database is located in `database.db`.
+2. Migrations or updates can be handled via `db.py`.
 
-1. The bot uses SQLite by default.
-   - The main database is located in `database.db`.
-
-2. Migrations or updates to the database structure can be handled via the `db.py` script.
-
----
-
-## PROJECT STRUCTURE OVERVIEW
-
+## PROJECT STRUCTURE
 - **`api/`:** REST API handlers.
-- **`chatters/` and `commands/`:** Chat functionality and command-specific handlers.
-- **`networks/`:** Classes handling network integrations (e.g., Discord, Twitch, IRC).
-- **`static/` and `templates/`:** Assets and templates for the bot's web interface.
-- **`tests/`:** Unit tests for the project.
-
----
+- **`chatters/`, `commands/`:** Chat functionality.
+- **`networks/`, `static/`, `templates/`:** Integrations and assets.
+- **`tests/`:** Unit tests.
 
 ## RUNNING THE BOT
-
 To start the bot, run:
 ```bash
 python j4ne.py
 ```
 
-Add any optional arguments as needed (e.g., enabling/disabling networks, setting debug mode).
-
----
-
 ## COMMAND-LINE USAGE
-
-You can launch different modules and features using subcommands:
-
-- **Default / Chat Loop** (start interactive chat):
+You can execute different modules/features using subcommands:
+- **Chat Loop**:
   ```bash
   python j4ne.py chat
   ```
-  Or just:
-  ```bash
-  python j4ne.py
-  ```
-
-- **Greet** (print a styled greeting in the logs):
+- **Greet**:
   ```bash
   python j4ne.py greet <NAME>
   ```
-
-- **Kanban Board Web App** (launch web server):
+- **Kanban Board Web App**:
   ```bash
   python j4ne.py web
   ```
-  This starts a web server on `http://localhost:8000/`, hosting the Kanban board interface and API. Static files are served from `/static`. The Kanban board persists data in `kanban.json`.
-
-  - Main board view: [http://localhost:8000/](http://localhost:8000/)
-  - API endpoints:
-    - `GET /api/kanban` — fetch the board
-    - `POST /api/kanban/add` — add a card
-    - `POST /api/kanban/move` — move a card
-    - `POST /api/kanban/delete` — delete a card
-
-- **Verbose Logging**: Add `--verbose` to any command for debug output.
-
----
-
-Let me know if you want any further customization or info included! I can write this to README.md if you’re happy with it.
+  Access the app at `http://localhost:8000/`.
