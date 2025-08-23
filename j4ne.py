@@ -30,7 +30,6 @@ def home(request):
 routes = [
     Route("/", endpoint=home),
     *kanban_routes,  # Add Kanban-related API endpoints
-    Mount("/static", app=StaticFiles(directory="static"), name="static"),
 ]
 
 def start_web_server():
