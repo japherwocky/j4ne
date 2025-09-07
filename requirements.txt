@@ -8,3 +8,7 @@ python-dotenv
 starlette
 uvicorn
 tiktoken
+transformers
+torch
+huggingface_hub
+accelerate

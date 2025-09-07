@@ -1,17 +1,53 @@
-# Project Setup and Usage Guide
+# J4NE - AI Chat Bot with Data Visualizations
+
+J4NE is a versatile chat bot with data visualization capabilities that supports multiple platforms including IRC, Twitch, Discord, and Twitter. The bot now supports both Azure OpenAI and Hugging Face models for AI inference.
 
 ## SYSTEM REQUIREMENTS
-- The application can be set up using Python's virtual environment feature, with dependencies listed in `requirements.txt`.
+- Python 3.7 or later
+- For local Hugging Face inference: CUDA-compatible GPU (recommended) or CPU
+- The application uses Python's virtual environment feature with dependencies listed in `requirements.txt`
 
-## PYTHON REQUIREMENTS
-1. **Set up a Python Virtual Environment**:
-   - Ensure you're using Python 3.5 or later.
-   - Execute the following commands:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
+## QUICK START
+
+### 1. Set up Python Virtual Environment
+```bash
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 2. Configure AI Inference
+Copy the example environment file and configure your preferred AI provider:
+```bash
+cp .env.example .env
+```
+
+Edit `.env` to configure either Hugging Face (recommended) or Azure OpenAI:
+
+#### Option A: Hugging Face (Recommended)
+```bash
+# For API inference (easier setup)
+HF_MODEL_NAME=microsoft/DialoGPT-medium
+HF_API_TOKEN=your_hugging_face_token_here
+HF_USE_LOCAL=false
+
+# For local inference (requires GPU)
+HF_MODEL_NAME=microsoft/DialoGPT-medium
+HF_USE_LOCAL=true
+HF_DEVICE=auto
+```
+
+#### Option B: Azure OpenAI (Legacy)
+```bash
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_MODEL=your-deployment-name
+AZURE_OPENAI_API_VERSION=2023-12-01-preview
+```
+
+### 3. Get Hugging Face Token (if using HF API)
+1. Visit [Hugging Face Settings](https://huggingface.co/settings/tokens)
+2. Create a new token with read permissions
+3. Add it to your `.env` file as `HF_API_TOKEN`
 
 ## GETTING J4NE UP AND RUNNING
 **Important:** Ensure that a file named `keys.py` exists in the project root. This file will store credentials for various networks (e.g., Discord, Twitch, etc.).
@@ -68,6 +104,21 @@ To start the bot, run:
 python j4ne.py
 ```
 
+## AI MODEL RECOMMENDATIONS
+
+### For Tool Calling and Structured Output
+- `mistralai/Mistral-7B-Instruct-v0.1` - Excellent for tool calling
+- `codellama/CodeLlama-7b-Instruct-hf` - Good for code-related tasks
+- `meta-llama/Llama-2-7b-chat-hf` - Strong instruction following
+
+### For Conversational Chat
+- `microsoft/DialoGPT-medium` - Lightweight, good for casual chat
+- `microsoft/DialoGPT-large` - Better quality, more resource intensive
+
+### Local vs API Inference
+- **API Inference**: Easier setup, no local resources needed, subject to rate limits
+- **Local Inference**: Full control, no rate limits, requires GPU memory (4-8GB+ recommended)
+
 ## COMMAND-LINE USAGE
 You can execute different modules/features using subcommands:
 - **Chat Loop**:
@@ -83,3 +134,19 @@ You can execute different modules/features using subcommands:
   python j4ne.py web
   ```
   Access the app at `http://localhost:8000/`.
+
+## TROUBLESHOOTING
+
+### Hugging Face Issues
+- **Model not found**: Ensure the model name is correct and publicly available
+- **API rate limits**: Get a Hugging Face token or switch to local inference
+- **Out of memory**: Use a smaller model or switch to API inference
+- **Slow local inference**: Ensure CUDA is available and properly configured
+
+### Environment Issues
+- **Import errors**: Ensure all dependencies are installed with `pip install -r requirements.txt`
+- **Client initialization fails**: Check your `.env` configuration matches the examples above
+
+### Tool Calling Issues
+- **Tools not working**: Some models handle structured output better than others
+- **Try switching to**: `mistralai/Mistral-7B-Instruct-v0.1` for better tool calling support

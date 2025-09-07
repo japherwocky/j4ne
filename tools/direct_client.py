@@ -12,7 +12,6 @@ import logging
 from collections import deque
 from typing import List, Dict, Any, Optional
 
-from openai import AzureOpenAI
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.markdown import Markdown
@@ -28,6 +27,9 @@ from tools.direct_tools import (
 )
 # Import the command handler from the new location
 from commands import command_handler
+
+# Import client factory for flexible client creation
+from clients import create_client
 
 # Load environment variables
 load_dotenv()
@@ -74,31 +76,19 @@ class DirectClient:
         git_provider = GitToolProvider(root_path)
         self.multiplexer.add_provider(git_provider)
         
-        # Set up OpenAI client
-        self._setup_openai_client()
+        # Set up inference client (supports both Azure OpenAI and Hugging Face)
+        self._setup_inference_client()
         
         logger.info("DirectClient initialized successfully")
     
-    def _setup_openai_client(self):
-        """Set up the OpenAI client using environment variables"""
+    def _setup_inference_client(self):
+        """Set up the inference client using environment variables"""
         try:
-            api_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
-            api_model = os.getenv('AZURE_OPENAI_API_MODEL')
-            api_version = os.getenv('AZURE_OPENAI_API_VERSION')
-            
-            if not all([api_endpoint, api_model, api_version]):
-                logger.warning("Missing Azure OpenAI environment variables")
-                raise ValueError("Missing Azure OpenAI environment variables")
-            
-            api_path = api_endpoint + api_model
-            
-            self.client = AzureOpenAI(
-                api_version=api_version,
-                base_url=api_path
-            )
-            logger.info("OpenAI client initialized successfully")
+            # Use client factory to create appropriate client
+            self.client = create_client(prefer_huggingface=True)
+            logger.info("Inference client initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+            logger.error(f"Failed to initialize inference client: {str(e)}")
             raise
     
     async def process_query(self, history: List[Dict[str, str]]) -> str:
@@ -111,8 +101,10 @@ class DirectClient:
         
         # Initial LLM call
         try:
+            # Use environment variable for model name, with fallback
+            model_name = os.getenv('HF_MODEL_NAME') or os.getenv('OPENAI_MODEL', "gpt-4")
             init = self.client.chat.completions.create(
-                model=os.getenv('OPENAI_MODEL', "gpt-4"),
+                model=model_name,
                 max_tokens=3000,
                 messages=history,
                 tools=available_tools
@@ -124,8 +116,10 @@ class DirectClient:
             # Continue processing if needed
             while out_reason != 'stop':
                 # Keep passing tool responses back
+                # Use environment variable for followup model, with fallback
+                followup_model = os.getenv('HF_FOLLOWUP_MODEL') or os.getenv('OPENAI_FOLLOWUP_MODEL', "gpt-4.1-mini")
                 r = self.client.chat.completions.create(
-                    model=os.getenv('OPENAI_FOLLOWUP_MODEL', "gpt-4.1-mini"),
+                    model=followup_model,
                     max_tokens=3000,
                     messages=out_messages,
                     tools=available_tools

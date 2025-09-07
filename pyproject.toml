@@ -20,8 +20,11 @@ dependencies = [
     "rich",
     "starlette",
     "uvicorn",
+    "transformers",
+    "torch",
+    "huggingface_hub",
+    "accelerate",
 ]
 
 [project.scripts]
 j4ne = "j4ne:main"
-
