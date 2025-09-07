@@ -58,7 +58,9 @@ class ToolCallHandler:
             tool_descriptions.append(tool_desc)
         
         prompt = f"""
-You have access to the following tools. To use a tool, respond with a tool call in this exact format:
+You have access to the following tools. When a user asks about tools, files, directories, or requests any action, you should use the appropriate tool.
+
+To use a tool, respond with a tool call in this exact format:
 
 <tool_call>
 {{"name": "tool_name", "arguments": {{"param1": "value1", "param2": "value2"}}}}
@@ -67,7 +69,13 @@ You have access to the following tools. To use a tool, respond with a tool call 
 Available tools:
 {chr(10).join(tool_descriptions)}
 
-If you need to use a tool, format your response exactly as shown above. If you don't need to use any tools, respond normally.
+Examples of when to use tools:
+- "what tools do you have?" → Use a tool to show available capabilities
+- "list files" → Use filesystem.list-files
+- "show me the database" → Use sqlite tools
+- "what's in this directory?" → Use filesystem.list-files
+
+If you need to use a tool, format your response exactly as shown above. Only respond normally for simple greetings or general conversation.
 """
         return prompt.strip()
     
