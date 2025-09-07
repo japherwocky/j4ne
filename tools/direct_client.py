@@ -91,13 +91,48 @@ class DirectClient:
             logger.error(f"Failed to initialize inference client: {str(e)}")
             raise
     
+    def _is_conversational_query(self, history: List[Dict[str, str]]) -> bool:
+        """Detect if this is a simple conversational query that doesn't need tools"""
+        if not history:
+            return True
+            
+        last_message = history[-1].get('content', '').lower().strip()
+        
+        # Simple conversational patterns
+        conversational_patterns = [
+            'hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening',
+            'how are you', 'what\'s up', 'sup', 'yo', 'greetings',
+            'thanks', 'thank you', 'bye', 'goodbye', 'see you', 'later',
+            'yes', 'no', 'ok', 'okay', 'sure', 'alright',
+            'mic check', 'test', 'anyone there', 'are you there'
+        ]
+        
+        # Check if the query is just a simple greeting or conversational
+        for pattern in conversational_patterns:
+            if pattern in last_message:
+                return True
+                
+        # If it's very short (< 10 chars) and doesn't contain obvious action words
+        action_words = ['list', 'show', 'find', 'search', 'create', 'delete', 'run', 'execute', 'get', 'set']
+        if len(last_message) < 10:
+            return not any(word in last_message for word in action_words)
+            
+        return False
+
     async def process_query(self, history: List[Dict[str, str]]) -> str:
         """Process a query using available tools"""
         logger.info("Processing query")
         
-        # Get available tools
-        available_tools = self.multiplexer.get_available_tools()
-        logger.debug(f"Available tools: {len(available_tools)}")
+        # Check if this is a conversational query
+        is_conversational = self._is_conversational_query(history)
+        logger.info(f"Query classified as conversational: {is_conversational}")
+        
+        # Get available tools only if needed
+        available_tools = None if is_conversational else self.multiplexer.get_available_tools()
+        if available_tools:
+            logger.debug(f"Available tools: {len(available_tools)}")
+        else:
+            logger.debug("No tools provided for conversational query")
         
         # Initial LLM call
         try:
