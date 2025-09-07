@@ -16,8 +16,14 @@ class ToolCallHandler:
     """Handles tool calling for Hugging Face models using prompt engineering"""
     
     def __init__(self):
+        # Pattern for the expected format: <tool_call>{"name": "...", "arguments": {...}}</tool_call>
         self.tool_call_pattern = re.compile(
             r'<tool_call>\s*(\{.*?\})\s*</tool_call>',
+            re.DOTALL | re.IGNORECASE
+        )
+        # Pattern for the format the model actually uses: <tool.name>{"param": "value"}</tool.name>
+        self.alt_tool_pattern = re.compile(
+            r'<([^>]+)>\s*(\{.*?\})',
             re.DOTALL | re.IGNORECASE
         )
     
@@ -90,31 +96,49 @@ If you need to use a tool, format your response exactly as shown above. Only res
             Tool call dictionary in OpenAI format, or None if no tool call found
         """
         try:
-            # Look for tool call pattern
+            # First try the expected format: <tool_call>{"name": "...", "arguments": {...}}</tool_call>
             match = self.tool_call_pattern.search(response_text)
-            if not match:
-                return None
-            
-            # Extract and parse JSON
-            json_str = match.group(1)
-            tool_data = json.loads(json_str)
-            
-            # Validate required fields
-            if 'name' not in tool_data:
-                logger.warning("Tool call missing 'name' field")
-                return None
-            
-            # Format in OpenAI style
-            tool_call = {
-                "id": f"call_{hash(json_str) % 1000000}",  # Generate a simple ID
-                "type": "function",
-                "function": {
-                    "name": tool_data['name'],
-                    "arguments": json.dumps(tool_data.get('arguments', {}))
+            if match:
+                json_str = match.group(1)
+                tool_data = json.loads(json_str)
+                
+                # Validate required fields
+                if 'name' not in tool_data:
+                    logger.warning("Tool call missing 'name' field")
+                    return None
+                
+                # Format in OpenAI style
+                tool_call = {
+                    "id": f"call_{hash(json_str) % 1000000}",
+                    "type": "function",
+                    "function": {
+                        "name": tool_data['name'],
+                        "arguments": json.dumps(tool_data.get('arguments', {}))
+                    }
                 }
-            }
+                return tool_call
             
-            return tool_call
+            # Try the alternative format: <tool.name>{"param": "value"}
+            alt_match = self.alt_tool_pattern.search(response_text)
+            if alt_match:
+                tool_name = alt_match.group(1)
+                json_str = alt_match.group(2)
+                tool_args = json.loads(json_str)
+                
+                logger.info(f"Detected alternative tool format: {tool_name}")
+                
+                # Format in OpenAI style
+                tool_call = {
+                    "id": f"call_{hash(json_str) % 1000000}",
+                    "type": "function",
+                    "function": {
+                        "name": tool_name,
+                        "arguments": json.dumps(tool_args)
+                    }
+                }
+                return tool_call
+            
+            return None
             
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse tool call JSON: {e}")
