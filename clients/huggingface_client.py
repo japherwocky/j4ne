@@ -67,7 +67,7 @@ class HuggingFaceClient:
             model_name: Name of the Hugging Face model to use
             api_token: Hugging Face API token (optional for public models)
         """
-        self.model_name = model_name or os.getenv('HF_MODEL_NAME', 'microsoft/DialoGPT-medium')
+        self.model_name = model_name or os.getenv('HF_MODEL_NAME', 'HuggingFaceH4/zephyr-7b-beta')
         self.api_token = api_token or os.getenv('HF_API_TOKEN')
         
         # Initialize the chat interface
@@ -156,7 +156,10 @@ class HuggingFaceClient:
     def _generate_api(self, prompt: str, max_tokens: int) -> str:
         """Generate response using Hugging Face Inference API"""
         try:
-            # Use text generation
+            logger.info(f"Generating with model: {self.model_name}")
+            logger.info(f"Prompt: {prompt[:200]}...")
+            
+            # Use text generation API
             response = self.inference_client.text_generation(
                 prompt,
                 max_new_tokens=max_tokens,
@@ -166,10 +169,22 @@ class HuggingFaceClient:
                 return_full_text=False
             )
             
-            return response.strip()
+            logger.info(f"Raw response type: {type(response)}")
+            logger.info(f"Raw response: {str(response)[:200]}...")
+            
+            # Handle different response types
+            if isinstance(response, str):
+                return response.strip()
+            elif isinstance(response, dict) and 'generated_text' in response:
+                return response['generated_text'].strip()
+            elif hasattr(response, 'generated_text'):
+                return response.generated_text.strip()
+            else:
+                return str(response).strip()
             
         except Exception as e:
             logger.error(f"Error in API generation: {e}")
+            logger.error(f"Model: {self.model_name}, Prompt: {prompt[:100]}...")
             raise
     
     def _handle_tool_response(self, response_text: str, tools: List[Dict]) -> ChatCompletion:
