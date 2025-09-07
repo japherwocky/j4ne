@@ -215,10 +215,13 @@ class HuggingFaceClient:
     def _handle_tool_response(self, response_text: str, tools: List[Dict]) -> ChatCompletion:
         """Handle response that might contain tool calls"""
         try:
+            logger.info(f"Checking for tool calls in response: {response_text[:200]}...")
+            
             # Check if the response contains a tool call
             tool_call = self.tool_handler.parse_tool_call(response_text)
             
             if tool_call:
+                logger.info(f"Tool call detected: {tool_call}")
                 # Create tool call response
                 message = {
                     "role": "assistant",
@@ -227,6 +230,7 @@ class HuggingFaceClient:
                 }
                 finish_reason = "tool_calls"
             else:
+                logger.info("No tool call detected, treating as regular response")
                 # Regular response
                 message = {
                     "role": "assistant",
