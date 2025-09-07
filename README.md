@@ -4,7 +4,6 @@ J4NE is a versatile chat bot with data visualization capabilities that supports 
 
 ## SYSTEM REQUIREMENTS
 - Python 3.7 or later
-- For local Hugging Face inference: CUDA-compatible GPU (recommended) or CPU
 - The application uses Python's virtual environment feature with dependencies listed in `requirements.txt`
 
 ## QUICK START
@@ -26,15 +25,8 @@ Edit `.env` to configure either Hugging Face (recommended) or Azure OpenAI:
 
 #### Option A: Hugging Face (Recommended)
 ```bash
-# For API inference (easier setup)
 HF_MODEL_NAME=microsoft/DialoGPT-medium
 HF_API_TOKEN=your_hugging_face_token_here
-HF_USE_LOCAL=false
-
-# For local inference (requires GPU)
-HF_MODEL_NAME=microsoft/DialoGPT-medium
-HF_USE_LOCAL=true
-HF_DEVICE=auto
 ```
 
 #### Option B: Azure OpenAI (Legacy)
@@ -115,9 +107,10 @@ python j4ne.py
 - `microsoft/DialoGPT-medium` - Lightweight, good for casual chat
 - `microsoft/DialoGPT-large` - Better quality, more resource intensive
 
-### Local vs API Inference
-- **API Inference**: Easier setup, no local resources needed, subject to rate limits
-- **Local Inference**: Full control, no rate limits, requires GPU memory (4-8GB+ recommended)
+### API Inference
+- **Easy Setup**: No local resources needed, just set your model name and optional API token
+- **Rate Limits**: Subject to Hugging Face API rate limits (get a token for better limits)
+- **Model Variety**: Access to thousands of models on Hugging Face Hub
 
 ## COMMAND-LINE USAGE
 You can execute different modules/features using subcommands:
@@ -139,9 +132,8 @@ You can execute different modules/features using subcommands:
 
 ### Hugging Face Issues
 - **Model not found**: Ensure the model name is correct and publicly available
-- **API rate limits**: Get a Hugging Face token or switch to local inference
-- **Out of memory**: Use a smaller model or switch to API inference
-- **Slow local inference**: Ensure CUDA is available and properly configured
+- **API rate limits**: Get a Hugging Face token for better rate limits
+- **Slow responses**: Try a smaller/faster model like `microsoft/DialoGPT-medium`
 
 ### Environment Issues
 - **Import errors**: Ensure all dependencies are installed with `pip install -r requirements.txt`

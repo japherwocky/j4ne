@@ -27,14 +27,13 @@ def create_client(prefer_huggingface: bool = True) -> Union['AzureOpenAI', 'Hugg
     # Check for Hugging Face configuration
     hf_model = os.getenv('HF_MODEL_NAME')
     hf_token = os.getenv('HF_API_TOKEN')
-    hf_use_local = os.getenv('HF_USE_LOCAL', 'false').lower() == 'true'
     
     # Check for Azure OpenAI configuration
     azure_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
     azure_model = os.getenv('AZURE_OPENAI_API_MODEL')
     azure_version = os.getenv('AZURE_OPENAI_API_VERSION')
     
-    has_hf_config = bool(hf_model or hf_use_local)
+    has_hf_config = bool(hf_model)
     has_azure_config = bool(azure_endpoint and azure_model and azure_version)
     
     logger.info(f"Available configurations - HF: {has_hf_config}, Azure: {has_azure_config}")
@@ -45,8 +44,7 @@ def create_client(prefer_huggingface: bool = True) -> Union['AzureOpenAI', 'Hugg
         from .huggingface_client import HuggingFaceClient
         return HuggingFaceClient(
             model_name=hf_model,
-            api_token=hf_token,
-            use_local=hf_use_local
+            api_token=hf_token
         )
     elif has_azure_config:
         logger.info("Using Azure OpenAI client")
@@ -61,8 +59,7 @@ def create_client(prefer_huggingface: bool = True) -> Union['AzureOpenAI', 'Hugg
         from .huggingface_client import HuggingFaceClient
         return HuggingFaceClient(
             model_name=hf_model,
-            api_token=hf_token,
-            use_local=hf_use_local
+            api_token=hf_token
         )
     else:
         error_msg = """
@@ -71,8 +68,6 @@ No valid client configuration found. Please set one of:
 For Hugging Face:
 - HF_MODEL_NAME: Name of the Hugging Face model (e.g., 'microsoft/DialoGPT-medium')
 - HF_API_TOKEN: Your Hugging Face API token (optional for public models)
-- HF_USE_LOCAL: Set to 'true' for local inference (default: 'false')
-- HF_DEVICE: Device for local inference ('cuda', 'cpu', 'auto')
 
 For Azure OpenAI:
 - AZURE_OPENAI_ENDPOINT: Your Azure OpenAI endpoint
@@ -91,14 +86,13 @@ def get_client_type() -> str:
     """
     # Check for Hugging Face configuration
     hf_model = os.getenv('HF_MODEL_NAME')
-    hf_use_local = os.getenv('HF_USE_LOCAL', 'false').lower() == 'true'
     
     # Check for Azure OpenAI configuration
     azure_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
     azure_model = os.getenv('AZURE_OPENAI_API_MODEL')
     azure_version = os.getenv('AZURE_OPENAI_API_VERSION')
     
-    has_hf_config = bool(hf_model or hf_use_local)
+    has_hf_config = bool(hf_model)
     has_azure_config = bool(azure_endpoint and azure_model and azure_version)
     
     if has_hf_config:
@@ -125,28 +119,24 @@ def validate_environment() -> dict:
     # Check Hugging Face config
     hf_model = os.getenv('HF_MODEL_NAME')
     hf_token = os.getenv('HF_API_TOKEN')
-    hf_use_local = os.getenv('HF_USE_LOCAL', 'false').lower() == 'true'
     
     # Check Azure config
     azure_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
     azure_model = os.getenv('AZURE_OPENAI_API_MODEL')
     azure_version = os.getenv('AZURE_OPENAI_API_VERSION')
     
-    has_hf_config = bool(hf_model or hf_use_local)
+    has_hf_config = bool(hf_model)
     has_azure_config = bool(azure_endpoint and azure_model and azure_version)
     
     if has_hf_config:
         result['valid'] = True
         result['client_type'] = 'huggingface'
         
-        if not hf_model and not hf_use_local:
-            result['issues'].append("HF_MODEL_NAME not set and HF_USE_LOCAL is false")
+        if not hf_model:
+            result['issues'].append("HF_MODEL_NAME not set")
         
-        if not hf_token and not hf_use_local:
+        if not hf_token:
             result['recommendations'].append("Consider setting HF_API_TOKEN for better rate limits")
-        
-        if hf_use_local:
-            result['recommendations'].append("Local inference requires significant GPU memory")
     
     elif has_azure_config:
         result['valid'] = True

@@ -12,11 +12,9 @@ from typing import List, Dict, Any, Optional, Union
 from dataclasses import dataclass
 
 try:
-    from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
     from huggingface_hub import InferenceClient
-    import torch
 except ImportError as e:
-    raise ImportError(f"Missing required dependencies: {e}. Please install with: pip install transformers torch huggingface_hub")
+    raise ImportError(f"Missing required dependencies: {e}. Please install with: pip install huggingface_hub")
 
 from .tool_calling import ToolCallHandler
 
@@ -52,24 +50,19 @@ class HuggingFaceClient:
     """
     Hugging Face client that mimics the OpenAI client interface.
     
-    Supports both local inference and Hugging Face Inference API.
+    Uses the Hugging Face Inference API for all inference.
     """
     
-    def __init__(self, model_name: Optional[str] = None, api_token: Optional[str] = None, 
-                 use_local: bool = False, device: Optional[str] = None):
+    def __init__(self, model_name: Optional[str] = None, api_token: Optional[str] = None):
         """
         Initialize the Hugging Face client.
         
         Args:
             model_name: Name of the Hugging Face model to use
-            api_token: Hugging Face API token (for Inference API)
-            use_local: Whether to use local inference instead of API
-            device: Device to use for local inference ('cuda', 'cpu', 'auto')
+            api_token: Hugging Face API token (optional for public models)
         """
         self.model_name = model_name or os.getenv('HF_MODEL_NAME', 'microsoft/DialoGPT-medium')
         self.api_token = api_token or os.getenv('HF_API_TOKEN')
-        self.use_local = use_local or os.getenv('HF_USE_LOCAL', 'false').lower() == 'true'
-        self.device = device or os.getenv('HF_DEVICE', 'auto')
         
         # Initialize the chat completions interface
         self.chat = ChatCompletions(self)
@@ -77,47 +70,12 @@ class HuggingFaceClient:
         # Initialize tool calling handler
         self.tool_handler = ToolCallHandler()
         
-        # Initialize the appropriate inference method
-        if self.use_local:
-            self._init_local_model()
-        else:
-            self._init_api_client()
+        # Initialize the Inference API client
+        self._init_api_client()
         
-        logger.info(f"HuggingFace client initialized with model: {self.model_name}, local: {self.use_local}")
+        logger.info(f"HuggingFace client initialized with model: {self.model_name}")
     
-    def _init_local_model(self):
-        """Initialize local model for inference"""
-        try:
-            logger.info(f"Loading local model: {self.model_name}")
-            
-            # Determine device
-            if self.device == 'auto':
-                device = 'cuda' if torch.cuda.is_available() else 'cpu'
-            else:
-                device = self.device
-            
-            # Load tokenizer and model
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_name,
-                torch_dtype=torch.float16 if device == 'cuda' else torch.float32,
-                device_map='auto' if device == 'cuda' else None
-            )
-            
-            # Create pipeline
-            self.pipeline = pipeline(
-                'text-generation',
-                model=self.model,
-                tokenizer=self.tokenizer,
-                device=0 if device == 'cuda' else -1,
-                torch_dtype=torch.float16 if device == 'cuda' else torch.float32
-            )
-            
-            logger.info(f"Local model loaded successfully on {device}")
-            
-        except Exception as e:
-            logger.error(f"Failed to load local model: {e}")
-            raise
+
     
     def _init_api_client(self):
         """Initialize Hugging Face Inference API client"""
@@ -143,11 +101,8 @@ class HuggingFaceClient:
             # Convert messages to prompt
             prompt = self._messages_to_prompt(messages, tools)
             
-            # Generate response
-            if self.use_local:
-                response_text = self._generate_local(prompt, max_tokens)
-            else:
-                response_text = self._generate_api(prompt, max_tokens)
+            # Generate response using Inference API
+            response_text = self._generate_api(prompt, max_tokens)
             
             # Handle tool calls if tools are provided
             if tools:
@@ -190,28 +145,7 @@ class HuggingFaceClient:
         prompt_parts.append("Assistant:")
         return "\n\n".join(prompt_parts)
     
-    def _generate_local(self, prompt: str, max_tokens: int) -> str:
-        """Generate response using local model"""
-        try:
-            # Generate response
-            outputs = self.pipeline(
-                prompt,
-                max_new_tokens=max_tokens,
-                do_sample=True,
-                temperature=0.7,
-                top_p=0.9,
-                pad_token_id=self.tokenizer.eos_token_id
-            )
-            
-            # Extract generated text (remove the input prompt)
-            generated_text = outputs[0]['generated_text']
-            response = generated_text[len(prompt):].strip()
-            
-            return response
-            
-        except Exception as e:
-            logger.error(f"Error in local generation: {e}")
-            raise
+
     
     def _generate_api(self, prompt: str, max_tokens: int) -> str:
         """Generate response using Hugging Face Inference API"""
