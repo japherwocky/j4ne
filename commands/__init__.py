@@ -1,24 +1,22 @@
-Discord_commands = {}
+"""
+Command system for j4ne.
 
+This module provides a framework for handling commands that start with '/'.
+Commands are registered with the CommandHandler and can be executed when
+a message starts with '/'.
+"""
 
-def discord_command(name):
-    """
-    Decorator for registering commands
-    """
+from commands.handler import command_handler
+from commands.core import register_core_commands
+from commands.tools_command import register_tools_command
+from commands.context_command import register_context_command
 
-    def __decorator(func):
-        Discord_commands[name] = func
-        return func
+# Register the core commands
+register_core_commands()
 
-    return __decorator
+# Register the tools command
+register_tools_command()
 
-
-Twitch_commands = {}
-
-def twitch_command(name):
-    def __decorator(func):
-        Twitch_commands[name] = func
-        return func
-
-    return __decorator
+# Register the context command
+register_context_command()
 

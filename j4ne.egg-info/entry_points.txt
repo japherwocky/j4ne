@@ -1,0 +1,2 @@
+[console_scripts]
+j4ne = j4ne:main

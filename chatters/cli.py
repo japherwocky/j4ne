@@ -10,10 +10,12 @@ import platform
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from openai import AzureOpenAI
 from dotenv import load_dotenv
 
 load_dotenv()  # load environment variables from .env
+
+# Import client factory for flexible client creation
+from clients import create_client
 
 from rich.console import Console
 from rich.markdown import Markdown
@@ -25,8 +27,8 @@ class MCPClient:
         self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
 
-        api_path=os.getenv('AZURE_OPENAI_ENDPOINT') + os.getenv('AZURE_OPENAI_API_MODEL')
-        self.client = AzureOpenAI(api_version=os.getenv('AZURE_OPENAI_API_VERSION'), base_url=api_path)
+        # Create client using factory (supports both Azure OpenAI and Hugging Face)
+        self.client = create_client(prefer_huggingface=True)
 
     async def connect_to_server(self):
         # Determine the Python executable path based on the platform
@@ -69,8 +71,10 @@ class MCPClient:
         } for tool in response.tools]
 
         # Initial LLM call
+        # Use environment variable for model name, with fallback
+        model_name = os.getenv('HF_MODEL_NAME') or os.getenv('OPENAI_MODEL', "gpt-4")
         init = self.client.chat.completions.create(
-            model="gpt-4",
+            model=model_name,
             max_tokens=3000,
             messages=init_messages,
             tools=available_tools
@@ -111,8 +115,10 @@ class MCPClient:
 
         while out_reason != 'stop':
             # keep passing tool responses back
+            # Use environment variable for followup model, with fallback
+            followup_model = os.getenv('HF_FOLLOWUP_MODEL') or os.getenv('OPENAI_FOLLOWUP_MODEL', "gpt-4.1-mini")
             r = self.client.chat.completions.create(
-                model="gpt-4.1-mini",
+                model=followup_model,
                 max_tokens=3000,
                 messages=out_messages,
                 tools=available_tools

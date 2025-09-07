@@ -63,145 +63,45 @@ python j4ne.py --mktables
 ```bash
 # Start the bot with default settings
 python j4ne.py
-
-# Disable specific networks
-python j4ne.py --twitter=False --twitch=False
 ```
 
-### Discord Setup
+Add any optional arguments as needed (e.g., enabling/disabling networks, setting debug mode).
 
-1. Create a Discord application at [Discord Developer Portal](https://discord.com/developers/applications)
-2. Copy the "Client ID" and "Token" into your `.env` file
-3. Generate an invitation link:
-   ```bash
-   python j4ne.py --newbot
-   ```
+---
 
-## Agent Capabilities
+## COMMAND-LINE USAGE
 
-J4NE includes a local agent system that can access various tools. The agent uses Azure OpenAI for LLM capabilities.
+You can launch different modules and features using subcommands:
 
-### 1. Starting the Agent
+- **Default / Chat Loop** (start interactive chat):
+  ```bash
+  python j4ne.py chat
+  ```
+  Or just:
+  ```bash
+  python j4ne.py
+  ```
 
-The agent is integrated into the main chat loop and can be started with:
+- **Greet** (print a styled greeting in the logs):
+  ```bash
+  python j4ne.py greet <NAME>
+  ```
 
-```bash
-python j4ne.py chat
-```
+- **Kanban Board Web App** (launch web server):
+  ```bash
+  python j4ne.py web
+  ```
+  This starts a web server on `http://localhost:8000/`, hosting the Kanban board interface and API. Static files are served from `/static`. The Kanban board persists data in `kanban.json`.
 
-This will start the chat interface where you can interact with the agent. By default, the agent uses a multiplexer that provides access to both filesystem and database tools.
+  - Main board view: [http://localhost:8000/](http://localhost:8000/)
+  - API endpoints:
+    - `GET /api/kanban` — fetch the board
+    - `POST /api/kanban/add` — add a card
+    - `POST /api/kanban/move` — move a card
+    - `POST /api/kanban/delete` — delete a card
 
-### 2. Available Agent Tools
+- **Verbose Logging**: Add `--verbose` to any command for debug output.
 
-The agent has access to the following tools:
+---
 
-- **Filesystem Tools**:
-  - `fs_list-files`: List files in a directory
-  - `fs_read-file`: Read file contents
-  - `fs_write-file`: Write to a file
-  - `fs_delete-file`: Delete a file or directory
-
-- **Database Tools**:
-  - `db_read_query`: Execute SELECT queries
-  - `db_write_query`: Execute INSERT/UPDATE/DELETE queries
-  - `db_create_table`: Create database tables
-  - `db_list_tables`: List all tables
-  - `db_describe_table`: Get table schema
-  - `db_append_insight`: Add business insights
-
-### 3. Troubleshooting
-
-If you encounter issues with the agent:
-
-1. **Azure OpenAI Connection**: Ensure your `.env` file contains the correct Azure OpenAI credentials with the proper format:
-   - `AZURE_OPENAI_ENDPOINT` should be the base URL (e.g., `https://your-resource-name.openai.azure.com/`)
-   - `AZURE_OPENAI_API_MODEL` should include the `deployments/` prefix (e.g., `deployments/gpt-4.1`)
-
-2. **Path Issues**: Make sure the paths to the server scripts are correct. The code automatically detects Windows vs. Unix paths for the Python executable.
-
-3. **Logging**: Enable verbose logging to see more details about what's happening:
-   ```bash
-   python j4ne.py chat --verbose
-   ```
-
-4. **Process Management**: If the agent seems to hang, check if there are any orphaned Python processes that need to be terminated.
-
-5. **Multiplexer Freezing**: If the multiplexer freezes after "Launching MCP Server", use the debugging tools:
-   ```bash
-   # Run the debugging script to test the multiplexer directly
-   python debug_multiplexer.py
-   ```
-   See [DEBUGGING.md](DEBUGGING.md) for detailed troubleshooting steps.
-
-## Web Interface
-
-J4NE includes a Kanban board web interface:
-
-```bash
-# Start the web server
-python j4ne.py web
-```
-
-This starts a web server on `http://localhost:8000/` with the following features:
-
-- Main board view: [http://localhost:8000/](http://localhost:8000/)
-- API endpoints:
-  - `GET /api/kanban` — fetch the board
-  - `POST /api/kanban/add` — add a card
-  - `POST /api/kanban/move` — move a card
-  - `POST /api/kanban/delete` — delete a card
-
-## Project Structure
-
-- **`api/`**: REST API handlers
-- **`chatters/` and `commands/`**: Chat functionality and command handlers
-  - `chatters/cli.py`: Agent client implementation
-  - `chatters/__init__.py`: Chat loop and agent initialization
-- **`networks/`**: Platform integrations (Discord, Twitch, IRC, Twitter)
-- **`servers/`**: Agent tool servers
-  - `filesystem.py`: File system access tools
-  - `localsqlite.py`: Database query tools
-  - `multiplexer_fixed.py`: Tool server multiplexer with improved error handling
-  - `openaidiff.py`: File patching utility
-- **`static/` and `templates/`**: Web interface assets
-- **`tests/`**: Unit tests
-
-## Command-Line Options
-
-```bash
-# Show help
-python j4ne.py --help
-
-# Enable verbose logging
-python j4ne.py --verbose
-
-# Start the chat loop (default)
-python j4ne.py chat
-
-# Start the web server
-python j4ne.py web
-
-# Send a greeting
-python j4ne.py greet <name>
-```
-
-## Development
-
-The project is structured to allow easy extension with new features:
-
-1. Add new commands in the `commands/` directory
-2. Add new network integrations in the `networks/` directory
-3. Add new agent tools in the `servers/` directory
-4. Extend the agent capabilities in `chatters/cli.py`
-
-### Adding New Tools
-
-To add a new tool server:
-
-1. Create a new server file in the `servers/` directory
-2. Implement the MCP protocol (see existing servers for examples)
-3. Update the multiplexer to include your new server
-
-## Future Work
-
-See [PLAN.md](PLAN.md) for planned features and improvements.
+Let me know if you want any further customization or info included! I can write this to README.md if you’re happy with it.

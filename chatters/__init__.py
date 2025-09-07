@@ -21,13 +21,14 @@ async def chat_loop():
         logging.debug(f"User input: {message}")
 
 async def EmCeePee():
-    logging.info("Launching MCP Server")
+    logging.info("Launching Direct Tools Client")
 
-    from chatters.cli import MCPClient
-    client = MCPClient()
+    from tools.direct_client import DirectClient
+    client = DirectClient()
 
     try:
-        await client.connect_to_server()
+        await client.connect_to_server()  # This is a no-op in the direct implementation
         await client.chat_loop()
     finally:
         await client.cleanup()
+
