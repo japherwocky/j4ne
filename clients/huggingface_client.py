@@ -67,7 +67,7 @@ class HuggingFaceClient:
             model_name: Name of the Hugging Face model to use
             api_token: Hugging Face API token (optional for public models)
         """
-        self.model_name = model_name or os.getenv('HF_MODEL_NAME', 'HuggingFaceH4/zephyr-7b-beta')
+        self.model_name = model_name or os.getenv('HF_MODEL_NAME', 'mistralai/Mistral-7B-Instruct-v0.1')
         self.api_token = api_token or os.getenv('HF_API_TOKEN')
         
         # Initialize the chat interface
@@ -89,9 +89,11 @@ class HuggingFaceClient:
             if not self.api_token:
                 logger.warning("No HF_API_TOKEN provided, using public inference API (may have rate limits)")
             
+            # Use the official HF Inference API endpoint
             self.inference_client = InferenceClient(
                 model=self.model_name,
-                token=self.api_token
+                token=self.api_token,
+                base_url="https://api-inference.huggingface.co"
             )
             
             logger.info("Hugging Face Inference API client initialized")
@@ -159,15 +161,26 @@ class HuggingFaceClient:
             logger.info(f"Generating with model: {self.model_name}")
             logger.info(f"Prompt: {prompt[:200]}...")
             
-            # Use text generation API
-            response = self.inference_client.text_generation(
-                prompt,
-                max_new_tokens=max_tokens,
-                temperature=0.7,
-                top_p=0.9,
-                do_sample=True,
-                return_full_text=False
-            )
+            # Try text generation first, fall back to conversational if needed
+            try:
+                response = self.inference_client.text_generation(
+                    prompt,
+                    max_new_tokens=max_tokens,
+                    temperature=0.7,
+                    top_p=0.9,
+                    do_sample=True,
+                    return_full_text=False
+                )
+            except Exception as text_gen_error:
+                logger.info(f"Text generation failed, trying conversational: {text_gen_error}")
+                # Fall back to conversational API
+                response = self.inference_client.conversational(
+                    text=prompt,
+                    max_length=max_tokens + len(prompt.split()),
+                    temperature=0.7,
+                    top_p=0.9,
+                    do_sample=True
+                )
             
             logger.info(f"Raw response type: {type(response)}")
             logger.info(f"Raw response: {str(response)[:200]}...")
@@ -175,12 +188,21 @@ class HuggingFaceClient:
             # Handle different response types
             if isinstance(response, str):
                 return response.strip()
-            elif isinstance(response, dict) and 'generated_text' in response:
-                return response['generated_text'].strip()
+            elif isinstance(response, dict):
+                if 'generated_text' in response:
+                    return response['generated_text'].strip()
+                elif 'conversation' in response and 'generated_responses' in response['conversation']:
+                    # Handle conversational response format
+                    responses = response['conversation']['generated_responses']
+                    if responses:
+                        return responses[-1].strip()
+                elif 'text' in response:
+                    return response['text'].strip()
             elif hasattr(response, 'generated_text'):
                 return response.generated_text.strip()
-            else:
-                return str(response).strip()
+            
+            # Fallback to string conversion
+            return str(response).strip()
             
         except Exception as e:
             logger.error(f"Error in API generation: {e}")
