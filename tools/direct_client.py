@@ -141,7 +141,7 @@ class DirectClient:
         
         if reason == 'stop':
             # Regular response
-            messages.append({"role": "assistant", "content": content.message.content})
+            messages.append({"role": "assistant", "content": content.message['content']})
         
         elif reason == 'tool_calls':
             # Tool call
