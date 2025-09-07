@@ -1,6 +1,6 @@
 # J4NE - Multi-Platform Chat Bot with Agent Capabilities
 
-J4NE is a versatile chat bot that supports multiple platforms including IRC, Twitch, Discord, and Twitter. It also includes a local agent system that can access software tools and perform various tasks.
+J4NE is a versatile chat bot that supports multiple platforms including IRC, Twitch, Discord, and Twitter. It also includes a local agent system that can access software tools and perform various tasks. The bot now supports both Azure OpenAI and Hugging Face models for AI inference.
 
 ## System Requirements
 
@@ -29,9 +29,29 @@ Create a `.env` file in the project root with your API credentials. You can use 
 cp .env.example .env
 ```
 
-At minimum, you'll need to set up the following for basic functionality:
+### AI Inference Configuration
 
+Choose your preferred AI provider for the agent functionality:
+
+#### Option A: Hugging Face (Recommended)
+```bash
+HF_MODEL_NAME=microsoft/DialoGPT-medium
+HF_API_TOKEN=your_hugging_face_token_here
 ```
+
+#### Option B: Azure OpenAI (Legacy)
+```bash
+AZURE_OPENAI_API_KEY=your-api-key
+AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/
+AZURE_OPENAI_API_VERSION=2024-12-01-preview
+AZURE_OPENAI_API_MODEL=deployments/gpt-4.1
+```
+
+### Platform Integration (Optional)
+
+For platform integrations, configure the relevant credentials:
+
+```bash
 # Discord credentials (required for Discord integration)
 DISCORD_TOKEN=your-discord-bot-token
 DISCORD_APP_ID=your-discord-application-id
@@ -40,12 +60,6 @@ DISCORD_APP_ID=your-discord-application-id
 TWITCH_NAME=your-twitch-username
 TWITCH_TOKEN=your-twitch-oauth-token
 TWITCH_KEY=your-twitch-client-id
-
-# Azure OpenAI credentials (required for agent functionality)
-AZURE_OPENAI_API_KEY=your-api-key
-AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/
-AZURE_OPENAI_API_VERSION=2024-12-01-preview
-AZURE_OPENAI_API_MODEL=deployments/gpt-4.1
 ```
 
 ### 3. First-Time Setup
@@ -66,6 +80,20 @@ python j4ne.py
 ```
 
 Add any optional arguments as needed (e.g., enabling/disabling networks, setting debug mode).
+
+## AI Model Configuration
+
+### Recommended Models
+
+For Hugging Face, these models work well with J4NE:
+- `microsoft/DialoGPT-medium` - Lightweight, good for casual chat
+- `microsoft/DialoGPT-large` - Better quality, more resource intensive
+- `mistralai/Mistral-7B-Instruct-v0.1` - Good for tool calling and structured responses
+
+### API Inference
+- **Easy Setup**: No local resources needed, just set your model name and optional API token
+- **Rate Limits**: Subject to Hugging Face API rate limits (get a token for better limits)
+- **Model Variety**: Access to thousands of models on Hugging Face Hub
 
 ---
 
@@ -102,6 +130,15 @@ You can launch different modules and features using subcommands:
 
 - **Verbose Logging**: Add `--verbose` to any command for debug output.
 
----
+## Troubleshooting
 
-Let me know if you want any further customization or info included! I can write this to README.md if you’re happy with it.
+### Hugging Face Issues
+- **Model not found**: Ensure the model name is correct and publicly available
+- **API rate limits**: Get a Hugging Face token for better rate limits
+- **Slow responses**: Try a smaller/faster model like `microsoft/DialoGPT-medium`
+
+### Environment Issues
+- **Import errors**: Ensure all dependencies are installed with `pip install -r requirements.txt`
+- **Database errors**: Run `python j4ne.py --mktables` to initialize the database
+- **Configuration errors**: Check that your `.env` file is properly formatted and contains required credentials
+
