@@ -98,6 +98,19 @@ class DirectClient:
             
         last_message = history[-1].get('content', '').lower().strip()
         
+        # Check for tool-related queries first (these should NOT be conversational)
+        tool_keywords = [
+            'tool', 'tools', 'function', 'functions', 'command', 'commands',
+            'list', 'show', 'find', 'search', 'create', 'delete', 'run', 'execute', 
+            'get', 'set', 'file', 'files', 'directory', 'folder', 'database',
+            'git', 'commit', 'branch', 'sql', 'query', 'table'
+        ]
+        
+        # If query mentions tools or actions, it's NOT conversational
+        for keyword in tool_keywords:
+            if keyword in last_message:
+                return False
+        
         # Simple conversational patterns
         conversational_patterns = [
             'hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening',
@@ -113,10 +126,10 @@ class DirectClient:
                 return True
                 
         # If it's very short (< 10 chars) and doesn't contain obvious action words
-        action_words = ['list', 'show', 'find', 'search', 'create', 'delete', 'run', 'execute', 'get', 'set']
         if len(last_message) < 10:
-            return not any(word in last_message for word in action_words)
+            return True
             
+        # Default to requiring tools for longer, more complex queries
         return False
 
     async def process_query(self, history: List[Dict[str, str]]) -> str:
