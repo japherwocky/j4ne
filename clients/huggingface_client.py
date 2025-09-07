@@ -89,11 +89,10 @@ class HuggingFaceClient:
             if not self.api_token:
                 logger.warning("No HF_API_TOKEN provided, using public inference API (may have rate limits)")
             
-            # Use the official HF Inference API endpoint
+            # Use the official HF Inference API (default endpoint)
             self.inference_client = InferenceClient(
                 model=self.model_name,
-                token=self.api_token,
-                base_url="https://api-inference.huggingface.co"
+                token=self.api_token
             )
             
             logger.info("Hugging Face Inference API client initialized")
