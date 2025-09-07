@@ -171,14 +171,13 @@ class HuggingFaceClient:
                     return_full_text=False
                 )
             except Exception as text_gen_error:
-                logger.info(f"Text generation failed, trying conversational: {text_gen_error}")
-                # Fall back to conversational API
-                response = self.inference_client.conversational(
-                    text=prompt,
-                    max_length=max_tokens + len(prompt.split()),
+                logger.info(f"Text generation failed, trying chat completion: {text_gen_error}")
+                # Fall back to chat completion API
+                response = self.inference_client.chat_completion(
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=max_tokens,
                     temperature=0.7,
-                    top_p=0.9,
-                    do_sample=True
+                    top_p=0.9
                 )
             
             logger.info(f"Raw response type: {type(response)}")
@@ -190,15 +189,20 @@ class HuggingFaceClient:
             elif isinstance(response, dict):
                 if 'generated_text' in response:
                     return response['generated_text'].strip()
-                elif 'conversation' in response and 'generated_responses' in response['conversation']:
-                    # Handle conversational response format
-                    responses = response['conversation']['generated_responses']
-                    if responses:
-                        return responses[-1].strip()
+                elif 'choices' in response and response['choices']:
+                    # Handle chat completion response format
+                    choice = response['choices'][0]
+                    if 'message' in choice and 'content' in choice['message']:
+                        return choice['message']['content'].strip()
                 elif 'text' in response:
                     return response['text'].strip()
             elif hasattr(response, 'generated_text'):
                 return response.generated_text.strip()
+            elif hasattr(response, 'choices') and response.choices:
+                # Handle chat completion object response
+                choice = response.choices[0]
+                if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
+                    return choice.message.content.strip()
             
             # Fallback to string conversion
             return str(response).strip()
