@@ -46,6 +46,12 @@ class ChatCompletions:
         """Create a chat completion using Hugging Face models"""
         return self.client._create_completion(model, messages, max_tokens, tools, **kwargs)
 
+class Chat:
+    """Mimics OpenAI's chat interface"""
+    
+    def __init__(self, client):
+        self.completions = ChatCompletions(client)
+
 class HuggingFaceClient:
     """
     Hugging Face client that mimics the OpenAI client interface.
@@ -64,8 +70,8 @@ class HuggingFaceClient:
         self.model_name = model_name or os.getenv('HF_MODEL_NAME', 'microsoft/DialoGPT-medium')
         self.api_token = api_token or os.getenv('HF_API_TOKEN')
         
-        # Initialize the chat completions interface
-        self.chat = ChatCompletions(self)
+        # Initialize the chat interface
+        self.chat = Chat(self)
         
         # Initialize tool calling handler
         self.tool_handler = ToolCallHandler()
