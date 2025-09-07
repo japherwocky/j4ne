@@ -145,8 +145,8 @@ class DirectClient:
         
         elif reason == 'tool_calls':
             # Tool call
-            content = content.model_dump()
-            tool_calls = content['message'].get('tool_calls', [])
+            # Access the message directly instead of using model_dump()
+            tool_calls = content.message.get('tool_calls', [])
             
             if not tool_calls:
                 logger.warning("Tool calls indicated but none found")
