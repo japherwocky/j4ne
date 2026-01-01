@@ -9,7 +9,7 @@ import logging
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from openai import AzureOpenAI
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()  # load environment variables from .env
@@ -24,8 +24,31 @@ class MCPClient:
         self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
 
-        api_path=os.getenv('AZURE_OPENAI_ENDPOINT') + os.getenv('AZURE_OPENAI_API_MODEL')
-        self.client = AzureOpenAI(api_version=os.getenv('AZURE_OPENAI_API_VERSION'), base_url=api_path)
+        # Set up OpenCode Zen client
+        api_key = os.getenv('OPENCODE_ZEN_API_KEY')
+        if not api_key:
+            try:
+                from keys import opencode_zen_api_key
+                api_key = opencode_zen_api_key
+            except ImportError:
+                pass
+        
+        if not api_key:
+            raise ValueError("Missing OpenCode Zen API key. Set OPENCODE_ZEN_API_KEY environment variable or update keys.py")
+        
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url="https://opencode.ai/zen/v1"
+        )
+        
+        # Store model configuration
+        self.default_model = os.getenv('OPENCODE_ZEN_MODEL', 'gpt-5.1-codex')
+        try:
+            from keys import opencode_zen_model
+            if opencode_zen_model:
+                self.default_model = opencode_zen_model
+        except ImportError:
+            pass
 
     async def connect_to_server(self):
 
@@ -65,7 +88,7 @@ class MCPClient:
 
         # Initial LLM call
         init = self.client.chat.completions.create(
-            model="gpt-4",
+            model=self.default_model,
             max_tokens=3000,
             messages=init_messages,
             tools=available_tools
@@ -104,10 +127,13 @@ class MCPClient:
 
         out_messages, out_reason = await handle(init, init_messages)
 
+        # Set up followup model
+        followup_model = os.getenv('OPENCODE_ZEN_FOLLOWUP_MODEL', 'gpt-5.1-codex-mini')
+        
         while out_reason != 'stop':
             # keep passing tool responses back
             r = self.client.chat.completions.create(
-                model="gpt-4.1-mini",
+                model=followup_model,
                 max_tokens=3000,
                 messages=out_messages,
                 tools=available_tools

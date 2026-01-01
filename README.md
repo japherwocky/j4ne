@@ -6,7 +6,7 @@ A modern chat bot with data visualizations and a web-based Kanban board interfac
 
 - **Interactive Chat Interface**: CLI-based chat with MCP (Model Context Protocol) integration
 - **Kanban Board**: Web-based task management interface
-- **OpenAI Integration**: Powered by OpenAI for intelligent responses
+- **OpenCode Zen Integration**: Powered by OpenCode Zen for intelligent responses with coding-optimized models
 - **Modern Architecture**: Built with Starlette web framework and async Python
 
 ## Requirements
@@ -23,9 +23,11 @@ A modern chat bot with data visualizations and a web-based Kanban board interfac
    pip install -r requirements.txt
    ```
 
-2. **Configure API Keys** (optional):
-   - Copy and edit `keys.py` to add your OpenAI API key if needed
-   - The file contains examples for other integrations
+2. **Configure API Keys**:
+   - Get your OpenCode Zen API key from: https://opencode.ai/auth
+   - Option 1: Set environment variable: `export OPENCODE_ZEN_API_KEY=your_api_key`
+   - Option 2: Edit `keys.py` and set `opencode_zen_api_key = 'your_api_key'`
+   - Copy `.env.example` to `.env` for environment variable setup
 
 ## Usage
 
@@ -75,7 +77,7 @@ The application uses:
 - **Starlette**: Modern async web framework
 - **Uvicorn**: ASGI server for web interface
 - **MCP**: Model Context Protocol for tool integration
-- **OpenAI**: AI-powered chat responses
+- **OpenCode Zen**: AI-powered chat responses with coding-optimized models
 - **Rich**: Beautiful terminal output
 
 ## Database
@@ -105,4 +107,3 @@ python j4ne.py web             # Start web server
 ## License
 
 MIT License - see LICENSE file for details
-
