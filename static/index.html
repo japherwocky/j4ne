@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J4NE Kanban Board</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .kanban-board {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .column {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .column h3 {
+            margin-top: 0;
+            text-align: center;
+            padding: 10px;
+            border-radius: 4px;
+            color: white;
+        }
+        .todo h3 { background-color: #e74c3c; }
+        .doing h3 { background-color: #f39c12; }
+        .done h3 { background-color: #27ae60; }
+        .card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            cursor: move;
+        }
+        .add-card {
+            width: 100%;
+            padding: 10px;
+            border: 2px dashed #ccc;
+            background: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #666;
+        }
+        .add-card:hover {
+            border-color: #007bff;
+            color: #007bff;
+        }
+        #newCardInput {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        .btn {
+            padding: 5px 10px;
+            margin: 2px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>J4NE Kanban Board</h1>
+        <p>Organize your tasks and track progress</p>
+    </div>
+
+    <div class="kanban-board">
+        <div class="column todo">
+            <h3>To Do</h3>
+            <div id="todo-cards"></div>
+            <button class="add-card" onclick="showAddCard('todo')">+ Add Card</button>
+        </div>
+        
+        <div class="column doing">
+            <h3>Doing</h3>
+            <div id="doing-cards"></div>
+            <button class="add-card" onclick="showAddCard('doing')">+ Add Card</button>
+        </div>
+        
+        <div class="column done">
+            <h3>Done</h3>
+            <div id="done-cards"></div>
+            <button class="add-card" onclick="showAddCard('done')">+ Add Card</button>
+        </div>
+    </div>
+
+    <!-- Add Card Modal -->
+    <div id="addCardModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 1000;">
+        <h4>Add New Card</h4>
+        <input type="text" id="newCardInput" placeholder="Enter card text...">
+        <div>
+            <button class="btn btn-primary" onclick="addCard()">Add</button>
+            <button class="btn btn-secondary" onclick="hideAddCard()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        let currentColumn = '';
+        let kanbanData = { todo: [], doing: [], done: [] };
+
+        // Load initial data
+        async function loadKanban() {
+            try {
+                const response = await fetch('/api/kanban');
+                const data = await response.json();
+                kanbanData = data.columns;
+                renderBoard();
+            } catch (error) {
+                console.error('Error loading kanban data:', error);
+            }
+        }
+
+        // Render the board
+        function renderBoard() {
+            ['todo', 'doing', 'done'].forEach(column => {
+                const container = document.getElementById(`${column}-cards`);
+                container.innerHTML = '';
+                kanbanData[column].forEach(card => {
+                    const cardElement = document.createElement('div');
+                    cardElement.className = 'card';
+                    cardElement.innerHTML = `
+                        ${card}
+                        <div style="margin-top: 10px;">
+                            ${column !== 'todo' ? `<button class="btn btn-secondary" onclick="moveCard('${card}', '${column}', 'todo')">← To Do</button>` : ''}
+                            ${column !== 'doing' ? `<button class="btn btn-secondary" onclick="moveCard('${card}', '${column}', 'doing')">→ Doing</button>` : ''}
+                            ${column !== 'done' ? `<button class="btn btn-secondary" onclick="moveCard('${card}', '${column}', 'done')">✓ Done</button>` : ''}
+                            <button class="btn btn-danger" onclick="deleteCard('${card}', '${column}')">Delete</button>
+                        </div>
+                    `;
+                    container.appendChild(cardElement);
+                });
+            });
+        }
+
+        // Show add card modal
+        function showAddCard(column) {
+            currentColumn = column;
+            document.getElementById('addCardModal').style.display = 'block';
+            document.getElementById('newCardInput').focus();
+        }
+
+        // Hide add card modal
+        function hideAddCard() {
+            document.getElementById('addCardModal').style.display = 'none';
+            document.getElementById('newCardInput').value = '';
+        }
+
+        // Add new card
+        async function addCard() {
+            const cardText = document.getElementById('newCardInput').value.trim();
+            if (!cardText) return;
+
+            try {
+                const response = await fetch('/api/kanban/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ column: currentColumn, card: cardText })
+                });
+                const data = await response.json();
+                kanbanData = data.columns;
+                renderBoard();
+                hideAddCard();
+            } catch (error) {
+                console.error('Error adding card:', error);
+            }
+        }
+
+        // Move card between columns
+        async function moveCard(card, fromColumn, toColumn) {
+            try {
+                const response = await fetch('/api/kanban/move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from: fromColumn, to: toColumn, card: card })
+                });
+                const data = await response.json();
+                kanbanData = data.columns;
+                renderBoard();
+            } catch (error) {
+                console.error('Error moving card:', error);
+            }
+        }
+
+        // Delete card
+        async function deleteCard(card, column) {
+            if (!confirm('Are you sure you want to delete this card?')) return;
+            
+            try {
+                const response = await fetch('/api/kanban/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ column: column, card: card })
+                });
+                const data = await response.json();
+                kanbanData = data.columns;
+                renderBoard();
+            } catch (error) {
+                console.error('Error deleting card:', error);
+            }
+        }
+
+        // Handle Enter key in input
+        document.getElementById('newCardInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addCard();
+            }
+        });
+
+        // Load data on page load
+        loadKanban();
+    </script>
+</body>
+</html>
+

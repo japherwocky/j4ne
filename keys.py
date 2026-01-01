@@ -1,13 +1,10 @@
-twitch_name = ''
-twitch_token = ''
-twitch_key =''
+# Configuration file for API keys and tokens
+# Add your API keys here as needed
 
-discord_token = 'your-secret-token'
-discord_app_id = 'your-discord-client/application-ID'
+# OpenAI API key (for MCP tools integration)
+openai_api_key = ''
 
-twitter_appkey = ''
-twitter_appsecret = ''
-twitter_token = ''
-twitter_tokensecret = ''
-
-cleverbot_key = ''
+# Add other API keys as needed for future integrations
+# Example:
+# discord_token = 'your-discord-token'
+# twitch_client_id = 'your-twitch-client-id'
