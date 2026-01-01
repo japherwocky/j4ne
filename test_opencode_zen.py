@@ -23,17 +23,15 @@ async def test_opencode_zen_connection():
     try:
         from openai import OpenAI
         
-        # Get API key
+        # Get API key from environment variables
         api_key = os.getenv('OPENCODE_ZEN_API_KEY')
-        if not api_key:
-            try:
-                from keys import opencode_zen_api_key
-                api_key = opencode_zen_api_key
-            except ImportError:
-                pass
         
         if not api_key:
-            logger.error("No OpenCode Zen API key found. Set OPENCODE_ZEN_API_KEY or update keys.py")
+            logger.error(
+                "Missing OPENCODE_ZEN_API_KEY environment variable. "
+                "Set it using 'export OPENCODE_ZEN_API_KEY=your_key' or add it to your .env file. "
+                "Get your API key from: https://opencode.ai/auth"
+            )
             return False
         
         # Set up client
@@ -42,14 +40,8 @@ async def test_opencode_zen_connection():
             base_url="https://opencode.ai/zen/v1"
         )
         
-        # Get model
+        # Get model from environment variables
         model = os.getenv('OPENCODE_ZEN_MODEL', 'gpt-5.1-codex')
-        try:
-            from keys import opencode_zen_model
-            if opencode_zen_model:
-                model = opencode_zen_model
-        except ImportError:
-            pass
         
         logger.info(f"Testing OpenCode Zen with model: {model}")
         

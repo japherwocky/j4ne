@@ -1,6 +1,6 @@
 include requirements.txt
 include README.md
-include keys.py
+include .env.example
 recursive-include static *
 recursive-include api *
 recursive-include chatters *

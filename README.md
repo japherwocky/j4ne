@@ -25,9 +25,12 @@ A modern chat bot with data visualizations and a web-based Kanban board interfac
 
 2. **Configure API Keys**:
    - Get your OpenCode Zen API key from: https://opencode.ai/auth
-   - Option 1: Set environment variable: `export OPENCODE_ZEN_API_KEY=your_api_key`
-   - Option 2: Edit `keys.py` and set `opencode_zen_api_key = 'your_api_key'`
-   - Copy `.env.example` to `.env` for environment variable setup
+   - Copy `.env.example` to `.env` and add your API key:
+     ```bash
+     cp .env.example .env
+     # Edit .env and set OPENCODE_ZEN_API_KEY=your_api_key
+     ```
+   - Or set environment variable directly: `export OPENCODE_ZEN_API_KEY=your_api_key`
 
 ## Usage
 
