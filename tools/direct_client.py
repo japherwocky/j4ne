@@ -12,7 +12,7 @@ import logging
 from collections import deque
 from typing import List, Dict, Any, Optional
 
-from openai import AzureOpenAI
+from openai import OpenAI
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.markdown import Markdown
@@ -74,31 +74,49 @@ class DirectClient:
         git_provider = GitToolProvider(root_path)
         self.multiplexer.add_provider(git_provider)
         
-        # Set up OpenAI client
-        self._setup_openai_client()
+        # Set up OpenCode Zen client
+        self._setup_opencode_zen_client()
         
         logger.info("DirectClient initialized successfully")
     
-    def _setup_openai_client(self):
-        """Set up the OpenAI client using environment variables"""
+    def _setup_opencode_zen_client(self):
+        """Set up the OpenCode Zen client using environment variables"""
         try:
-            api_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
-            api_model = os.getenv('AZURE_OPENAI_API_MODEL')
-            api_version = os.getenv('AZURE_OPENAI_API_VERSION')
+            # Try environment variables first, then fall back to keys.py
+            api_key = os.getenv('OPENCODE_ZEN_API_KEY')
+            if not api_key:
+                try:
+                    from keys import opencode_zen_api_key
+                    api_key = opencode_zen_api_key
+                except ImportError:
+                    pass
             
-            if not all([api_endpoint, api_model, api_version]):
-                logger.warning("Missing Azure OpenAI environment variables")
-                raise ValueError("Missing Azure OpenAI environment variables")
+            if not api_key:
+                logger.warning("Missing OpenCode Zen API key")
+                raise ValueError("Missing OpenCode Zen API key. Set OPENCODE_ZEN_API_KEY environment variable or update keys.py")
             
-            api_path = api_endpoint + api_model
-            
-            self.client = AzureOpenAI(
-                api_version=api_version,
-                base_url=api_path
+            # Set up the OpenAI client to use OpenCode Zen's endpoint
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url="https://opencode.ai/zen/v1"
             )
-            logger.info("OpenAI client initialized successfully")
+            
+            # Store model configuration
+            self.default_model = os.getenv('OPENCODE_ZEN_MODEL', 'gpt-5.1-codex')
+            self.followup_model = os.getenv('OPENCODE_ZEN_FOLLOWUP_MODEL', 'gpt-5.1-codex-mini')
+            
+            # Try to get model from keys.py if not in environment
+            if self.default_model == 'gpt-5.1-codex':
+                try:
+                    from keys import opencode_zen_model
+                    if opencode_zen_model:
+                        self.default_model = opencode_zen_model
+                except ImportError:
+                    pass
+            
+            logger.info(f"OpenCode Zen client initialized successfully with model: {self.default_model}")
         except Exception as e:
-            logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+            logger.error(f"Failed to initialize OpenCode Zen client: {str(e)}")
             raise
     
     async def process_query(self, history: List[Dict[str, str]]) -> str:
@@ -112,7 +130,7 @@ class DirectClient:
         # Initial LLM call
         try:
             init = self.client.chat.completions.create(
-                model=os.getenv('OPENAI_MODEL', "gpt-4"),
+                model=self.default_model,
                 max_tokens=3000,
                 messages=history,
                 tools=available_tools
@@ -125,7 +143,7 @@ class DirectClient:
             while out_reason != 'stop':
                 # Keep passing tool responses back
                 r = self.client.chat.completions.create(
-                    model=os.getenv('OPENAI_FOLLOWUP_MODEL', "gpt-4.1-mini"),
+                    model=self.followup_model,
                     max_tokens=3000,
                     messages=out_messages,
                     tools=available_tools
