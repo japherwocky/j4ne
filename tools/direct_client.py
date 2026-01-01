@@ -82,18 +82,16 @@ class DirectClient:
     def _setup_opencode_zen_client(self):
         """Set up the OpenCode Zen client using environment variables"""
         try:
-            # Try environment variables first, then fall back to keys.py
+            # Get API key from environment variables
             api_key = os.getenv('OPENCODE_ZEN_API_KEY')
-            if not api_key:
-                try:
-                    from keys import opencode_zen_api_key
-                    api_key = opencode_zen_api_key
-                except ImportError:
-                    pass
             
             if not api_key:
                 logger.warning("Missing OpenCode Zen API key")
-                raise ValueError("Missing OpenCode Zen API key. Set OPENCODE_ZEN_API_KEY environment variable or update keys.py")
+                raise ValueError(
+                    "Missing OPENCODE_ZEN_API_KEY environment variable. "
+                    "Set it using 'export OPENCODE_ZEN_API_KEY=your_key' or add it to your .env file. "
+                    "Get your API key from: https://opencode.ai/auth"
+                )
             
             # Set up the OpenAI client to use OpenCode Zen's endpoint
             self.client = OpenAI(
@@ -101,18 +99,9 @@ class DirectClient:
                 base_url="https://opencode.ai/zen/v1"
             )
             
-            # Store model configuration
+            # Store model configuration from environment variables
             self.default_model = os.getenv('OPENCODE_ZEN_MODEL', 'gpt-5.1-codex')
             self.followup_model = os.getenv('OPENCODE_ZEN_FOLLOWUP_MODEL', 'gpt-5.1-codex-mini')
-            
-            # Try to get model from keys.py if not in environment
-            if self.default_model == 'gpt-5.1-codex':
-                try:
-                    from keys import opencode_zen_model
-                    if opencode_zen_model:
-                        self.default_model = opencode_zen_model
-                except ImportError:
-                    pass
             
             logger.info(f"OpenCode Zen client initialized successfully with model: {self.default_model}")
         except Exception as e:

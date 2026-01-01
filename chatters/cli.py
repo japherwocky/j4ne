@@ -26,29 +26,21 @@ class MCPClient:
 
         # Set up OpenCode Zen client
         api_key = os.getenv('OPENCODE_ZEN_API_KEY')
-        if not api_key:
-            try:
-                from keys import opencode_zen_api_key
-                api_key = opencode_zen_api_key
-            except ImportError:
-                pass
         
         if not api_key:
-            raise ValueError("Missing OpenCode Zen API key. Set OPENCODE_ZEN_API_KEY environment variable or update keys.py")
+            raise ValueError(
+                "Missing OPENCODE_ZEN_API_KEY environment variable. "
+                "Set it using 'export OPENCODE_ZEN_API_KEY=your_key' or add it to your .env file. "
+                "Get your API key from: https://opencode.ai/auth"
+            )
         
         self.client = OpenAI(
             api_key=api_key,
             base_url="https://opencode.ai/zen/v1"
         )
         
-        # Store model configuration
+        # Store model configuration from environment variables
         self.default_model = os.getenv('OPENCODE_ZEN_MODEL', 'gpt-5.1-codex')
-        try:
-            from keys import opencode_zen_model
-            if opencode_zen_model:
-                self.default_model = opencode_zen_model
-        except ImportError:
-            pass
 
     async def connect_to_server(self):
 
