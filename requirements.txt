@@ -9,3 +9,4 @@ starlette
 uvicorn
 tiktoken
 colorama
+irc3

@@ -21,6 +21,8 @@ logger.addHandler(channel)
 from chatters import chat_loop
 # --- Import the kanban routes ---
 from api.kanban import routes as kanban_routes
+# --- Import IRC client ---
+from networks.irc import IRCClient
 
 def home(request):
     # Redirect / to the Kanban board UI
@@ -30,15 +32,62 @@ def home(request):
 routes = [
     Route("/", endpoint=home),
     *kanban_routes,  # Add Kanban-related API endpoints
+    Mount("/static", StaticFiles(directory="static"), name="static"),
 ]
+
+async def start_web_server_with_irc():
+    """
+    Starts the Starlette web server with IRC client.
+    """
+    chat_client = None
+    irc_client = None
+    
+    # Initialize chat client for AI responses (optional)
+    try:
+        from tools.direct_client import DirectClient
+        chat_client = DirectClient()
+        await chat_client.connect_to_server()
+        logger.info("Chat client initialized successfully")
+    except Exception as e:
+        logger.warning(f"Failed to initialize chat client: {e}")
+        logger.info("IRC will run without AI responses")
+    
+    # Initialize IRC client
+    irc_client = IRCClient(chat_client=chat_client)
+    
+    # Start IRC client in background
+    if irc_client.server:  # Only start if IRC is configured
+        logger.info("Starting IRC client...")
+        success = await irc_client.connect()
+        if success:
+            logger.info(f"IRC client connected to {irc_client.server}")
+        else:
+            logger.warning("Failed to connect to IRC")
+    else:
+        logger.info("IRC not configured, skipping IRC client startup")
+    
+    # Create Starlette app
+    app = Starlette(debug=True, routes=routes)
+    
+    # Start web server
+    logger.info("Starting Starlette web server...")
+    config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info")
+    server = uvicorn.Server(config)
+    
+    try:
+        await server.serve()
+    finally:
+        # Cleanup IRC client
+        if irc_client and irc_client.connected:
+            await irc_client.disconnect()
+        if chat_client:
+            await chat_client.cleanup()
 
 def start_web_server():
     """
-    Starts the Starlette web server.
+    Starts the Starlette web server (legacy sync wrapper).
     """
-    app = Starlette(debug=True, routes=routes)
-    logger.info("Starting Starlette web server...")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    asyncio.run(start_web_server_with_irc())
 
 def main():
     """
