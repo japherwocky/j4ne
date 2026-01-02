@@ -27,6 +27,7 @@ class IRCClient(NetworkClient):
         self.realname = os.getenv('IRC_REALNAME', 'J4NE Chat Bot')
         self.channels = os.getenv('IRC_CHANNELS', '#j4ne-test').split(',')
         self.password = os.getenv('IRC_PASSWORD', None)
+        self.command_prefix = os.getenv('IRC_COMMAND_PREFIX', '!')
         
         # IRC3 bot instance
         self.bot = None
@@ -208,7 +209,7 @@ class IRCClient(NetworkClient):
         should_respond = (
             self.nickname.lower() in message.content.lower() or
             message.channel == self.nickname or  # Direct message
-            message.content.startswith('!')  # Command prefix
+            message.content.startswith(self.command_prefix)  # Configurable command prefix
         )
         
         if should_respond and self.chat_client:
