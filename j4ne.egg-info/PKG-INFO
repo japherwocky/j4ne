@@ -95,7 +95,7 @@ You can execute different modules/features using subcommands:
   ```bash
   python j4ne.py greet <NAME>
   ```
-- **Kanban Board Web App**:
+- **Web Server**:
   ```bash
   python j4ne.py web
   ```

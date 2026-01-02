@@ -5,11 +5,9 @@ requirements.txt
 setup.py
 api/__init__.py
 api/handlers.py
-api/kanban.py
 api/__pycache__/__init__.cpython-310.pyc
 api/__pycache__/__init__.cpython-312.pyc
 api/__pycache__/handlers.cpython-310.pyc
-api/__pycache__/kanban.cpython-312.pyc
 chatters/__init__.py
 chatters/cli.py
 chatters/__pycache__/__init__.cpython-312.pyc

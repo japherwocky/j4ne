@@ -1,11 +1,11 @@
-# J4NE - Chat Bot with Kanban Board
+# J4NE - Chat Bot
 
-A modern chat bot with data visualizations and a web-based Kanban board interface.
+A modern chat bot with data visualizations for IRC, Twitch, Discord, and Twitter.
 
 ## Features
 
 - **Interactive Chat Interface**: CLI-based chat with MCP (Model Context Protocol) integration
-- **Kanban Board**: Web-based task management interface
+- **Multi-Platform Support**: Works with IRC, Twitch, Discord, and Twitter
 - **OpenCode Zen Integration**: Powered by OpenCode Zen for intelligent responses with coding-optimized models
 - **Modern Architecture**: Built with Starlette web framework and async Python
 
@@ -52,26 +52,21 @@ Send a greeting message:
 python j4ne.py greet "Your Name"
 ```
 
-### 3. Web Interface (Kanban Board)
-Start the web server with Kanban board:
+### 3. Web Interface
+Start the web server:
 ```bash
 python j4ne.py web
 ```
 Then visit: http://localhost:8000
 
-The Kanban board allows you to:
-- Create, move, and delete task cards
-- Organize tasks in To Do, Doing, and Done columns
-- Persist data automatically
+The web interface provides a simple endpoint for future web-based features.
 
 ## Project Structure
 
 - **`j4ne.py`**: Main entry point with CLI and web server
-- **`api/`**: REST API handlers for the Kanban board
 - **`chatters/`**: Chat functionality and CLI interface
 - **`commands/`**: Command handlers and processing
 - **`tools/`**: MCP tools integration and direct client
-- **`static/`**: Web assets for the Kanban board interface
 - **`tests/`**: Unit tests
 
 ## Development
@@ -86,8 +81,7 @@ The application uses:
 ## Database
 
 The application uses SQLite for data persistence:
-- Kanban board data is stored in `kanban.json`
-- Other data may use `database.db` (created automatically)
+- Chat data and other information is stored in `database.db` (created automatically)
 
 ## Command Line Options
 
