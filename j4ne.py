@@ -19,20 +19,17 @@ channel.setFormatter(tornado.log.LogFormatter())
 logger.addHandler(channel)
 
 from chatters import chat_loop
-# --- Import the kanban routes ---
-from api.kanban import routes as kanban_routes
+from starlette.responses import PlainTextResponse
 # --- Import IRC client ---
 from networks.irc import IRCClient
 
 def home(request):
-    # Redirect / to the Kanban board UI
-    return RedirectResponse(url="/static/index.html")
+    # Simple home page response
+    return PlainTextResponse("J4NE Chat Bot - Use 'j4ne chat' to start chatting or 'j4ne --help' for more options.")
 
 # Main app routes
 routes = [
     Route("/", endpoint=home),
-    *kanban_routes,  # Add Kanban-related API endpoints
-    Mount("/static", StaticFiles(directory="static"), name="static"),
 ]
 
 async def start_web_server_with_irc():
