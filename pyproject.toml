@@ -12,16 +12,46 @@ license = {text = "MIT"}
 authors = [
     {name = "japherwocky"}
 ]
+keywords = ["chatbot", "ai", "irc", "twitch", "discord", "twitter", "chat", "bot", "visualization"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Chat",
+    "Topic :: Communications :: Chat :: Internet Relay Chat",
+    "Topic :: Internet",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
 dependencies = [
     "tornado",
     "mcp",
     "openai",
     "pathspec",
     "rich",
+    "peewee",
+    "python-dotenv",
     "starlette",
     "uvicorn",
+    "tiktoken",
+    "colorama",
+    "irc3",
     "typer",
 ]
+
+[project.urls]
+Homepage = "https://github.com/japherwocky/j4ne"
+Repository = "https://github.com/japherwocky/j4ne"
+Issues = "https://github.com/japherwocky/j4ne/issues"
 
 [project.scripts]
 j4ne = "j4ne:app"

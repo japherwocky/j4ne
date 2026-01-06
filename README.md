@@ -1,106 +1,102 @@
-# J4NE - Chat Bot
+# J4NE - AI Chat Bot
 
-A modern chat bot with data visualizations for IRC, Twitch, Discord, and Twitter.
+A versatile chat bot with data visualizations for IRC, Twitch, Discord, and Twitter. J4NE provides an interactive AI-powered chat experience with support for multiple platforms and rich data visualization capabilities.
 
 ## Features
 
-- **Interactive Chat Interface**: CLI-based chat with MCP (Model Context Protocol) integration
-- **Multi-Platform Support**: Works with IRC, Twitch, Discord, and Twitter
-- **OpenCode Zen Integration**: Powered by OpenCode Zen for intelligent responses with coding-optimized models
-- **Modern Architecture**: Built with Starlette web framework and async Python
-
-## Requirements
-
-- Python 3.7 or later
-- Dependencies listed in `requirements.txt`
+- 🤖 **AI-Powered Chat**: Interactive chat loop with AI responses
+- 🌐 **Multi-Platform Support**: IRC, Twitch, Discord, and Twitter integration
+- 📊 **Data Visualizations**: Rich data visualization capabilities
+- 🖥️ **Web Interface**: Built-in web server with Starlette
+- 🎯 **CLI Interface**: Easy-to-use command-line interface with Typer
+- ⚙️ **Configurable**: Environment-based configuration
 
 ## Installation
 
-1. **Set up a Python Virtual Environment**:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
+Install J4NE from PyPI:
 
-2. **Configure API Keys**:
-   - Get your OpenCode Zen API key from: https://opencode.ai/auth
-   - Copy `.env.example` to `.env` and add your API key:
-     ```bash
-     cp .env.example .env
-     # Edit .env and set OPENCODE_ZEN_API_KEY=your_api_key
-     ```
-   - Or set environment variable directly: `export OPENCODE_ZEN_API_KEY=your_api_key`
-
-## Usage
-
-J4NE provides three main commands:
-
-### 1. Interactive Chat
-Start an interactive chat session:
 ```bash
-python j4ne.py chat
-```
-or simply:
-```bash
-python j4ne.py
+pip install j4ne
 ```
 
-### 2. Quick Greeting
-Send a greeting message:
+## Quick Start
+
+After installation, you can use J4NE in several ways:
+
+### Start Interactive Chat (Default)
 ```bash
-python j4ne.py greet "Your Name"
+j4ne
+# or explicitly
+j4ne chat
 ```
 
-### 3. Web Interface
-Start the web server:
+### Start Web Server
 ```bash
-python j4ne.py web
+j4ne web
 ```
-Then visit: http://localhost:8000
 
-The web interface provides a simple endpoint for future web-based features.
+### Send a Greeting
+```bash
+j4ne greet "World"
+```
 
-## Project Structure
+### Get Help
+```bash
+j4ne --help
+```
 
-- **`j4ne.py`**: Main entry point with CLI and web server
-- **`chatters/`**: Chat functionality and CLI interface
-- **`commands/`**: Command handlers and processing
-- **`tools/`**: MCP tools integration and direct client
-- **`tests/`**: Unit tests
+## Configuration
+
+J4NE uses environment variables for configuration. Create a `.env` file in your working directory or set environment variables:
+
+```bash
+# Copy the example configuration
+cp .env.example .env
+# Edit with your settings
+```
+
+Key configuration options:
+- IRC server settings
+- AI service API keys
+- Platform-specific tokens and credentials
+
+## Commands
+
+- `j4ne` or `j4ne chat` - Start interactive chat loop
+- `j4ne web` - Start web server on port 8000
+- `j4ne greet <name>` - Send a greeting message
+- `j4ne --help` - Show help information
+
+All commands support `--verbose` flag for detailed logging.
 
 ## Development
 
-The application uses:
-- **Starlette**: Modern async web framework
-- **Uvicorn**: ASGI server for web interface
-- **MCP**: Model Context Protocol for tool integration
-- **OpenCode Zen**: AI-powered chat responses with coding-optimized models
-- **Rich**: Beautiful terminal output
-
-## Database
-
-The application uses SQLite for data persistence:
-- Chat data and other information is stored in `database.db` (created automatically)
-
-## Command Line Options
+For development setup:
 
 ```bash
-python j4ne.py --help          # Show all available commands
-python j4ne.py --verbose       # Enable verbose logging
-python j4ne.py chat            # Start interactive chat (default)
-python j4ne.py greet <name>    # Send greeting
-python j4ne.py web             # Start web server
+# Clone the repository
+git clone https://github.com/japherwocky/j4ne.git
+cd j4ne
+
+# Install in development mode
+pip install -e .
+
+# Or install dependencies directly
+pip install -r requirements.txt
 ```
 
-## Contributing
+## Platform Support
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+- **IRC**: Full IRC client with configurable servers and channels
+- **Twitch**: Twitch chat integration
+- **Discord**: Discord bot capabilities
+- **Twitter**: Twitter API integration
+- **Web**: Built-in web interface
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License - see LICENSE file for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
