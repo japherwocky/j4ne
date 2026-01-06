@@ -1,7 +1,0 @@
-tornado
-mcp
-openai
-pathspec
-rich
-starlette
-uvicorn
