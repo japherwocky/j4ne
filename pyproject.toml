@@ -20,8 +20,8 @@ dependencies = [
     "rich",
     "starlette",
     "uvicorn",
+    "typer",
 ]
 
 [project.scripts]
-j4ne = "j4ne:main"
-
+j4ne = "j4ne:app"

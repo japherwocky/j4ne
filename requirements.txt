@@ -10,3 +10,4 @@ uvicorn
 tiktoken
 colorama
 irc3
+typer
