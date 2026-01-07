@@ -5,7 +5,7 @@ A modern chat bot with data visualizations for IRC, Twitch, Discord, and Twitter
 ## Features
 
 - **Interactive Chat Interface**: CLI-based chat with MCP (Model Context Protocol) integration
-- **Multi-Platform Support**: Works with IRC, Twitch, Discord, and Twitter
+- **Multi-Platform Support**: Works with IRC, Slack, Twitch, Discord, and Twitter
 - **OpenCode Zen Integration**: Powered by OpenCode Zen for intelligent responses with coding-optimized models
 - **Modern Architecture**: Built with Starlette web framework and async Python
 
@@ -31,6 +31,63 @@ A modern chat bot with data visualizations for IRC, Twitch, Discord, and Twitter
      # Edit .env and set OPENCODE_ZEN_API_KEY=your_api_key
      ```
    - Or set environment variable directly: `export OPENCODE_ZEN_API_KEY=your_api_key`
+
+## Slack Configuration
+
+To enable Slack integration:
+
+1. **Create a Slack App**:
+   - Go to https://api.slack.com/apps and click "Create New App"
+   - Choose "From scratch" and give your app a name
+   - Select the workspace where you want to install the bot
+
+2. **Configure OAuth Scopes**:
+   - Go to "OAuth & Permissions" in your app settings
+   - Add the following Bot Token Scopes:
+     - `app_mentions:read` - Listen for @mentions
+     - `chat:write` - Send messages
+     - `channels:history` - Read channel messages
+     - `groups:history` - Read private channel messages
+     - `im:history` - Read direct messages
+     - `mpim:history` - Read group direct messages
+
+3. **Enable Socket Mode**:
+   - Go to "Socket Mode" in your app settings
+   - Enable Socket Mode and create an App Token
+   - Copy the App Token (starts with `xapp-`)
+
+4. **Install the App**:
+   - Go to "Install App" and install to your workspace
+   - Copy the Bot User OAuth Token (starts with `xoxb-`)
+
+5. **Configure Environment Variables**:
+   ```bash
+   # Add to your .env file
+   SLACK_BOT_TOKEN=xoxb-your-bot-token-here
+   SLACK_APP_TOKEN=xapp-your-app-token-here
+   ```
+
+6. **Enable Events**:
+   - Go to "Event Subscriptions" in your app settings
+   - Enable Events and subscribe to:
+     - `app_mention` - When users @mention your bot
+     - `message.im` - Direct messages to your bot
+
+## Using Slack Integration
+
+1. **Start the web server** (this starts both IRC and Slack clients):
+   ```bash
+   python j4ne.py web
+   ```
+
+2. **Invite the bot to channels**:
+   - In Slack, type `/invite @your-bot-name` in any channel
+   - Or add the bot through the channel settings
+
+3. **Chat with the bot**:
+   - **In channels**: @mention the bot: `@j4ne-bot Hello!`
+   - **Direct messages**: Just send a message directly
+   - The bot will respond in threads for better conversation context
 
 ## Usage
 
