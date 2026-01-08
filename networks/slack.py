@@ -130,9 +130,17 @@ class SlackClient(NetworkClient):
     def _setup_handlers(self):
         """Set up Slack event handlers."""
         
+        # Debug: Log ALL events received
+        @self.app.event("*")
+        async def handle_all_events(event, **kwargs):
+            """Debug handler to log all events."""
+            self.logger.debug(f"Received event: {event.get('type', 'unknown')}")
+            self.logger.debug(f"Event data: {event}")
+        
         @self.app.event("app_mention")
         async def handle_app_mention(event, say, client):
             """Handle @mentions of the bot."""
+            self.logger.info(f"App mention received: {event.get('text', '')[:100]}...")
             await self._handle_message_event(event, client, is_mention=True)
         
         @self.app.event("message")
@@ -140,18 +148,26 @@ class SlackClient(NetworkClient):
             """Handle direct messages to the bot."""
             # Only respond to DMs (not channel messages without mentions)
             if event.get("channel_type") == "im":
+                self.logger.info(f"DM received: {event.get('text', '')[:100]}...")
                 await self._handle_message_event(event, client, is_mention=False)
     
     async def _handle_message_event(self, event, client, is_mention: bool = False):
         """Process a Slack message event."""
+        self.logger.debug(f"Processing message event: {event.get('type', 'unknown')}")
+        self.logger.debug(f"Event details: channel={event.get('channel')}, user={event.get('user')}, text={event.get('text', '')[:50]}...")
+        
         try:
             # Skip bot messages and messages without text
             if event.get("bot_id") or not event.get("text"):
+                self.logger.debug(f"Skipping message: bot_id={event.get('bot_id')}, text={event.get('text')}")
                 return
             
             # Skip our own messages
             if event.get("user") == self.bot_user_id:
+                self.logger.debug(f"Skipping own message")
                 return
+            
+            self.logger.info(f"Processing message from user {event.get('user')}: {event.get('text', '')[:100]}...")
             
             # Get user info
             user_info = await client.users_info(user=event["user"])
