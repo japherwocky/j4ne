@@ -21,8 +21,8 @@ logger.addHandler(channel)
 
 from chatters import chat_loop
 from starlette.responses import PlainTextResponse
-# --- Import IRC client ---
-from networks.irc import IRCClient
+# --- Import network clients ---
+from networks import IRCClient, SlackClient
 
 def home(request):
     # Simple home page response
@@ -33,12 +33,13 @@ routes = [
     Route("/", endpoint=home),
 ]
 
-async def start_web_server_with_irc():
+async def start_web_server_with_networks():
     """
-    Starts the Starlette web server with IRC client.
+    Starts the Starlette web server with IRC and Slack clients.
     """
     chat_client = None
     irc_client = None
+    slack_client = None
     
     # Initialize chat client for AI responses (optional)
     try:
@@ -48,7 +49,7 @@ async def start_web_server_with_irc():
         logger.info("Chat client initialized successfully")
     except Exception as e:
         logger.warning(f"Failed to initialize chat client: {e}")
-        logger.info("IRC will run without AI responses")
+        logger.info("Network clients will run without AI responses")
     
     # Initialize IRC client
     irc_client = IRCClient(chat_client=chat_client)
@@ -64,6 +65,20 @@ async def start_web_server_with_irc():
     else:
         logger.info("IRC not configured, skipping IRC client startup")
     
+    # Initialize Slack client
+    slack_client = SlackClient(chat_client=chat_client)
+    
+    # Start Slack client in background
+    if slack_client.bot_token and slack_client.app_token:  # Only start if Slack is configured
+        logger.info("Starting Slack client...")
+        success = await slack_client.connect()
+        if success:
+            logger.info("Slack client connected via Socket Mode")
+        else:
+            logger.warning("Failed to connect to Slack")
+    else:
+        logger.info("Slack not configured, skipping Slack client startup")
+    
     # Create Starlette app
     app = Starlette(debug=True, routes=routes)
     
@@ -75,9 +90,11 @@ async def start_web_server_with_irc():
     try:
         await server.serve()
     finally:
-        # Cleanup IRC client
+        # Cleanup network clients
         if irc_client and irc_client.connected:
             await irc_client.disconnect()
+        if slack_client and slack_client.connected:
+            await slack_client.disconnect()
         if chat_client:
             await chat_client.cleanup()
 
@@ -85,7 +102,7 @@ def start_web_server():
     """
     Starts the Starlette web server (legacy sync wrapper).
     """
-    asyncio.run(start_web_server_with_irc())
+    asyncio.run(start_web_server_with_networks())
 
 # Create the Typer app
 app = typer.Typer(
@@ -123,7 +140,7 @@ def greet(
 def web(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging for debugging.")
 ):
-    """Start the Starlette web server."""
+    """Start the Starlette web server with IRC and Slack clients."""
     if verbose:
         logger.setLevel(logging.DEBUG)
         logger.debug("Verbose mode enabled.")
