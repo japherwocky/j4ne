@@ -12,3 +12,4 @@ colorama
 irc3
 typer
 slack-bolt[async]
+aiohttp
