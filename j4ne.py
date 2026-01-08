@@ -137,10 +137,10 @@ def greet(
     handle_greet(name)
 
 @app.command()
-def web(
+def serve(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging for debugging.")
 ):
-    """Start the Starlette web server with IRC and Slack clients."""
+    """Start the J4NE bot server with IRC and Slack integrations."""
     if verbose:
         logger.setLevel(logging.DEBUG)
         logger.debug("Verbose mode enabled.")
