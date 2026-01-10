@@ -27,15 +27,19 @@ class TestDirectTools(unittest.TestCase):
         # Create a test directory
         self.test_dir = Path("./test_direct_tools")
         self.test_dir.mkdir(exist_ok=True)
-        
+
         # Create a test database path
         self.test_db = Path("./test_direct_tools.db")
-        
+
+        # Clean up any existing test database from previous runs
+        if self.test_db.exists():
+            self.test_db.unlink()
+
         # Create a multiplexer with providers
         self.multiplexer = DirectMultiplexer()
         self.fs_provider = FilesystemToolProvider(str(self.test_dir))
         self.sqlite_provider = SQLiteToolProvider(str(self.test_db))
-        
+
         self.multiplexer.add_provider(self.fs_provider)
         self.multiplexer.add_provider(self.sqlite_provider)
     
@@ -94,12 +98,18 @@ class TestDirectTools(unittest.TestCase):
     
     def test_sqlite_tools(self):
         """Test SQLite tools"""
+        # Drop the table if it exists to ensure clean state
+        self.multiplexer.execute_tool(
+            "sqlite.write-query",
+            {"query": "DROP TABLE IF EXISTS test_table"}
+        )
+
         # Create a test table
         result = self.multiplexer.execute_tool(
             "sqlite.create-table",
             {
                 "query": """
-                CREATE TABLE IF NOT EXISTS test_table (
+                CREATE TABLE test_table (
                     id INTEGER PRIMARY KEY,
                     name TEXT NOT NULL,
                     value REAL
