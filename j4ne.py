@@ -11,6 +11,7 @@ import uvicorn
 import asyncio
 import typer
 from typing import Optional
+import os
 
 logger = logging.getLogger()
 logger.setLevel("INFO")
@@ -23,6 +24,8 @@ from chatters import chat_loop
 from starlette.responses import PlainTextResponse
 # --- Import network clients ---
 from networks import IRCClient, SlackClient
+# --- Import Slack HTTP routes for production mode ---
+from networks.slack_http import get_slack_routes
 # --- Import DirectClient with tool filtering ---
 from tools.direct_client import DirectClient, SAFE_TOOLS, SLACK_TOOLS
 
@@ -38,10 +41,30 @@ routes = [
 async def start_web_server_with_networks():
     """
     Starts the Starlette web server with IRC and Slack clients.
+    Supports both Socket Mode (development) and HTTP mode (production).
     """
     chat_client = None
     chat_client_full = None  # For IRC (trusted environment)
     slack_client = None
+
+    # Determine Slack mode from environment or auto-detect
+    slack_mode = os.getenv('SLACK_MODE', 'auto').lower()
+    slack_signing_secret = os.getenv('SLACK_SIGNING_SECRET')
+    slack_app_token = os.getenv('SLACK_APP_TOKEN')
+
+    # Auto-detect mode: HTTP if signing secret available, otherwise Socket Mode
+    if slack_mode == 'auto':
+        if slack_signing_secret:
+            slack_mode = 'http'
+            logger.info("Auto-detected Slack mode: HTTP (signing secret available)")
+        elif slack_app_token:
+            slack_mode = 'socket'
+            logger.info("Auto-detected Slack mode: Socket Mode (app token available)")
+        else:
+            slack_mode = 'http'
+            logger.info("Auto-detected Slack mode: HTTP (default)")
+
+    logger.info(f"Using Slack mode: {slack_mode}")
 
     # Initialize full chat client for IRC (trusted, gets all tools)
     try:
@@ -64,7 +87,7 @@ async def start_web_server_with_networks():
 
     # Initialize IRC client (uses full client for all tools)
     irc_client = IRCClient(chat_client=chat_client_full)
-    
+
     # Start IRC client in background
     if irc_client.server:  # Only start if IRC is configured
         logger.info("Starting IRC client...")
@@ -75,23 +98,46 @@ async def start_web_server_with_networks():
             logger.warning("Failed to connect to IRC")
     else:
         logger.info("IRC not configured, skipping IRC client startup")
-    
-    # Initialize Slack client
-    slack_client = SlackClient(chat_client=chat_client)
-    
-    # Start Slack client in background
-    if slack_client.bot_token and slack_client.app_token:  # Only start if Slack is configured
-        logger.info("Starting Slack client...")
-        success = await slack_client.connect()
-        if success:
-            logger.info("Slack client connected via Socket Mode")
+
+    # Initialize Slack client with appropriate mode
+    slack_client = SlackClient(chat_client=chat_client, mode=slack_mode)
+
+    # Start Slack client based on mode
+    if slack_mode == 'socket':
+        # Socket Mode: requires bot_token AND app_token
+        if slack_client.bot_token and slack_client.app_token:
+            logger.info("Starting Slack client via Socket Mode...")
+            success = await slack_client.connect()
+            if success:
+                logger.info("Slack client connected via Socket Mode")
+            else:
+                logger.warning("Failed to connect to Slack via Socket Mode")
         else:
-            logger.warning("Failed to connect to Slack")
+            logger.info("Slack tokens not configured for Socket Mode, skipping Slack client startup")
     else:
-        logger.info("Slack not configured, skipping Slack client startup")
-    
+        # HTTP mode: only requires bot_token (for API calls) and signing_secret (for webhooks)
+        if slack_client.bot_token:
+            logger.info("Starting Slack client via HTTP mode...")
+            success = await slack_client.connect()
+            if success:
+                logger.info("Slack client ready via HTTP mode (webhooks active)")
+            else:
+                logger.warning("Failed to initialize Slack client for HTTP mode")
+        else:
+            logger.info("Slack bot token not configured, skipping Slack client startup")
+
+    # Build routes (include Slack HTTP routes for production mode)
+    app_routes = [
+        Route("/", endpoint=home),
+    ]
+
+    # Add Slack HTTP routes in production mode
+    if slack_mode == 'http':
+        app_routes.extend(get_slack_routes())
+        logger.info("Slack HTTP webhook routes registered")
+
     # Create Starlette app
-    app = Starlette(debug=True, routes=routes)
+    app = Starlette(debug=True, routes=app_routes)
     
     # Start web server
     logger.info("Starting Starlette web server...")

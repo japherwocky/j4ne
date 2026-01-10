@@ -59,20 +59,44 @@ def markdown_to_mrkdwn(text: str) -> str:
 
 
 class SlackClient(NetworkClient):
-    """Slack network client using Slack Bolt with Socket Mode."""
+    """Slack network client supporting both HTTP and Socket Mode."""
 
     # Reaction emoji constants
     REACTION_THINKING = "hourglass"  # Thinking/working on it
     REACTION_DONE = "white_check_mark"  # Done/success
     REACTION_ERROR = "x"  # Error/failed
 
-    def __init__(self, chat_client=None):
+    # Global instance for HTTP webhook access
+    _global_instance = None
+
+    @classmethod
+    def set_global_instance(cls, instance):
+        """Set the global SlackClient instance for HTTP webhook access."""
+        cls._global_instance = instance
+
+    @classmethod
+    def get_global_instance(cls):
+        """Get the global SlackClient instance."""
+        return cls._global_instance
+
+    def __init__(self, chat_client=None, mode: str = "auto"):
+        """
+        Initialize Slack client.
+
+        Args:
+            chat_client: Chat client for AI responses
+            mode: Connection mode - "socket" (Socket Mode), "http" (HTTP webhook),
+                  or "auto" (HTTP if signing secret available, otherwise Socket Mode)
+        """
         super().__init__("slack")
 
         # Slack configuration from environment variables
         self.bot_token = os.getenv('SLACK_BOT_TOKEN')
         self.app_token = os.getenv('SLACK_APP_TOKEN')
         self.signing_secret = os.getenv('SLACK_SIGNING_SECRET')
+
+        # Determine connection mode
+        self.mode = self._determine_mode(mode)
 
         # Slack Bolt app and socket handler
         self.app = None
@@ -85,17 +109,53 @@ class SlackClient(NetworkClient):
         # Bot user ID (will be set after connection)
         self.bot_user_id = None
 
-        # Validate required tokens
-        if not self.bot_token or not self.app_token:
-            self.logger.warning(
-                "Missing Slack tokens. Set SLACK_BOT_TOKEN and SLACK_APP_TOKEN "
-                "environment variables to enable Slack integration."
-            )
+        # Validate required tokens based on mode
+        if self.mode == "socket":
+            if not self.bot_token or not self.app_token:
+                self.logger.warning(
+                    "Socket Mode requires SLACK_BOT_TOKEN and SLACK_APP_TOKEN. "
+                    "Set these environment variables or use HTTP mode."
+                )
+        else:  # http mode
+            if not self.bot_token:
+                self.logger.warning(
+                    "Missing SLACK_BOT_TOKEN. Set this environment variable to enable Slack integration."
+                )
+            if not self.signing_secret:
+                self.logger.warning(
+                    "Missing SLACK_SIGNING_SECRET. This is required for HTTP mode. "
+                    "Get it from your Slack app settings."
+                )
+
+    def _determine_mode(self, mode: str) -> str:
+        """
+        Determine the connection mode based on parameter and environment.
+
+        Args:
+            mode: Requested mode ("socket", "http", or "auto")
+
+        Returns:
+            Actual mode to use
+        """
+        if mode == "socket":
+            return "socket"
+        if mode == "http":
+            return "http"
+
+        # Auto mode: prefer HTTP if signing secret is available
+        if mode == "auto":
+            if self.signing_secret:
+                return "http"
+            if self.app_token:
+                return "socket"
+            return "http"  # Default to HTTP if neither is configured
+
+        return "http"
 
     async def connect(self) -> bool:
-        """Connect to Slack using Socket Mode."""
-        if not self.bot_token or not self.app_token:
-            self.logger.warning("Slack tokens not configured, skipping Slack client startup")
+        """Connect to Slack using either HTTP mode or Socket Mode."""
+        if not self.bot_token:
+            self.logger.warning("Slack bot token not configured, skipping Slack client startup")
             return False
 
         try:
@@ -107,20 +167,32 @@ class SlackClient(NetworkClient):
             self.bot_user_id = auth_response["user_id"]
             self.logger.info(f"Slack bot user ID: {self.bot_user_id}")
 
-            # Set up event handlers
+            # Set up event handlers (for both modes)
             self._setup_handlers()
 
-            # Initialize Socket Mode handler
-            self.handler = AsyncSocketModeHandler(self.app, self.app_token)
+            # Register as global instance for HTTP mode
+            SlackClient.set_global_instance(self)
 
-            # Start the handler in background
-            self._handler_task = asyncio.create_task(self.handler.start_async())
+            if self.mode == "socket":
+                # Socket Mode connection
+                if not self.app_token:
+                    self.logger.warning("SLACK_APP_TOKEN required for Socket Mode")
+                    return False
 
-            # Wait a bit for connection
-            await asyncio.sleep(2)
+                # Initialize Socket Mode handler
+                self.handler = AsyncSocketModeHandler(self.app, self.app_token)
+                self._handler_task = asyncio.create_task(self.handler.start_async())
 
-            self.connected = True
-            self.logger.info("Connected to Slack via Socket Mode")
+                # Wait a bit for connection
+                await asyncio.sleep(2)
+
+                self.connected = True
+                self.logger.info("Connected to Slack via Socket Mode")
+            else:
+                # HTTP mode - just verify connection, no socket needed
+                self.connected = True
+                self.logger.info("Connected to Slack via HTTP mode (webhook receiver active)")
+
             return True
 
         except Exception as e:
@@ -138,6 +210,10 @@ class SlackClient(NetworkClient):
                 await self._handler_task
             except asyncio.CancelledError:
                 pass
+
+        # Clear global instance
+        if SlackClient.get_global_instance() == self:
+            SlackClient.set_global_instance(None)
 
         self.connected = False
         self.logger.info("Disconnected from Slack")
