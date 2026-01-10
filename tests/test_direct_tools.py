@@ -24,36 +24,31 @@ class TestDirectTools(unittest.TestCase):
     
     def setUp(self):
         """Set up test environment"""
-        # Create a test directory
+        # Create a test directory for filesystem tools
         self.test_dir = Path("./test_direct_tools")
         self.test_dir.mkdir(exist_ok=True)
 
-        # Create a test database path
-        self.test_db = Path("./test_direct_tools.db")
-
-        # Clean up any existing test database from previous runs
-        if self.test_db.exists():
-            self.test_db.unlink()
+        # Use in-memory SQLite database for faster, isolated tests
+        # The :memory: database is created fresh for each test
+        self.test_db = ":memory:"
 
         # Create a multiplexer with providers
         self.multiplexer = DirectMultiplexer()
         self.fs_provider = FilesystemToolProvider(str(self.test_dir))
-        self.sqlite_provider = SQLiteToolProvider(str(self.test_db))
+        self.sqlite_provider = SQLiteToolProvider(self.test_db)
 
         self.multiplexer.add_provider(self.fs_provider)
         self.multiplexer.add_provider(self.sqlite_provider)
     
     def tearDown(self):
         """Clean up test environment"""
-        # Remove test files
+        # Remove test directory and files
         if self.test_dir.exists():
             for file in self.test_dir.iterdir():
                 file.unlink()
             self.test_dir.rmdir()
-        
-        # Remove test database
-        if self.test_db.exists():
-            self.test_db.unlink()
+
+        # No cleanup needed for :memory: database - it disappears when the connection closes
     
     def test_filesystem_tools(self):
         """Test filesystem tools"""
