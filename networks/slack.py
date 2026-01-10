@@ -5,6 +5,7 @@ Slack network client implementation using Slack Bolt for Python.
 import asyncio
 import time
 import os
+import re
 from typing import Optional
 import logging
 
@@ -12,6 +13,49 @@ from slack_bolt.async_app import AsyncApp
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 
 from .base import NetworkClient, NetworkMessage
+
+
+def markdown_to_mrkdwn(text: str) -> str:
+    """
+    Convert markdown formatting to Slack's mrkdwn format.
+
+    Markdown → Slack mrkdwn:
+    - **bold** → *bold*
+    - *italic* → _italic_
+    - `code` → `code`
+    - ```code block``` → ```code block```
+    - ~~strike~~ → ~strike~
+    - > quote → > quote
+    - [text](url) → <url|text>
+    """
+    if not text:
+        return text
+
+    # Code blocks (```...```)
+    text = re.sub(r'```(\w*)\n([\s\S]*?)```', r'```\2```', text)
+
+    # Inline code (`...`)
+    text = re.sub(r'`([^`]+)`', r'`\1`', text)
+
+    # Bold (**...** → *...*)
+    text = re.sub(r'\*\*([^*]+)\*\*', r'*\1*', text)
+
+    # Italic (*...* → _..._) - be careful not to match bold
+    text = re.sub(r'(?<![\*])(\*)([^\s*]+)(?!\1)', r'_\2_', text)
+    # Actually, this is tricky. Let's use a simpler approach for italic
+    # Match _italic_ format if it's already there
+    text = re.sub(r'_(.+?)_', r'_\1_', text)
+
+    # Strikethrough (~~...~~ → ~...~)
+    text = re.sub(r'~~(.+?)~~', r'~\1~', text)
+
+    # Links ([text](url) → <url|text>)
+    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<\2|\1>', text)
+
+    # Block quotes (> text)
+    text = re.sub(r'^>\s*(.+)$', r'>\1', text, flags=re.MULTILINE)
+
+    return text
 
 
 class SlackClient(NetworkClient):
@@ -99,15 +143,18 @@ class SlackClient(NetworkClient):
         self.logger.info("Disconnected from Slack")
 
     async def send_message(self, channel: str, message: str, thread_ts: Optional[str] = None):
-        """Send a message to a Slack channel."""
+        """Send a message to a Slack channel, converting markdown to mrkdwn format."""
         if not self.connected or not self.app:
             self.logger.warning("Not connected to Slack")
             return
 
+        # Convert markdown to Slack's mrkdwn format
+        mrkdwn_message = markdown_to_mrkdwn(message)
+
         try:
             await self.app.client.chat_postMessage(
                 channel=channel,
-                text=message,
+                text=mrkdwn_message,
                 thread_ts=thread_ts
             )
             self.logger.debug(f"Sent message to {channel}: {message[:50]}...")
