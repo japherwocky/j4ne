@@ -46,6 +46,7 @@ console = Console()
 # ---- Safe Tools Configuration ----
 
 # Tools that are safe to expose to untrusted users (read-only operations)
+# These are available to CLI and IRC
 SAFE_TOOLS: Set[str] = {
     "filesystem.read-file",
     "filesystem.list-files",
@@ -68,6 +69,10 @@ WRITE_TOOLS: Set[str] = {
     "git.commit",
     "git.branch",
 }
+
+# Slack-specific tools (empty for now, but abstraction is in place)
+# These would be Slack-aware tools that could be added later
+SLACK_TOOLS: Set[str] = set()
 
 
 class DirectClient:

@@ -24,7 +24,7 @@ from starlette.responses import PlainTextResponse
 # --- Import network clients ---
 from networks import IRCClient, SlackClient
 # --- Import DirectClient with tool filtering ---
-from tools.direct_client import DirectClient, SAFE_TOOLS
+from tools.direct_client import DirectClient, SAFE_TOOLS, SLACK_TOOLS
 
 def home(request):
     # Simple home page response
@@ -51,12 +51,12 @@ async def start_web_server_with_networks():
     except Exception as e:
         logger.warning(f"Failed to initialize full chat client: {e}")
 
-    # Initialize restricted chat client for Slack (untrusted, only safe tools)
+    # Initialize restricted chat client for Slack (no tools, conversational only)
     try:
-        chat_client_slack = DirectClient(allowed_tools=SAFE_TOOLS)
-        logger.info("Restricted chat client initialized for Slack")
+        chat_client_slack = DirectClient(allowed_tools=SLACK_TOOLS)
+        logger.info("Chat client initialized for Slack (no tools)")
     except Exception as e:
-        logger.warning(f"Failed to initialize restricted chat client: {e}")
+        logger.warning(f"Failed to initialize Slack chat client: {e}")
         chat_client_slack = None
 
     # Use the restricted client for Slack
