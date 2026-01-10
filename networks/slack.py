@@ -303,23 +303,24 @@ class SlackClient(NetworkClient):
             # Build history from thread messages
             history = []
             for msg in response["messages"]:
-                # Skip messages without text or from bots
-                if not msg.get("text") or msg.get("bot_id"):
+                # Skip messages without text
+                if not msg.get("text"):
                     continue
 
-                # Skip our own messages
-                if msg.get("user") == self.bot_user_id:
-                    continue
+                # Check if this is our bot's message
+                is_our_bot = msg.get("bot_id") or msg.get("user") == self.bot_user_id
 
-                # Get username for this message
-                if msg.get("user"):
+                # Get username for user messages
+                if not is_our_bot and msg.get("user"):
                     try:
                         user_info = await client.users_info(user=msg["user"])
                         username = user_info["user"]["real_name"] or user_info["user"]["name"]
                     except Exception:
                         username = "unknown"
-                else:
+                elif not is_our_bot:
                     username = "unknown"
+                else:
+                    username = "j4ne"  # Our bot's name
 
                 # Clean the message text (remove bot mentions)
                 msg_text = msg["text"]
@@ -327,9 +328,10 @@ class SlackClient(NetworkClient):
                     bot_mention = f"<@{self.bot_user_id}>"
                     msg_text = msg_text.replace(bot_mention, "").strip()
 
-                # Add to history
+                # Add to history with appropriate role
+                # Our bot messages get role="assistant", users get role="user"
                 history.append({
-                    "role": "user",
+                    "role": "assistant" if is_our_bot else "user",
                     "content": f"{username}: {msg_text}"
                 })
 
