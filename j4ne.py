@@ -23,6 +23,8 @@ from chatters import chat_loop
 from starlette.responses import PlainTextResponse
 # --- Import network clients ---
 from networks import IRCClient, SlackClient
+# --- Import DirectClient with tool filtering ---
+from tools.direct_client import DirectClient, SAFE_TOOLS
 
 def home(request):
     # Simple home page response
@@ -38,21 +40,30 @@ async def start_web_server_with_networks():
     Starts the Starlette web server with IRC and Slack clients.
     """
     chat_client = None
-    irc_client = None
+    chat_client_full = None  # For IRC (trusted environment)
     slack_client = None
-    
-    # Initialize chat client for AI responses (optional)
+
+    # Initialize full chat client for IRC (trusted, gets all tools)
     try:
-        from tools.direct_client import DirectClient
-        chat_client = DirectClient()
-        await chat_client.connect_to_server()
-        logger.info("Chat client initialized successfully")
+        chat_client_full = DirectClient(allowed_tools=None)  # All tools
+        await chat_client_full.connect_to_server()
+        logger.info("Full chat client initialized for IRC")
     except Exception as e:
-        logger.warning(f"Failed to initialize chat client: {e}")
-        logger.info("Network clients will run without AI responses")
-    
-    # Initialize IRC client
-    irc_client = IRCClient(chat_client=chat_client)
+        logger.warning(f"Failed to initialize full chat client: {e}")
+
+    # Initialize restricted chat client for Slack (untrusted, only safe tools)
+    try:
+        chat_client_slack = DirectClient(allowed_tools=SAFE_TOOLS)
+        logger.info("Restricted chat client initialized for Slack")
+    except Exception as e:
+        logger.warning(f"Failed to initialize restricted chat client: {e}")
+        chat_client_slack = None
+
+    # Use the restricted client for Slack
+    chat_client = chat_client_slack
+
+    # Initialize IRC client (uses full client for all tools)
+    irc_client = IRCClient(chat_client=chat_client_full)
     
     # Start IRC client in background
     if irc_client.server:  # Only start if IRC is configured
