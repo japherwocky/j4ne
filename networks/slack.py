@@ -17,6 +17,11 @@ from .base import NetworkClient, NetworkMessage
 class SlackClient(NetworkClient):
     """Slack network client using Slack Bolt with Socket Mode."""
 
+    # Reaction emoji constants
+    REACTION_THINKING = "hourglass"  # Thinking/working on it
+    REACTION_DONE = "white_check_mark"  # Done/success
+    REACTION_ERROR = "x"  # Error/failed
+
     def __init__(self, chat_client=None):
         super().__init__("slack")
 
@@ -108,6 +113,80 @@ class SlackClient(NetworkClient):
             self.logger.debug(f"Sent message to {channel}: {message[:50]}...")
         except Exception as e:
             self.logger.error(f"Failed to send Slack message: {e}")
+
+    async def add_reaction(self, channel_id: str, timestamp: str, emoji: str) -> bool:
+        """
+        Add an emoji reaction to a message.
+
+        Args:
+            channel_id: The Slack channel ID
+            timestamp: The timestamp of the message to react to
+            emoji: The emoji name (without colons)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.connected or not self.app:
+            self.logger.warning("Not connected to Slack")
+            return False
+
+        try:
+            await self.app.client.reactions_add(
+                channel=channel_id,
+                timestamp=timestamp,
+                name=emoji
+            )
+            self.logger.debug(f"Added reaction :{emoji}: to message {timestamp}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to add reaction :{emoji}: {e}")
+            return False
+
+    async def remove_reaction(self, channel_id: str, timestamp: str, emoji: str) -> bool:
+        """
+        Remove an emoji reaction from a message.
+
+        Args:
+            channel_id: The Slack channel ID
+            timestamp: The timestamp of the message to unreact from
+            emoji: The emoji name (without colons)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.connected or not self.app:
+            self.logger.warning("Not connected to Slack")
+            return False
+
+        try:
+            await self.app.client.reactions_remove(
+                channel=channel_id,
+                timestamp=timestamp,
+                name=emoji
+            )
+            self.logger.debug(f"Removed reaction :{emoji}: from message {timestamp}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to remove reaction :{emoji}: {e}")
+            return False
+
+    async def update_reaction(self, channel_id: str, timestamp: str, old_emoji: str, new_emoji: str) -> bool:
+        """
+        Replace one emoji reaction with another.
+
+        Args:
+            channel_id: The Slack channel ID
+            timestamp: The timestamp of the message
+            old_emoji: The emoji to remove (without colons)
+            new_emoji: The emoji to add (without colons)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        # Remove old reaction and add new one
+        removed = await self.remove_reaction(channel_id, timestamp, old_emoji)
+        added = await self.add_reaction(channel_id, timestamp, new_emoji)
+        return removed and added
 
     async def join_channel(self, channel: str):
         """Join a Slack channel (bot must be invited by users)."""
@@ -268,6 +347,17 @@ class SlackClient(NetworkClient):
 
             # Generate AI response if chat client is available
             if self.chat_client and message_text.strip():
+                # Get message timestamp for reactions
+                message_ts = event.get("ts")
+
+                # Add thinking reaction immediately
+                if message_ts:
+                    await self.add_reaction(
+                        channel_id,
+                        message_ts,
+                        self.REACTION_THINKING
+                    )
+
                 try:
                     # Check if this is a thread reply
                     thread_ts = event.get("thread_ts")
@@ -297,8 +387,27 @@ class SlackClient(NetworkClient):
 
                         self.logger.info(f"Sent AI response to {channel_name} for {username}")
 
+                        # Update reaction to done
+                        if message_ts:
+                            await self.update_reaction(
+                                channel_id,
+                                message_ts,
+                                self.REACTION_THINKING,
+                                self.REACTION_DONE
+                            )
+
                 except Exception as e:
                     self.logger.error(f"Error generating AI response: {e}")
+
+                    # Update reaction to error
+                    if message_ts:
+                        await self.update_reaction(
+                            channel_id,
+                            message_ts,
+                            self.REACTION_THINKING,
+                            self.REACTION_ERROR
+                        )
+
                     # Send a friendly error message
                     await self.send_message(
                         channel=channel_id,
