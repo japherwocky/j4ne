@@ -109,8 +109,56 @@ async def demo_lsp_operations():
         else:
             print("   ℹ️  No references found at this position")
         
+        # 5. Workspace Symbol Search - Find symbols across entire project
+        print("\n🔎 Workspace Symbol Search (Project-wide Search):")
+        workspace_result = await lsp.workspace_symbols("demo")
+        
+        if "error" in workspace_result:
+            print(f"   ❌ Error: {workspace_result['error']}")
+        elif workspace_result["count"] > 0:
+            print(f"   🎯 Found {workspace_result['count']} symbols matching 'demo':")
+            for symbol in workspace_result["symbols"][:3]:  # Show first 3
+                file_info = symbol.get("file", "Unknown file")
+                line = symbol.get("range", {}).get("start", {}).get("line", "?")
+                print(f"   • {symbol['kind']}: {symbol['name']} in {file_info} (line {line})")
+        else:
+            print("   ℹ️  No symbols found matching 'demo'")
+        
+        # 6. Call Hierarchy - Analyze function call relationships
+        print("\n📞 Call Hierarchy (Function Call Analysis):")
+        # Try to prepare call hierarchy for the main function
+        hierarchy_result = await lsp.prepare_call_hierarchy(demo_file, 160, 10)  # Approximate position of main()
+        
+        if "error" in hierarchy_result:
+            print(f"   ❌ Error: {hierarchy_result['error']}")
+        elif hierarchy_result["count"] > 0:
+            item = hierarchy_result["items"][0]
+            print(f"   📋 Prepared call hierarchy for: {item['name']} ({item['kind']})")
+            
+            # Find incoming calls (who calls this function)
+            incoming_result = await lsp.incoming_calls(item["_original"])
+            if incoming_result["count"] > 0:
+                print(f"   📥 Found {incoming_result['count']} incoming calls")
+            else:
+                print("   📥 No incoming calls found")
+            
+            # Find outgoing calls (what this function calls)
+            outgoing_result = await lsp.outgoing_calls(item["_original"])
+            if outgoing_result["count"] > 0:
+                print(f"   📤 Found {outgoing_result['count']} outgoing calls")
+                for call in outgoing_result["calls"][:2]:  # Show first 2
+                    print(f"      → Calls: {call['to']['name']} ({call['to']['kind']})")
+            else:
+                print("   📤 No outgoing calls found")
+        else:
+            print("   ℹ️  No call hierarchy available at this position")
+        
         print("\n✨ Demo completed! LSP provides the same code intelligence")
         print("   that developers use in VS Code - now available for AI agents!")
+        print("\n🎯 Phase 2 Operations Added:")
+        print("   • workspaceSymbol - Search across entire project")
+        print("   • goToImplementation - Find interface implementations")
+        print("   • Call Hierarchy - Analyze function call relationships")
 
 
 def print_usage_examples():
@@ -122,36 +170,47 @@ def print_usage_examples():
     print("""
 # Basic usage with convenience functions
 import asyncio
-from tools.lsp_tool import go_to_definition, find_references, hover, document_symbols
+from tools.lsp_tool import (
+    go_to_definition, find_references, hover, document_symbols,
+    workspace_symbols, go_to_implementation, prepare_call_hierarchy,
+    incoming_calls, outgoing_calls
+)
 
 async def analyze_code():
-    # Find where a symbol is defined
+    # Phase 1: Core operations
     result = await go_to_definition("src/main.py", 10, 5)
-    print(f"Definition: {result}")
-    
-    # Find all references to a symbol
     result = await find_references("src/main.py", 10, 5)
-    print(f"References: {result}")
-    
-    # Get documentation for a symbol
     result = await hover("src/main.py", 10, 5)
-    print(f"Documentation: {result}")
-    
-    # List all symbols in a file
     result = await document_symbols("src/main.py")
-    print(f"Symbols: {result}")
+    
+    # Phase 2: Advanced operations
+    result = await workspace_symbols("Calculator")  # Search entire project
+    result = await go_to_implementation("src/main.py", 10, 5)  # Find implementations
+    
+    # Call hierarchy analysis
+    hierarchy = await prepare_call_hierarchy("src/main.py", 10, 5)
+    if hierarchy["count"] > 0:
+        item = hierarchy["items"][0]["_original"]
+        incoming = await incoming_calls(item)  # Who calls this?
+        outgoing = await outgoing_calls(item)  # What does this call?
 
 # Advanced usage with LSPTool class
 async def advanced_analysis():
     async with LSPTool("/path/to/project") as lsp:
-        # Multiple operations with same server instance
+        # Analyze function call relationships
         symbols = await lsp.document_symbols("main.py")
         for symbol in symbols["symbols"]:
-            # Get details for each symbol
-            hover_info = await lsp.hover("main.py", 
-                                       symbol["range"]["start"]["line"],
-                                       symbol["range"]["start"]["character"])
-            print(f"{symbol['name']}: {hover_info}")
+            if symbol["kind"] == "Function":
+                # Get call hierarchy for each function
+                hierarchy = await lsp.prepare_call_hierarchy(
+                    "main.py", 
+                    symbol["range"]["start"]["line"],
+                    symbol["range"]["start"]["character"]
+                )
+                if hierarchy["count"] > 0:
+                    item = hierarchy["items"][0]["_original"]
+                    calls = await lsp.outgoing_calls(item)
+                    print(f"{symbol['name']} calls {calls['count']} functions")
 
 asyncio.run(analyze_code())
 """)

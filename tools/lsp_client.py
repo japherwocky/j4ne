@@ -274,6 +274,104 @@ class LSPClient:
         result = await self._send_request("textDocument/documentSymbol", params)
         return result or []
     
+    async def workspace_symbols(self, query: str) -> List[Dict[str, Any]]:
+        """
+        Search for symbols across the entire workspace.
+        
+        Args:
+            query: Search query string
+            
+        Returns:
+            List of symbol information dictionaries
+        """
+        if not self._initialized:
+            raise LSPClientError("LSP server not initialized")
+        
+        params = {"query": query}
+        
+        result = await self._send_request("workspace/symbol", params)
+        return result or []
+    
+    async def go_to_implementation(self, file_path: Path, position: Position) -> List[Dict[str, Any]]:
+        """
+        Find implementations of an interface or abstract method at the given position.
+        
+        Args:
+            file_path: Path to the file
+            position: Position in the file
+            
+        Returns:
+            List of location dictionaries with 'uri', 'range' keys
+        """
+        if not self._initialized:
+            raise LSPClientError("LSP server not initialized")
+        
+        params = {
+            "textDocument": {"uri": file_path.as_uri()},
+            "position": position.to_lsp()
+        }
+        
+        result = await self._send_request("textDocument/implementation", params)
+        return self._normalize_locations(result)
+    
+    async def prepare_call_hierarchy(self, file_path: Path, position: Position) -> List[Dict[str, Any]]:
+        """
+        Prepare call hierarchy items at the given position.
+        
+        Args:
+            file_path: Path to the file
+            position: Position in the file
+            
+        Returns:
+            List of call hierarchy item dictionaries
+        """
+        if not self._initialized:
+            raise LSPClientError("LSP server not initialized")
+        
+        params = {
+            "textDocument": {"uri": file_path.as_uri()},
+            "position": position.to_lsp()
+        }
+        
+        result = await self._send_request("textDocument/prepareCallHierarchy", params)
+        return result or []
+    
+    async def incoming_calls(self, call_hierarchy_item: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Find all functions/methods that call the given call hierarchy item.
+        
+        Args:
+            call_hierarchy_item: Call hierarchy item from prepare_call_hierarchy
+            
+        Returns:
+            List of incoming call dictionaries
+        """
+        if not self._initialized:
+            raise LSPClientError("LSP server not initialized")
+        
+        params = {"item": call_hierarchy_item}
+        
+        result = await self._send_request("callHierarchy/incomingCalls", params)
+        return result or []
+    
+    async def outgoing_calls(self, call_hierarchy_item: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Find all functions/methods called by the given call hierarchy item.
+        
+        Args:
+            call_hierarchy_item: Call hierarchy item from prepare_call_hierarchy
+            
+        Returns:
+            List of outgoing call dictionaries
+        """
+        if not self._initialized:
+            raise LSPClientError("LSP server not initialized")
+        
+        params = {"item": call_hierarchy_item}
+        
+        result = await self._send_request("callHierarchy/outgoingCalls", params)
+        return result or []
+    
     def _check_server_executable(self) -> bool:
         """Check if the LSP server executable is available."""
         try:
@@ -297,7 +395,9 @@ class LSPClient:
                     "definition": {"linkSupport": True},
                     "references": {},
                     "hover": {"contentFormat": ["markdown", "plaintext"]},
-                    "documentSymbol": {"hierarchicalDocumentSymbolSupport": True}
+                    "documentSymbol": {"hierarchicalDocumentSymbolSupport": True},
+                    "implementation": {"linkSupport": True},
+                    "callHierarchy": {}
                 },
                 "workspace": {
                     "symbol": {}
