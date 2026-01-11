@@ -37,18 +37,29 @@ This document contains comprehensive analysis of the OpenCode repository to guid
 
 ### Tier 1: Must-Have (Implement First)
 
-1. **`read`** - Smart file reading
-   - 50KB max, 2000 lines default
-   - Line-based reading with offset/limit
-   - File existence checking with suggestions
+1. ✅ **`read`** - Smart file reading **[COMPLETED]**
+   - ✅ 50KB max, 2000 lines default
+   - ✅ Line-based reading with offset/limit
+   - ✅ File existence checking with suggestions
+   - ✅ Binary file detection and blocking
+   - ✅ Image/PDF base64 encoding support
+   - ✅ Line numbering in cat -n format
+   - ✅ UTF-8 encoding with proper error handling
+   - ✅ Implementation: `tools/read_tool.py` (350+ lines)
+   - ✅ Tests: `tests/test_read_tool.py` (16 tests, all passing)
    - Location: `packages/opencode/src/tool/read.ts`
 
-2. **`edit`** - Precise string find/replace
-   - Exact string matching (not regex)
-   - `replaceAll` option for batch renaming
-   - Requires reading file first (safety)
-   - Preserves indentation perfectly
-   - Shows diffs before applying
+2. ✅ **`edit`** - Precise string find/replace **[COMPLETED]**
+   - ✅ Exact string matching (not regex)
+   - ✅ `replaceAll` option for batch renaming
+   - ✅ Requires reading file first (safety)
+   - ✅ Preserves indentation perfectly
+   - ✅ Shows diffs before applying
+   - ✅ Multiple sophisticated replacement strategies
+   - ✅ Safety features through unique match detection
+   - ✅ Support for creating new files
+   - ✅ Implementation: `tools/edit_tool.py` (500+ lines)
+   - ✅ Tests: `tests/test_edit_tool.py` (25 tests, all passing)
    - Location: `packages/opencode/src/tool/edit.ts`
    - Note: Sources approaches from Cline and Gemini CLI
 
