@@ -86,10 +86,17 @@ This document contains comprehensive analysis of the OpenCode repository to guid
    - ✅ Tests: `tests/test_grep_tool.py` (24 tests, all passing)
    - Location: `packages/opencode/src/tool/grep.ts`
 
-5. **`bash`** - Shell command execution
-   - Persistent shell session
-   - Security validation using tree-sitter
-   - Git operations, builds, testing
+5. ✅ **`bash`** - Shell command execution **[COMPLETED]**
+   - ✅ Cross-platform shell detection (Git Bash, WSL, PowerShell, cmd on Windows)
+   - ✅ Intelligent shell selection with fallback hierarchy
+   - ✅ Command execution with timeout support
+   - ✅ Security validation for dangerous commands
+   - ✅ Working directory support
+   - ✅ Process tree termination (Unix: SIGTERM/SIGKILL, Windows: taskkill)
+   - ✅ Path translation for Git Bash on Windows
+   - ✅ Error handling and output truncation
+   - ✅ Implementation: `tools/bash_tool.py` (450+ lines)
+   - ✅ Tests: `tests/test_bash_tool.py` (comprehensive cross-platform tests)
    - Location: `packages/opencode/src/tool/bash.ts`
 
 ### Tier 2: Very Useful (Implement Next)
