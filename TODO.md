@@ -62,10 +62,17 @@ This document contains comprehensive analysis of the OpenCode repository to guid
    - ✅ Tests: `tests/test_write_tool.py` (20 tests, all passing)
    - Location: `packages/opencode/src/tool/write.ts`
 
-4. **`grep`** - Content search via ripgrep
-   - Regex pattern search
-   - File type filtering (`*.js`, `*.{ts,tsx}`)
-   - Directory scoping
+4. ✅ **`grep`** - Content search via ripgrep **[COMPLETED]**
+   - ✅ Regex pattern search with full regex syntax support
+   - ✅ File type filtering (`*.js`, `*.{ts,tsx}`)
+   - ✅ Directory scoping and subdirectory search
+   - ✅ Results sorted by modification time (most recent first)
+   - ✅ Line number and content display
+   - ✅ Hidden file search support
+   - ✅ Result truncation with configurable limits
+   - ✅ Long line truncation for readability
+   - ✅ Implementation: `tools/grep_tool.py` (300+ lines)
+   - ✅ Tests: `tests/test_grep_tool.py` (24 tests, all passing)
    - Location: `packages/opencode/src/tool/grep.ts`
 
 5. **`bash`** - Shell command execution
