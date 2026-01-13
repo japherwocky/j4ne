@@ -33,6 +33,32 @@ This document contains comprehensive analysis of the OpenCode repository to guid
 
 **Approach**: Build clean monolithic CLI with typer, design core logic for future extraction if needed.
 
+## Core Tools Status
+
+### ✅ Additional Tools Already Implemented (Not in OpenCode)
+
+**Filesystem Tools** (in `tools/direct_tools.py`):
+- ✅ **`ReadFileTool`** - File reading via MCP protocol
+- ✅ **`WriteFileTool`** - File writing via MCP protocol  
+- ✅ **`ListFilesTool`** - Directory listing (similar to `ls`)
+- ✅ **`DeleteFileTool`** - File deletion
+
+**Database Tools** (in `tools/direct_tools.py`):
+- ✅ **`ReadQueryTool`** - SQLite query execution
+- ✅ **`WriteQueryTool`** - SQLite data modification
+- ✅ **`CreateTableTool`** - SQLite table creation
+- ✅ **`ListTablesTool`** - SQLite schema inspection
+- ✅ **`DescribeTableTool`** - SQLite table description
+- ✅ **`AppendInsightTool`** - Data insights logging
+
+**Git Tools** (in `tools/direct_tools.py`):
+- ✅ **`GitStatusTool`** - Git status checking
+- ✅ **`GitAddTool`** - Git staging
+- ✅ **`GitCommitTool`** - Git commits
+- ✅ **`GitBranchTool`** - Git branch management
+- ✅ **`GitLogTool`** - Git history
+- ✅ **`GitDiffTool`** - Git diff viewing
+
 ## Core Tools to Implement (Priority Order)
 
 ### Tier 1: Must-Have (Implement First)
@@ -86,16 +112,21 @@ This document contains comprehensive analysis of the OpenCode repository to guid
    - ✅ Tests: `tests/test_grep_tool.py` (24 tests, all passing)
    - Location: `packages/opencode/src/tool/grep.ts`
 
-5. **`bash`** - Shell command execution
-   - Persistent shell session
-   - Security validation using tree-sitter
-   - Git operations, builds, testing
+5. ✅ **`bash`** - Shell command execution **[COMPLETED]**
+   - ✅ Command execution with configurable timeout
+   - ✅ Working directory support
+   - ✅ Cross-platform process termination
+   - ✅ Output truncation for large outputs
+   - ✅ Basic security validation for dangerous commands
+   - ✅ Proper error handling and exit code capture
+   - ✅ Implementation: `tools/bash_tool.py` (375+ lines)
+   - ✅ Tests: `tests/test_bash_tool.py` (25+ test cases)
    - Location: `packages/opencode/src/tool/bash.ts`
 
 ### Tier 2: Very Useful (Implement Next)
 
-6. **`lsp`** - Language Server Protocol integration **[HIGH PRIORITY - MASSIVE VALUE-ADD]**
-   
+6. 🚧 **`lsp`** - Language Server Protocol integration **[HIGH PRIORITY - MASSIVE VALUE-ADD]**
+    
    **Core Operations (from OpenCode analysis):**
    1. **`goToDefinition`** - Find where a symbol is defined
    2. **`findReferences`** - Find all references to a symbol  
@@ -120,13 +151,13 @@ This document contains comprehensive analysis of the OpenCode repository to guid
    - **Planned languages**: Python → JavaScript/TypeScript → C++
    - **Phase 1**: Core 4 operations (goToDefinition, findReferences, hover, documentSymbol)
    - **Phase 2**: Advanced 5 operations (workspace, implementation, call hierarchy)
-   
+    
    **Python LSP Server Options:**
    - **Pyright** (Microsoft) - Fast, accurate, TypeScript-based, used by Pylance
    - **Pylsp** (Python LSP Server) - Pure Python, extensible, community-maintained
    - **Jedi Language Server** - Based on Jedi library, lightweight
    - **Recommendation**: Start with Pyright for speed/accuracy, fallback to Pylsp
-   
+    
    **Key Insights from OpenCode:**
    - LSP provides sophisticated code intelligence (not just linting)
    - Critical for AI code generation (same features as VS Code)
@@ -138,7 +169,7 @@ This document contains comprehensive analysis of the OpenCode repository to guid
    - File watching and diagnostics add significant complexity
    - Timeout handling is critical (LSP servers can hang)
    - Position conversion between 1-based (editor) and 0-based (LSP) is error-prone
-   
+    
    Location: `packages/opencode/src/tool/lsp.ts`
    LSP server implementation: `packages/opencode/src/lsp/server.ts` (2032 lines)
 
