@@ -210,17 +210,29 @@ This document contains comprehensive analysis of the OpenCode repository to guid
     - NOTE: Experimental tool - not exposed in main tools list
     - Location: `packages/opencode/src/tool/patch.ts`
 
-11. **`codesearch`** - External code context via Exa API
-    - Find API usage examples
-    - External dependency (API key required)
-    - **Requires MCP infrastructure** (see Phase 3 below)
+11. **`codesearch`** - External code context via Exa API **[MCP - Phase 3]**
+    - Find API usage examples and code documentation
+    - Uses Exa MCP endpoint: `https://mcp.exa.ai/mcp`
+    - Tool: `get_code_context_exa`
+    - Parameters: query, tokensNum (1000-50000)
+    - External dependency: Exa API key required
     - Location: `packages/opencode/src/tool/codesearch.ts`
+
+12. **`websearch`** - Real-time web search via Exa AI **[MCP - Phase 3]**
+    - Search the web and scrape content from URLs
+    - Uses Exa MCP endpoint: `https://mcp.exa.ai/mcp`
+    - Tool: `web_search_exa`
+    - Parameters: query, numResults, livecrawl, type, contextMaxCharacters
+    - Supports live crawling modes: 'fallback' or 'preferred'
+    - Search types: 'auto', 'fast', 'deep'
+    - External dependency: Exa API key required
+    - Location: `packages/opencode/src/tool/websearch.ts`
 
 ## Phase 3: MCP Integration (Future)
 
 ### MCP (Model Context Protocol) Overview
 MCP is a protocol for connecting AI assistants to external tools and data sources.
-OpenCode uses MCP to integrate with services like Exa's code search API.
+OpenCode uses MCP to integrate with services like Exa's web and code search APIs.
 
 ### Why MCP is Complex
 - JSON-RPC 2.0 communication layer
@@ -229,14 +241,47 @@ OpenCode uses MCP to integrate with services like Exa's code search API.
 - Server-Sent Events (SSE) for streaming responses
 - Protocol negotiation and capability exchange
 
+### MCP Tools to Implement
+
+#### Core MCP Infrastructure
+1. **`mcp_client`** - Generic MCP client infrastructure
+   - JSON-RPC 2.0 message formatting and parsing
+   - HTTP transport with SSE streaming support
+   - Request/response correlation with IDs
+   - Error handling per JSON-RPC spec
+
+2. **`mcp_server`** - Allow j4ne to act as MCP server (optional)
+   - Tool registration and discovery
+   - Request handling and response formatting
+
+#### Exa MCP Tools (via mcp.exa.ai)
+3. **`codesearch`** - Code search via Exa
+   - Uses `get_code_context_exa` tool
+   - Returns code examples and documentation
+
+4. **`websearch`** - Web search via Exa
+   - Uses `web_search_exa` tool
+   - Returns scraped web content
+
 ### Implementation Plan
 1. Create `tools/mcp_client.py` - Generic MCP client infrastructure
-2. Create `tools/mcp_server.py` - Allow j4ne to act as MCP server
-3. Refactor `codesearch_tool.py` to use MCP client
-4. Support additional MCP servers for extensibility
+   - JSON-RPC 2.0 message formatting/parsing
+   - HTTP transport with SSE support
+   - Timeout and abort signal handling
+
+2. Create `tools/codesearch_tool.py` - Code search via Exa MCP
+   - Uses `get_code_context_exa` tool
+   - Configurable token count (1000-50000)
+
+3. Create `tools/websearch_tool.py` - Web search via Exa MCP
+   - Uses `web_search_exa` tool
+   - Supports live crawling, search types, result limits
+
+4. Add MCP tools to tools/__init__.py (when ready)
 
 ### Benefits of MCP Support
 - Access to Exa code search (codesearch tool)
+- Access to Exa web search (websearch tool)
 - Database connections via MCP
 - Web APIs and services
 - Custom tool integrations
@@ -313,8 +358,20 @@ packages/
 3. **glob and ls tools**: ✅ COMPLETED
 4. **multiedit tool**: ✅ COMPLETED
 5. **patch tool**: ✅ COMPLETED (experimental - not exposed in tools list)
-6. **Phase 3**: MCP integration for codesearch and other external tools
-6. **Skip patch initially** - complex parsing, low priority
+
+## Phase 3: MCP Integration (Next)
+1. **mcp_client.py** - Generic MCP client infrastructure
+   - JSON-RPC 2.0 message formatting/parsing
+   - HTTP transport with SSE support
+   - Timeout and abort signal handling
+
+2. **codesearch_tool.py** - Code search via Exa MCP
+   - Uses `get_code_context_exa` tool
+   - Configurable token count (1000-50000)
+
+3. **websearch_tool.py** - Web search via Exa MCP
+   - Uses `web_search_exa` tool
+   - Supports live crawling, search types, result limits
 
 ## Benefits of Python Approach
 
