@@ -12,3 +12,7 @@ colorama
 irc3
 typer
 slack-bolt[async]
+# LSP dependencies
+pygls>=1.3.0
+python-lsp-jsonrpc>=1.1.0
+psutil>=5.9.0

@@ -125,12 +125,53 @@ This document contains comprehensive analysis of the OpenCode repository to guid
 
 ### Tier 2: Very Useful (Implement Next)
 
-6. 🚧 **`lsp`** - Language Server Protocol integration **[IN PROGRESS]**
-   - 9 operations: goToDefinition, findReferences, hover, documentSymbol, workspaceSymbol, goToImplementation, prepareCallHierarchy, incomingCalls, outgoingCalls
-   - Massive value-add for code generation
-   - Location: `packages/opencode/src/tool/lsp.ts`
-   - LSP server implementation: `packages/opencode/src/lsp/server.ts` (~62KB)
-   - **Status**: Someone is currently working on this implementation
+6. 🚧 **`lsp`** - Language Server Protocol integration **[HIGH PRIORITY - MASSIVE VALUE-ADD]**
+    
+   **Core Operations (from OpenCode analysis):**
+   1. **`goToDefinition`** - Find where a symbol is defined
+   2. **`findReferences`** - Find all references to a symbol  
+   3. **`hover`** - Get hover information (documentation, type info) for a symbol
+   4. **`documentSymbol`** - Get all symbols (functions, classes, variables) in a document
+   5. **`workspaceSymbol`** - Search for symbols across the entire workspace
+   6. **`goToImplementation`** - Find implementations of an interface or abstract method
+   7. **`prepareCallHierarchy`** - Get call hierarchy item at a position (functions/methods)
+   8. **`incomingCalls`** - Find all functions/methods that call the function at a position
+   9. **`outgoingCalls`** - Find all functions/methods called by the function at a position
+
+   **OpenCode Implementation Analysis:**
+   - **Massive scope**: 2032 lines in `server.ts`, supports 37 language servers
+   - **Complex architecture**: JSON-RPC communication, process management, server spawning
+   - **Known issues**: User reports it's "pretty buggy" - likely due to complexity
+   - **Languages supported**: Deno, TypeScript, Vue, ESLint, Oxlint, Biome, Gopls (Go), Rubocop (Ruby), Pyright (Python), ElixirLS, Zls (Zig), C#, F#, Swift, Rust, Clangd (C/C++), Svelte, Astro, Java, Kotlin, YAML, Lua, PHP, Prisma, Dart, OCaml, Bash, Terraform, LaTeX, Docker, Gleam, Clojure, Nix, Typst, Haskell
+
+   **Our Approach:**
+   - Start with **Python-only** using Pyright or Pylsp
+   - Use **wrapper approach** around existing mature LSP servers
+   - **Opinionated**: One LSP server per language (avoid OpenCode's complexity)
+   - **Planned languages**: Python → JavaScript/TypeScript → C++
+   - **Phase 1**: Core 4 operations (goToDefinition, findReferences, hover, documentSymbol)
+   - **Phase 2**: Advanced 5 operations (workspace, implementation, call hierarchy)
+    
+   **Python LSP Server Options:**
+   - **Pyright** (Microsoft) - Fast, accurate, TypeScript-based, used by Pylance
+   - **Pylsp** (Python LSP Server) - Pure Python, extensible, community-maintained
+   - **Jedi Language Server** - Based on Jedi library, lightweight
+   - **Recommendation**: Start with Pyright for speed/accuracy, fallback to Pylsp
+    
+   **Key Insights from OpenCode:**
+   - LSP provides sophisticated code intelligence (not just linting)
+   - Critical for AI code generation (same features as VS Code)
+   - Complexity is the enemy - simpler approach needed
+   - Process management and JSON-RPC are the hard parts
+   - Project root detection is crucial for each language
+   - Uses `vscode-jsonrpc` for JSON-RPC communication
+   - Each language has custom spawn logic and configuration
+   - File watching and diagnostics add significant complexity
+   - Timeout handling is critical (LSP servers can hang)
+   - Position conversion between 1-based (editor) and 0-based (LSP) is error-prone
+    
+   Location: `packages/opencode/src/tool/lsp.ts`
+   LSP server implementation: `packages/opencode/src/lsp/server.ts` (2032 lines)
 
 7. **`multiedit`** - Multiple edits in single operation
    - Batch string replacements on same file
