@@ -201,9 +201,13 @@ This document contains comprehensive analysis of the OpenCode repository to guid
 
 ### Tier 3: Nice to Have (Implement Later)
 
-10. **`patch`** - Apply unified diff patches
+10. **`patch`** - Apply unified diff patches **[COMPLETED - NOT EXPOSED]**
     - Multi-file changes in single operation
-    - Complex parsing required
+    - Custom format: `*** Begin Patch` / `*** End Patch`
+    - Supports add, update, delete, and move operations
+    - Implementation: `tools/patch_tool.py` (400+ lines)
+    - Tests: `tests/test_patch_tool.py` (24 tests, all passing)
+    - NOTE: Experimental tool - not exposed in main tools list
     - Location: `packages/opencode/src/tool/patch.ts`
 
 11. **`codesearch`** - External code context via Exa API
@@ -308,7 +312,8 @@ packages/
 2. **LSP integration**: ✅ COMPLETED (analysis and implementation)
 3. **glob and ls tools**: ✅ COMPLETED
 4. **multiedit tool**: ✅ COMPLETED
-5. **Future (Phase 3)**: MCP integration for codesearch and other external tools
+5. **patch tool**: ✅ COMPLETED (experimental - not exposed in tools list)
+6. **Phase 3**: MCP integration for codesearch and other external tools
 6. **Skip patch initially** - complex parsing, low priority
 
 ## Benefits of Python Approach
