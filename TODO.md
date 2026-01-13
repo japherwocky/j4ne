@@ -173,21 +173,28 @@ This document contains comprehensive analysis of the OpenCode repository to guid
    Location: `packages/opencode/src/tool/lsp.ts`
    LSP server implementation: `packages/opencode/src/lsp/server.ts` (2032 lines)
 
-7. **`multiedit`** - Multiple edits in single operation
-   - Batch string replacements on same file
-   - Atomic operation (all or nothing)
-   - Location: `packages/opencode/src/tool/multiedit.ts`
+7. ✅ **`multiedit`** - Multiple edits in single operation **[NOT STARTED]**
+    - Batch string replacements on same file
+    - Atomic operation (all or nothing)
+    - Location: `packages/opencode/src/tool/multiedit.ts`
 
-8. **`glob`** - File pattern matching
-   - Find files by patterns (`*.py`, `**/*.test.js`)
-   - More discoverable than basic ls
-   - Location: `packages/opencode/src/tool/glob.ts`
+8. ✅ **`glob`** - File pattern matching **[COMPLETED]**
+    - Fast file pattern matching using pathlib
+    - Supports glob patterns like "**/*.js" or "src/**/*.ts"
+    - Returns matching files sorted by modification time (most recent first)
+    - 100 result limit with truncation notice
+    - Implementation: `tools/glob_tool.py` (80+ lines)
+    - Tests: `tests/test_glob_tool.py` (12 tests, all passing)
+    - Location: `packages/opencode/src/tool/glob.ts`
 
-9. **`ls`** - Smart directory listing
-   - Ignores common build/cache dirs
-   - Pre-configured patterns: `node_modules`, `__pycache__`, `.git`, etc.
-   - Limited results (100 files max)
-   - Location: `packages/opencode/src/tool/ls.ts`
+9. ✅ **`ls`** - Smart directory listing **[COMPLETED]**
+    - Tree-like directory listing structure
+    - Ignores common build/cache directories (node_modules, __pycache__, etc.)
+    - Custom ignore pattern support
+    - 100 file limit with truncation
+    - Implementation: `tools/ls_tool.py` (150+ lines)
+    - Tests: `tests/test_ls_tool.py` (10 tests, all passing)
+    - Location: `packages/opencode/src/tool/ls.ts`
 
 ### Tier 3: Nice to Have (Implement Later)
 
@@ -199,7 +206,34 @@ This document contains comprehensive analysis of the OpenCode repository to guid
 11. **`codesearch`** - External code context via Exa API
     - Find API usage examples
     - External dependency (API key required)
+    - **Requires MCP infrastructure** (see Phase 3 below)
     - Location: `packages/opencode/src/tool/codesearch.ts`
+
+## Phase 3: MCP Integration (Future)
+
+### MCP (Model Context Protocol) Overview
+MCP is a protocol for connecting AI assistants to external tools and data sources.
+OpenCode uses MCP to integrate with services like Exa's code search API.
+
+### Why MCP is Complex
+- JSON-RPC 2.0 communication layer
+- Server spawning and lifecycle management
+- Request/response handling with proper error codes
+- Server-Sent Events (SSE) for streaming responses
+- Protocol negotiation and capability exchange
+
+### Implementation Plan
+1. Create `tools/mcp_client.py` - Generic MCP client infrastructure
+2. Create `tools/mcp_server.py` - Allow j4ne to act as MCP server
+3. Refactor `codesearch_tool.py` to use MCP client
+4. Support additional MCP servers for extensibility
+
+### Benefits of MCP Support
+- Access to Exa code search (codesearch tool)
+- Database connections via MCP
+- Web APIs and services
+- Custom tool integrations
+- Interoperability with other MCP-compatible tools
 
 ## Technology Stack Analysis
 
@@ -267,10 +301,12 @@ packages/
 
 ## Next Steps for Implementation
 
-1. **Start with core 5 tools**: read, edit, write, grep, bash
-2. **Add LSP integration** for code intelligence
-3. **Add glob and multiedit** for batching
-4. **Skip patch and codesearch** initially
+1. **Core 5 tools**: read, edit, write, grep, bash ✅ COMPLETED
+2. **LSP integration**: ✅ COMPLETED (analysis and implementation)
+3. **glob and ls tools**: ✅ COMPLETED
+4. **Next**: multiedit (batch editing)
+5. **Future (Phase 3)**: MCP integration for codesearch and other external tools
+6. **Skip patch initially** - complex parsing, low priority
 
 ## Benefits of Python Approach
 
