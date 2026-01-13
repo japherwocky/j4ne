@@ -1,0 +1,24 @@
+[Unit]
+Description=J4NE Chat Bot Service
+After=network.target
+
+[Service]
+Type=simple
+User=j4ne
+Group=j4ne
+WorkingDirectory=/opt/j4ne
+Environment=PATH=/opt/j4ne/venv/bin
+EnvironmentFile=/opt/j4ne/.env
+ExecStart=/opt/j4ne/venv/bin/python /opt/j4ne/j4ne.py web
+Restart=always
+RestartSec=10
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/j4ne
+
+[Install]
+WantedBy=multi-user.target
