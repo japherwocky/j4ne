@@ -173,10 +173,13 @@ This document contains comprehensive analysis of the OpenCode repository to guid
    Location: `packages/opencode/src/tool/lsp.ts`
    LSP server implementation: `packages/opencode/src/lsp/server.ts` (2032 lines)
 
-7. ✅ **`multiedit`** - Multiple edits in single operation **[NOT STARTED]**
-    - Batch string replacements on same file
-    - Atomic operation (all or nothing)
-    - Location: `packages/opencode/src/tool/multiedit.ts`
+7. ✅ **`multiedit`** - Multiple edits in single operation **[COMPLETED]**
+     - Batch string replacements on same file
+     - Atomic operation (all or nothing)
+     - Shows combined diff before applying
+     - Implementation: `tools/multiedit_tool.py` (290+ lines)
+     - Tests: `tests/test_multiedit_tool.py` (22 tests, all passing)
+     - Location: `packages/opencode/src/tool/multiedit.ts`
 
 8. ✅ **`glob`** - File pattern matching **[COMPLETED]**
     - Fast file pattern matching using pathlib
@@ -304,7 +307,7 @@ packages/
 1. **Core 5 tools**: read, edit, write, grep, bash ✅ COMPLETED
 2. **LSP integration**: ✅ COMPLETED (analysis and implementation)
 3. **glob and ls tools**: ✅ COMPLETED
-4. **Next**: multiedit (batch editing)
+4. **multiedit tool**: ✅ COMPLETED
 5. **Future (Phase 3)**: MCP integration for codesearch and other external tools
 6. **Skip patch initially** - complex parsing, low priority
 
