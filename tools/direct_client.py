@@ -30,6 +30,8 @@ from tools.direct_tools import (
     SQLiteToolProvider,
     GitToolProvider,
 )
+from tools.web_search_tool_simple import WebSearchToolProvider
+from tools.github_tool_simple import GitHubToolProvider
 # Import the command handler from the new location
 from commands import command_handler
 
@@ -45,20 +47,45 @@ console = Console()
 
 # ---- Safe Tools Configuration ----
 
-# Tools that are safe to expose to untrusted users (read-only operations)
-# These are available to CLI and IRC
-SAFE_TOOLS: Set[str] = {
+# ---- CLI-LOCAL TOOLS (NEVER expose to Slack) ----
+# Tools that access local filesystem and require trusted environment
+CLI_LOCAL_TOOLS: Set[str] = {
     "filesystem.read-file",
     "filesystem.list-files",
+    "filesystem.glob",
+    "filesystem.write-file",
+    "filesystem.delete-file",
     "sqlite.read-query",
     "sqlite.list-tables",
     "sqlite.describe-table",
+    "sqlite.write-query",
+    "sqlite.create-table",
+    "sqlite.append-insight",
     "git.status",
     "git.log",
     "git.diff",
+    "git.add",
+    "git.commit",
+    "git.branch",
+    "bash.execute",
+    "grep.search",
 }
 
-# Tools that require write access (potentially dangerous)
+# ---- SLACK-SAFE TOOLS (Public/Remote tools only) ----
+# Tools that are safe to expose to public Slack users
+# These tools only access public APIs and don't touch local filesystem
+SLACK_TOOLS: Set[str] = {
+    "web.search",
+    "github.explore-repo",
+    "github.search-repos",
+    "github.get-file",
+}
+
+# ---- Legacy compatibility ----
+# Tools that are safe for CLI/IRC (includes all CLI_LOCAL_TOOLS)
+SAFE_TOOLS: Set[str] = CLI_LOCAL_TOOLS.copy()
+
+# Tools that require write access (potentially dangerous) - for CLI only
 WRITE_TOOLS: Set[str] = {
     "filesystem.write-file",
     "filesystem.delete-file",
@@ -69,10 +96,6 @@ WRITE_TOOLS: Set[str] = {
     "git.commit",
     "git.branch",
 }
-
-# Slack-specific tools (empty for now, but abstraction is in place)
-# These would be Slack-aware tools that could be added later
-SLACK_TOOLS: Set[str] = set()
 
 
 class DirectClient:
@@ -113,17 +136,26 @@ class DirectClient:
         # Set up the multiplexer with tool providers
         self.multiplexer = DirectMultiplexer()
 
-        # Add filesystem tools
-        fs_provider = FilesystemToolProvider(root_path)
-        self.multiplexer.add_provider(fs_provider)
+        # Add filesystem tools (CLI only, NOT for Slack)
+        if self.context != "slack":
+            fs_provider = FilesystemToolProvider(root_path)
+            self.multiplexer.add_provider(fs_provider)
 
-        # Add SQLite tools
-        sqlite_provider = SQLiteToolProvider(db_path)
-        self.multiplexer.add_provider(sqlite_provider)
+            # Add SQLite tools (CLI only, NOT for Slack)
+            sqlite_provider = SQLiteToolProvider(db_path)
+            self.multiplexer.add_provider(sqlite_provider)
 
-        # Add Git tools
-        git_provider = GitToolProvider(root_path)
-        self.multiplexer.add_provider(git_provider)
+            # Add Git tools (CLI only, NOT for Slack)
+            git_provider = GitToolProvider(root_path)
+            self.multiplexer.add_provider(git_provider)
+
+        # Add Web Search tools (Slack-safe)
+        web_provider = WebSearchToolProvider()
+        self.multiplexer.add_provider(web_provider)
+
+        # Add GitHub tools (Slack-safe - public repos only)
+        github_provider = GitHubToolProvider()
+        self.multiplexer.add_provider(github_provider)
 
         # Set up OpenCode Zen client
         self._setup_opencode_zen_client()
@@ -329,4 +361,11 @@ class DirectClient:
     async def cleanup(self):
         """Clean up resources"""
         logger.info("Cleaning up resources")
-        # Nothing to clean up for now, but this method could be used in the future
+        
+        # Clean up async tool providers that have resources
+        for provider in self.multiplexer.providers:
+            if hasattr(provider, 'cleanup'):
+                try:
+                    await provider.cleanup()
+                except Exception as e:
+                    logger.error(f"Error cleaning up provider {type(provider).__name__}: {e}")
