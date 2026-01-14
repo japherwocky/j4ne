@@ -31,7 +31,7 @@ check_root() {
     fi
 }
 
-# Function to create user with SSH key
+# Function to create user
 create_user() {
     echo -e "${YELLOW}👤 Setting up deployment user and SSH key...${NC}"
 
@@ -46,6 +46,12 @@ create_user() {
     # Ensure home directory exists and has correct ownership
     mkdir -p $DEPLOY_DIR
     chown $DEPLOY_USER:$DEPLOY_USER $DEPLOY_DIR
+
+}
+
+# Function to generate SSH key
+generate_ssh_key() {
+    echo -e "${YELLOW}👤 Setting up SSH key for deployment...${NC}"
 
     # Create .ssh directory
     mkdir -p $DEPLOY_DIR/.ssh
@@ -276,26 +282,29 @@ start_service() {
 main() {
     check_root
 
-    echo -e "${GREEN}Step 1: User setup with SSH key${NC}"
+    echo -e "${GREEN}Step 1: User setup${NC}"
     create_user
 
     echo -e "${GREEN}Step 2: Copy repository${NC}"
     copy_repo
 
-    echo -e "${GREEN}Step 3: Application setup${NC}"
+    echo -e "${GREEN}Step 3: SSH key setup${NC}"
+    generate_ssh_key
+
+    echo -e "${GREEN}Step 4: Application setup${NC}"
     setup_virtualenv
     install_dependencies
     setup_env
 
-    echo -e "${GREEN}Step 4: Service configuration${NC}"
+    echo -e "${GREEN}Step 5: Service configuration${NC}"
     setup_systemd
     setup_nginx
     setup_sudoers
 
-    echo -e "${GREEN}Step 5: SSL setup${NC}"
+    echo -e "${GREEN}Step 6: SSL setup${NC}"
     setup_ssl
 
-    echo -e "${GREEN}Step 6: Start service${NC}"
+    echo -e "${GREEN}Step 7: Start service${NC}"
     start_service
 
     echo ""
