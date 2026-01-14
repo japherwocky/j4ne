@@ -87,7 +87,7 @@ class DirectClient:
         return cls._instance
 
     def __init__(self, root_path: str = "./", db_path: str = "./database.db",
-                 allowed_tools: Optional[Set[str]] = None):
+                 allowed_tools: Optional[Set[str]] = None, context: str = "cli"):
         """Initialize the client with tool providers
 
         Args:
@@ -96,8 +96,10 @@ class DirectClient:
             allowed_tools: Set of tool names allowed for this client.
                           If None, all tools are available.
                           Use SAFE_TOOLS for read-only access.
+            context: Context in which the client is being used ("cli" or "slack")
         """
-        logger.info(f"Initializing DirectClient (allowed_tools: {allowed_tools})")
+        logger.info(f"Initializing DirectClient (allowed_tools: {allowed_tools}, context: {context})")
+        self.context = context
 
         # Set this instance as the singleton instance
         DirectClient._instance = self
@@ -178,6 +180,19 @@ class DirectClient:
     async def process_query(self, history: List[Dict[str, str]]) -> str:
         """Process a query using available tools"""
         logger.info("Processing query")
+
+        # Add system prompt if not present
+        if not history or history[0].get("role") != "system":
+            if self.context == "slack":
+                system_content = "You are j4ne, a helpful AI assistant. You communicate through Slack and your name is j4ne. When users ask about your identity or name, you should confidently identify yourself as j4ne. You're here to help with various tasks and conversations."
+            else:  # cli context
+                system_content = "You are j4ne, a helpful AI assistant. Your name is j4ne. When users ask about your identity or name, you should confidently identify yourself as j4ne. You're here to help with various tasks and conversations through this command-line interface."
+            
+            system_prompt = {
+                "role": "system",
+                "content": system_content
+            }
+            history = [system_prompt] + history
 
         # Get available tools (filtered based on allowed_tools)
         available_tools = self.get_available_tools()

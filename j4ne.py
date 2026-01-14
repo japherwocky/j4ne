@@ -76,7 +76,7 @@ async def start_web_server_with_networks():
 
     # Initialize restricted chat client for Slack (no tools, conversational only)
     try:
-        chat_client_slack = DirectClient(allowed_tools=SLACK_TOOLS)
+        chat_client_slack = DirectClient(allowed_tools=SLACK_TOOLS, context="slack")
         logger.info("Chat client initialized for Slack (no tools)")
     except Exception as e:
         logger.warning(f"Failed to initialize Slack chat client: {e}")

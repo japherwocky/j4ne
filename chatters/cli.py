@@ -67,7 +67,15 @@ class MCPClient:
     async def process_query(self, history):
         """Process a query using available tools"""
 
-        init_messages = history
+        # Add system prompt if not present
+        if not history or history[0].get("role") != "system":
+            system_prompt = {
+                "role": "system",
+                "content": "You are j4ne, a helpful AI assistant. You communicate through Slack and your name is j4ne. When users ask about your identity or name, you should confidently identify yourself as j4ne. You're here to help with various tasks and conversations."
+            }
+            init_messages = [system_prompt] + history
+        else:
+            init_messages = history
 
         response = await self.session.list_tools()
         available_tools = [{
