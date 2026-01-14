@@ -15,7 +15,7 @@ from starlette.routing import Route
 logger = logging.getLogger(__name__)
 
 
-def verify_slack_signature(request: Request) -> bool:
+async def verify_slack_signature(request: Request) -> bool:
     """
     Verify the X-Slack-Signature header to ensure the request is from Slack.
 
@@ -31,7 +31,8 @@ def verify_slack_signature(request: Request) -> bool:
         return False
 
     # Get the raw body for signature verification
-    body = request.body.decode('utf-8')
+    body = await request.body()
+    body = body.decode('utf-8')
 
     # Get timestamp from header
     timestamp = request.headers.get('X-Slack-Request-Timestamp', '')
@@ -85,7 +86,7 @@ async def slack_events_handler(request: Request) -> PlainTextResponse:
     """
     try:
         # Verify the request is from Slack
-        if not verify_slack_signature(request):
+        if not await verify_slack_signature(request):
             logger.warning("Rejected request with invalid signature")
             return PlainTextResponse("Invalid signature", status_code=403)
 
@@ -159,7 +160,7 @@ async def slack_interactive_endpoint(request: Request) -> PlainTextResponse:
             return PlainTextResponse("Invalid signature", status_code=403)
 
         payload = await request.form()
-        payload_json = payload.get('payload', '{}')
+        payload_json = str(payload.get('payload', '{}'))
         import json
         payload_data = json.loads(payload_json)
 
