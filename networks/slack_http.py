@@ -7,12 +7,49 @@ import hmac
 import hashlib
 import os
 import logging
+import time
 from typing import Optional
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, JSONResponse
 from starlette.routing import Route
 
 logger = logging.getLogger(__name__)
+
+# Track processed events to prevent duplicates (event_key -> timestamp)
+processed_events: dict = {}
+# TTL for duplicate tracking (10 minutes)
+PROCESSED_EVENT_TTL = 600
+
+
+def get_event_key(event_data: dict) -> str:
+    """Generate a unique key for an event to detect duplicates."""
+    event_type = event_data.get('type', 'unknown')
+    user = event_data.get('user', 'unknown')
+    channel = event_data.get('channel', 'unknown')
+    ts = event_data.get('ts', '0')
+    # For app_mention, include the message text hash to be more specific
+    text = event_data.get('text', '')
+    text_hash = hashlib.md5(text.encode()).hexdigest() if text else ''
+    return f"{event_type}:{user}:{channel}:{ts}:{text_hash}"
+
+
+def is_duplicate_event(event_key: str) -> bool:
+    """Check if this event has already been processed, with TTL cleanup."""
+    current_time = time.time()
+
+    # Clean up old entries
+    expired_keys = [k for k, v in processed_events.items() if current_time - v > PROCESSED_EVENT_TTL]
+    for k in expired_keys:
+        del processed_events[k]
+
+    # Check if this event was already processed
+    if event_key in processed_events:
+        logger.info(f"Duplicate event detected, skipping: {event_key}")
+        return True
+
+    # Mark as processed
+    processed_events[event_key] = current_time
+    return False
 
 
 async def verify_slack_signature(request: Request) -> bool:
@@ -112,6 +149,12 @@ async def slack_events_handler(request: Request) -> PlainTextResponse:
         if event_data:
             # Route event to the appropriate handler
             event_type = event_data.get('type')
+
+            # Check for duplicate events (but skip reaction/other events we don't process)
+            if event_type in ['app_mention', 'message']:
+                event_key = get_event_key(event_data)
+                if is_duplicate_event(event_key):
+                    return PlainTextResponse("OK", status_code=200)
 
             logger.info(f"Received Slack event: type={event_type}, channel={event_data.get('channel')}, user={event_data.get('user')}, thread_ts={event_data.get('thread_ts')}, ts={event_data.get('ts')}")
 
