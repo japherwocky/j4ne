@@ -228,12 +228,13 @@ class SlackClient(NetworkClient):
         mrkdwn_message = markdown_to_mrkdwn(message)
 
         try:
+            self.logger.info(f"chat_postMessage: channel={channel}, thread_ts={thread_ts}, message_preview={message[:100]}...")
             await self.app.client.chat_postMessage(
                 channel=channel,
                 text=mrkdwn_message,
                 thread_ts=thread_ts
             )
-            self.logger.debug(f"Sent message to {channel}: {message[:50]}...")
+            self.logger.info(f"Successfully sent message to channel={channel}, thread_ts={thread_ts}")
         except Exception as e:
             self.logger.error(f"Failed to send Slack message: {e}")
 
@@ -442,6 +443,7 @@ class SlackClient(NetworkClient):
 
             # Get channel info
             channel_id = event["channel"]
+            self.logger.info(f"Event channel_id={channel_id}, thread_ts={event.get('thread_ts')}, ts={event.get('ts')}")
             channel_info = await client.conversations_info(channel=channel_id)
             channel_name = channel_info["channel"]["name"] if channel_info["channel"].get("name") else "DM"
 
@@ -503,6 +505,8 @@ class SlackClient(NetworkClient):
                     if response and response.strip():
                         # Send response in thread if original message was in a thread or if it was a mention
                         reply_ts = thread_ts or (event.get("ts") if is_mention else None)
+
+                        self.logger.info(f"Sending response: channel={channel_id} ({channel_name}), thread_ts={reply_ts}, is_mention={is_mention}, original_thread_ts={thread_ts}")
 
                         await self.send_message(
                             channel=channel_id,

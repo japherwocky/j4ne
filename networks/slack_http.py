@@ -113,6 +113,8 @@ async def slack_events_handler(request: Request) -> PlainTextResponse:
             # Route event to the appropriate handler
             event_type = event_data.get('type')
 
+            logger.info(f"Received Slack event: type={event_type}, channel={event_data.get('channel')}, user={event_data.get('user')}, thread_ts={event_data.get('thread_ts')}, ts={event_data.get('ts')}")
+
             if event_type == 'app_mention':
                 # Handle @mentions of the bot
                 await slack_client._handle_message_event(
