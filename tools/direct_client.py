@@ -30,8 +30,8 @@ from tools.direct_tools import (
     SQLiteToolProvider,
     GitToolProvider,
 )
-from tools.web_search_tool_simple import WebSearchToolProvider
-from tools.github_tool_simple import GitHubToolProvider
+from tools.web_search_tool import WebSearchToolProvider
+from tools.github_tool import GitHubToolProvider
 # Import the command handler from the new location
 from commands import command_handler
 
