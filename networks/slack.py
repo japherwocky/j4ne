@@ -31,26 +31,25 @@ def markdown_to_mrkdwn(text: str) -> str:
     if not text:
         return text
 
-    # Code blocks (```...```)
+    # Code blocks (```...```) - do this first to protect them
     text = re.sub(r'```(\w*)\n([\s\S]*?)```', r'```\2```', text)
 
-    # Inline code (`...`)
+    # Inline code (`...`) - do before other formatting
     text = re.sub(r'`([^`]+)`', r'`\1`', text)
 
-    # Bold (**...** → *...*)
+    # Links ([text](url) → <url|text>) - do before other formatting to avoid interference
+    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<\2|\1>', text)
+
+    # Bold (**...** → *...*) - use a pattern that won't interfere with italic
     text = re.sub(r'\*\*([^*]+)\*\*', r'*\1*', text)
 
-    # Italic (*...* → _..._) - be careful not to match bold
-    text = re.sub(r'(?<![\*])(\*)([^\s*]+)(?!\1)', r'_\2_', text)
-    # Actually, this is tricky. Let's use a simpler approach for italic
-    # Match _italic_ format if it's already there
-    text = re.sub(r'_(.+?)_', r'_\1_', text)
+    # Italic (*...* → _..._) - must be done AFTER bold, and only match single asterisks
+    # Pattern: single * followed by non-*, non-space chars, followed by single *
+    # Must not be preceded or followed by another *
+    text = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'_\1_', text)
 
     # Strikethrough (~~...~~ → ~...~)
     text = re.sub(r'~~(.+?)~~', r'~\1~', text)
-
-    # Links ([text](url) → <url|text>)
-    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<\2|\1>', text)
 
     # Block quotes (> text)
     text = re.sub(r'^>\s*(.+)$', r'>\1', text, flags=re.MULTILINE)
