@@ -351,7 +351,7 @@ class DirectClient:
 
     async def connect_to_server(self):
         """
-        Compatibility method with the old MCP client interface.
+        Compatibility method with the old direct client interface.
         In the direct implementation, there's no server to connect to.
         """
         logger.info("Direct client doesn't need to connect to a server")

@@ -1,6 +1,6 @@
 # Direct Tools Implementation
 
-This directory contains the implementation of the direct tools architecture, which replaces the stdio-based MCP implementation with direct Python function calls.
+This directory contains the implementation of the direct tools architecture for tool integration and execution.
 
 ## Files
 

@@ -164,7 +164,7 @@ def start_web_server():
 # Create the Typer app
 app = typer.Typer(
     name="j4ne",
-    help="A chat bot with data visualizations for IRC, Twitch, Discord, and Twitter",
+    help="A chat bot with data visualizations for IRC and Slack",
     no_args_is_help=False,  # Allow running without args to default to chat
 )
 
@@ -210,7 +210,7 @@ def main(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging for debugging.")
 ):
     """
-    A chat bot with data visualizations for IRC, Twitch, Discord, and Twitter.
+    A chat bot with data visualizations for IRC and Slack.
     
     If no command is specified, defaults to the 'chat' command.
     """
