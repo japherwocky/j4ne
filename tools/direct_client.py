@@ -326,9 +326,12 @@ class DirectClient:
 
                 # Check if this is a command
                 if query.startswith('/'):
-                    result = command_handler.handle_message(query)
+                    from commands import handle_slash_command
+                    result = handle_slash_command(query)
                     if result == "QUIT":
                         break
+                    elif result == "__HANDLED__":
+                        continue  # Command was handled internally, skip processing
                     elif result:
                         console.print(result)
                         continue

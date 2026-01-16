@@ -73,17 +73,23 @@ def handle_slash_command(command: str) -> str:
         # 🚀 NEW: Use defaults (thinking=True, tools=True) or override with flags
         import asyncio
         asyncio.run(handle_enhanced_chat_command(message, show_thinking=thinking, show_tool_calls=tools, verbose=verbose))
-        return ""  # Return empty string to indicate the command was handled internally
+        return "__HANDLED__"  # Special signal to skip processing
 
     elif cmd == '/help':
         show_help()
-        return ""
+        return "__HANDLED__"
 
     elif cmd in ('/quit', '/exit'):
         return "QUIT"
 
+    elif cmd == '/commands':
+        from commands.handler import command_handler
+        help_text = command_handler.get_help()
+        console.print(help_text)
+        return "__HANDLED__"
+
     else:
-        return f"Unknown command: {cmd}\nAvailable commands: /chat, /help, /quit"
+        return f"Unknown command: {cmd}\nAvailable commands: /chat, /commands, /help, /quit"
 
 def show_help():
     """Show available commands"""
@@ -92,6 +98,7 @@ def show_help():
 
 • [cyan]/chat "message"[/cyan] - Enhanced chat with thinking indicators and tool visibility
 • [cyan]/chat "message" --no-thinking --no-tools[/cyan] - Enhanced chat with features disabled
+• [cyan]/commands[/cyan] - List all available commands
 • [cyan]/help[/cyan] - Show this help message
 • [cyan]/quit[/cyan] - Exit the chat
 
