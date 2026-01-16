@@ -1,10 +1,11 @@
 from rich.console import Console
 import time
+import logging
 from typing import Optional
 
 # Import the enhanced chat command functions
-from commands.bot_commands import show_tool_call, show_conversation_summary, chat_command
-from commands.bot_commands import ConversationLogger
+from commands.bot_commands import handle_enhanced_chat_command, greet_command, help_command, quit_command
+from commands.handler import command_handler
 
 # Rich console for pretty output
 console = Console()
@@ -70,12 +71,13 @@ def handle_slash_command(command: str) -> str:
             return "No active chat client found"
         
         # 🚀 NEW: Use defaults (thinking=True, tools=True) or override with flags
-        chat_command(client, message, thinking=thinking, tools=tools, verbose=verbose)
-        return None  # Return None to indicate the command was handled internally
+        import asyncio
+        asyncio.run(handle_enhanced_chat_command(message, show_thinking=thinking, show_tool_calls=tools, verbose=verbose))
+        return ""  # Return empty string to indicate the command was handled internally
 
     elif cmd == '/help':
         show_help()
-        return None
+        return ""
 
     elif cmd in ('/quit', '/exit'):
         return "QUIT"
@@ -113,7 +115,7 @@ async def enhanced_chat_loop(client):
     console.print("[dim]Thinking indicators and tool visibility are enabled by default[/]")
     console.print("Type your queries, '/help' for commands, or '/quit' to exit.\n")
     
-    logger = ConversationLogger()
+    logger = logging.getLogger('commands')
     
     # Initialize history if not already done
     if not hasattr(client, 'history'):
@@ -165,11 +167,7 @@ async def enhanced_chat_loop(client):
                 console.print(response)
                 
                 # Log the conversation
-                logger.log_conversation(
-                    user_input=query,
-                    assistant_response=response,
-                    thinking_time=thinking_time
-                )
+                logger.info(f"Conversation: {query[:50]}... -> {response[:50]}... (Time: {thinking_time:.2f}s)")
                 
                 # Add response to history
                 client.history.append({'role': 'assistant', 'content': response})
