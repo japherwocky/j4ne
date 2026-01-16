@@ -27,3 +27,56 @@
 [2;32m[I 260115 20:01:23 direct_tools:858][0m Executing tool: filesystem.read-file
 [2;32m[I 260115 20:01:36 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
 [2;32m[I 260115 20:01:36 direct_client:289][0m Calling tool: git.add with args: {'files': '.'}
+[2;32m[I 260115 20:01:36 direct_tools:858][0m Executing tool: git.add
+[2;32m[I 260115 20:01:40 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:01:40 direct_client:289][0m Calling tool: git.commit with args: {'message': 'Implement enhanced logging system with file rotation and conversation tracking\n\n- Add comprehensive logging setup with rotating file handler (10MB, 5 backup files)\n- Separate logging configurations for chat, greet, and web modes\n- Create new bot_commands.py with enhanced UI features and conversation logging\n- Add thinking indicators and tool call visibility for debugging\n- Implement conversation logging to JSONL format with timestamps\n- Support for verbose mode with detailed logging information'}
+[2;32m[I 260115 20:01:40 direct_tools:858][0m Executing tool: git.commit
+[2;32m[I 260115 20:01:47 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:02:49 direct_client:214][0m Processing query
+[2;32m[I 260115 20:02:55 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:02:55 direct_client:289][0m Calling tool: filesystem.read-file with args: {'path': 'commands/bot_commands.py'}
+[2;32m[I 260115 20:02:55 direct_tools:858][0m Executing tool: filesystem.read-file
+[2;32m[I 260115 20:02:58 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:02:58 direct_client:289][0m Calling tool: filesystem.read-file with args: {'path': 'j4ne.py'}
+[2;32m[I 260115 20:02:58 direct_tools:858][0m Executing tool: filesystem.read-file
+[2;32m[I 260115 20:03:03 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:03:03 direct_client:289][0m Calling tool: filesystem.read-file with args: {'path': 'chatters.py'}
+[2;32m[I 260115 20:03:03 direct_tools:858][0m Executing tool: filesystem.read-file
+[2;32m[I 260115 20:03:10 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:03:10 direct_client:289][0m Calling tool: filesystem.list-files with args: {'directory': '.'}
+[2;32m[I 260115 20:03:10 direct_tools:858][0m Executing tool: filesystem.list-files
+[2;32m[I 260115 20:03:25 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:03:25 direct_client:289][0m Calling tool: filesystem.read-file with args: {'path': 'chatters/chat_loop.py'}
+[2;32m[I 260115 20:03:25 direct_tools:858][0m Executing tool: filesystem.read-file
+[2;32m[I 260115 20:03:31 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:06:26 direct_client:214][0m Processing query
+[2;32m[I 260115 20:06:30 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:06:30 direct_client:289][0m Calling tool: filesystem.read-file with args: {'path': 'chatters/cli.py'}
+[2;32m[I 260115 20:06:30 direct_tools:858][0m Executing tool: filesystem.read-file
+[2;32m[I 260115 20:06:37 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:06:37 direct_client:289][0m Calling tool: filesystem.read-file with args: {'path': 'main.py'}
+[2;32m[I 260115 20:06:37 direct_tools:858][0m Executing tool: filesystem.read-file
+[2;32m[I 260115 20:06:41 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:06:41 direct_client:289][0m Calling tool: filesystem.list-files with args: {'directory': '.'}
+[2;32m[I 260115 20:06:41 direct_tools:858][0m Executing tool: filesystem.list-files
+[2;32m[I 260115 20:06:44 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:06:44 direct_client:289][0m Calling tool: git.diff with args: {'file_path': 'j4ne.py'}
+[2;32m[I 260115 20:06:44 direct_tools:858][0m Executing tool: git.diff
+[2;32m[I 260115 20:06:47 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:06:47 direct_client:289][0m Calling tool: git.status with args: {'repository_path': '.'}
+[2;32m[I 260115 20:06:47 direct_tools:858][0m Executing tool: git.status
+[2;32m[I 260115 20:06:51 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:06:51 direct_client:289][0m Calling tool: filesystem.read-file with args: {'path': 'j4ne.py'}
+[2;32m[I 260115 20:06:51 direct_tools:858][0m Executing tool: filesystem.read-file
+[2;32m[I 260115 20:07:12 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:07:12 direct_tools:858][0m Executing tool: filesystem.write-file
+[2;32m[I 260115 20:07:17 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:07:17 direct_client:289][0m Calling tool: filesystem.read-file with args: {'path': 'chatters/__init__.py'}
+[2;32m[I 260115 20:07:17 direct_tools:858][0m Executing tool: filesystem.read-file
+[2;32m[I 260115 20:07:24 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:07:24 direct_client:289][0m Calling tool: filesystem.read-file with args: {'path': 'tools/direct_client.py'}
+[2;32m[I 260115 20:07:24 direct_tools:858][0m Executing tool: filesystem.read-file
+[2;32m[I 260115 20:08:04 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:08:04 direct_tools:858][0m Executing tool: filesystem.write-file
+[2;32m[I 260115 20:08:20 _client:1025][0m HTTP Request: POST https://opencode.ai/zen/v1/chat/completions "HTTP/1.1 200 OK"
+[2;32m[I 260115 20:08:20 direct_client:289][0m Calling tool: git.add with args: {'files': '.'}
