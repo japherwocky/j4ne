@@ -2,6 +2,7 @@ import colorama
 colorama.init()
 import tornado  # this sets up logging
 import logging
+import logging.handlers
 from starlette.applications import Starlette
 from starlette.responses import RedirectResponse
 from starlette.routing import Route, Mount
@@ -13,12 +14,48 @@ import typer
 from typing import Optional
 import os
 
-logger = logging.getLogger()
-logger.setLevel("INFO")
+def setup_logging(verbose=False, to_file=True, console_output=False):
+    """
+    Setup logging with file rotation and optional console output.
+    
+    Args:
+        verbose: Enable DEBUG level logging
+        to_file: Write logs to ./logs/j4ne.log
+        console_output: Also show logs in console (for web server)
+    """
+    # Get root logger (tornado already set it up)
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG if verbose else logging.INFO)
+    
+    # Clear existing handlers
+    logger.handlers.clear()
+    
+    # Set up formatter (keep tornado formatting)
+    formatter = tornado.log.LogFormatter()
+    
+    if to_file:
+        # Create logs directory
+        os.makedirs('logs', exist_ok=True)
+        
+        # Rotating file handler (10MB per file, keep 5 files)
+        file_handler = logging.handlers.RotatingFileHandler(
+            'logs/j4ne.log',
+            maxBytes=10*1024*1024,  # 10MB
+            backupCount=5
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    
+    # Console output for verbose mode or web server
+    if verbose or console_output:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+    
+    return logger
 
-channel = logging.StreamHandler()
-channel.setFormatter(tornado.log.LogFormatter())
-logger.addHandler(channel)
+# Default logging setup (for imports and initial setup)
+logger = setup_logging(verbose=False, to_file=True, console_output=False)
 
 from chatters import chat_loop
 from starlette.responses import PlainTextResponse
@@ -173,11 +210,14 @@ def chat(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging for debugging.")
 ):
     """Start an interactive chat loop (default command)."""
-    if verbose:
-        logger.setLevel(logging.DEBUG)
-        logger.debug("Verbose mode enabled.")
+    # Setup logging for chat mode
+    setup_logging(verbose=verbose, to_file=True, console_output=False)
     
-    logger.info("Starting the chat loop...")
+    if verbose:
+        logger.debug("Verbose mode enabled - logs will be written to ./logs/j4ne.log")
+    else:
+        logger.info("Chat mode started - logs are being written to ./logs/j4ne.log")
+    
     from chatters import EmCeePee
     asyncio.run(EmCeePee())
 
@@ -187,9 +227,11 @@ def greet(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging for debugging.")
 ):
     """Send a greeting to someone."""
+    # Setup logging for greet command
+    setup_logging(verbose=verbose, to_file=True, console_output=False)
+    
     if verbose:
-        logger.setLevel(logging.DEBUG)
-        logger.debug("Verbose mode enabled.")
+        logger.debug("Verbose mode enabled - logs will be written to ./logs/j4ne.log")
     
     handle_greet(name)
 
@@ -198,9 +240,13 @@ def web(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging for debugging.")
 ):
     """Start the Starlette web server with IRC and Slack clients."""
+    # Setup logging for web mode (always show console output for web server)
+    setup_logging(verbose=verbose, to_file=True, console_output=True)
+    
     if verbose:
-        logger.setLevel(logging.DEBUG)
-        logger.debug("Verbose mode enabled.")
+        logger.debug("Verbose mode enabled - logs will be written to ./logs/j4ne.log AND shown in console")
+    else:
+        logger.info("Web server mode started - logs are being written to ./logs/j4ne.log AND shown in console")
     
     start_web_server()
 
@@ -216,11 +262,14 @@ def main(
     """
     if ctx.invoked_subcommand is None:
         # Default to chat command when no subcommand is provided
-        if verbose:
-            logger.setLevel(logging.DEBUG)
-            logger.debug("Verbose mode enabled.")
+        # Setup logging for default chat mode
+        setup_logging(verbose=verbose, to_file=True, console_output=False)
         
-        logger.info("Starting the chat loop...")
+        if verbose:
+            logger.debug("Verbose mode enabled - logs will be written to ./logs/j4ne.log")
+        else:
+            logger.info("Chat mode started - logs are being written to ./logs/j4ne.log")
+        
         from chatters import EmCeePee
         asyncio.run(EmCeePee())
 
