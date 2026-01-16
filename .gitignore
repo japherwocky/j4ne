@@ -11,3 +11,6 @@ database.db
 
 .python_history
 .sqlite_history
+
+logs/
+*.log
