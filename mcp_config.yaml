@@ -1,0 +1,31 @@
+# MCP Server Configuration
+# This file configures MCP servers that j4ne can connect to
+
+mcp_servers:
+  # Exa MCP Server - Web and code search
+  exa:
+    url: "https://mcp.exa.ai/mcp"
+    transport: "http"
+    timeout: 30
+    # Explicitly list tools to expose
+    tools:
+      - name: "get_code_context_exa"
+        alias: "codesearch"
+      - name: "web_search_exa"
+        alias: "websearch"
+
+  # Example: Custom MCP server
+  # Uncomment and configure as needed
+  # custom_server:
+  #   url: "http://localhost:3000/mcp"
+  #   transport: "http"
+  #   timeout: 60
+  #   # Auto-discover all tools (no explicit list)
+
+  # Example: Filesystem MCP server (stdio transport)
+  # Uncomment and configure as needed
+  # filesystem_server:
+  #   command: "python"
+  #   args: ["-m", "mcp_server.filesystem"]
+  #   transport: "stdio"
+  #   root_path: "/path/to/project"

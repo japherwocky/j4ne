@@ -360,18 +360,150 @@ packages/
 5. **patch tool**: ✅ COMPLETED (experimental - not exposed in tools list)
 
 ## Phase 3: MCP Integration (Next)
-1. **mcp_client.py** - Generic MCP client infrastructure
-   - JSON-RPC 2.0 message formatting/parsing
-   - HTTP transport with SSE support
-   - Timeout and abort signal handling
 
-2. **codesearch_tool.py** - Code search via Exa MCP
-   - Uses `get_code_context_exa` tool
-   - Configurable token count (1000-50000)
+### Architecture Overview
 
-3. **websearch_tool.py** - Web search via Exa MCP
-   - Uses `web_search_exa` tool
-   - Supports live crawling, search types, result limits
+**Design Philosophy**: Dynamic tool discovery over hard-coded classes. MCP is a protocol, so we should support arbitrary MCP servers through configuration.
+
+**Core Components**:
+
+1. **MCPClient** - Protocol handler
+   - JSON-RPC 2.0 communication
+   - HTTP + SSE transport
+   - Server lifecycle (connect, disconnect, health checks)
+   - Tool discovery and invocation
+   - Error handling and timeouts
+
+2. **MCPToolRegistry** - Tool management
+   - Registers MCP servers from config
+   - Discovers available tools from each server
+   - Maps tool names to server endpoints
+   - Caches tool schemas for validation
+
+3. **Hybrid Tool Exposure**:
+   - **Specific wrappers** for common tools (codesearch, websearch) - nice UX
+   - **Generic interface** for arbitrary tools - maximum flexibility
+
+**User Experience**:
+
+```python
+# For common tools (pre-wrapped)
+result = codesearch_tool.run(
+    query="fastapi authentication",
+    tokens_num=5000
+)
+
+# For arbitrary tools (dynamic)
+result = mcp_call_tool.run(
+    server="custom_mcp_server",
+    tool="my_custom_tool",
+    parameters={"param1": "value1", "param2": "value2"}
+)
+```
+
+**Configuration System** (`mcp_config.yaml`):
+
+```yaml
+mcp_servers:
+  exa:
+    url: "https://mcp.exa.ai/mcp"
+    transport: "http"
+    timeout: 30
+    tools:
+      - name: "get_code_context_exa"
+        alias: "codesearch"
+      - name: "web_search_exa"
+        alias: "websearch"
+
+  custom_server:
+    url: "http://localhost:3000/mcp"
+    transport: "http"
+    timeout: 60
+    # Auto-discover all tools
+
+  filesystem_server:
+    command: "python"
+    args: ["-m", "mcp_server.filesystem"]
+    transport: "stdio"
+    root_path: "/path/to/project"
+```
+
+### Implementation Plan
+
+**Phase 1: Core Infrastructure** ✅ COMPLETED
+1. ✅ **mcp_client.py** - MCPClient class
+   - JSON-RPC 2.0 message formatting
+   - HTTP + SSE transport
+   - Tool discovery (`tools/list`)
+   - Tool invocation (`tools/call`)
+   - Error handling
+   - Tests: `tests/test_mcp_infrastructure.py` (7 tests, all passing)
+
+2. ✅ **mcp_registry.py** - MCPToolRegistry class
+   - Load config from YAML
+   - Connect to servers
+   - Discover and cache tools
+   - Map aliases to tool names
+
+3. ✅ **mcp_config.yaml** - Example configuration
+   - Exa MCP server configuration
+   - Custom server examples
+   - stdio transport examples
+
+**Phase 2: Specific Tool Wrappers** ✅ COMPLETED
+3. ✅ **codesearch_tool.py** - Exa codesearch wrapper
+   - Uses MCPClient internally via registry
+   - Provides nice interface with validation
+   - Singleton pattern for efficiency
+   - Convenience function: `codesearch(query, tokens_num)`
+   - Tests: `tests/test_mcp_tools.py` (9 tests, all passing)
+
+4. ✅ **websearch_tool.py** - Exa websearch wrapper
+   - Uses MCPClient internally via registry
+   - Provides nice interface with validation
+   - Singleton pattern for efficiency
+   - Convenience function: `websearch(query, num_results, ...)`
+   - Tests: `tests/test_mcp_tools.py` (9 tests, all passing)
+
+**Phase 3: Generic Interface** (Next)
+5. **mcp_call_tool.py** - Generic tool caller
+   - Takes server, tool, parameters
+   - Validates against tool schema
+   - Returns formatted results
+
+**Phase 4: Configuration & Discovery**
+6. Auto-discovery on startup
+7. Dynamic tool registration
+
+### Key Design Decisions
+
+✅ **Don't create a class for each tool**
+- MCP servers advertise their tools via `tools/list`
+- We discover them dynamically
+- Only create wrapper classes for common tools (better UX)
+
+✅ **Support multiple transport types**
+- HTTP + SSE (most common)
+- stdio (for local MCP servers)
+- WebSocket (future)
+
+✅ **Flexible configuration**
+- Users can add any MCP server
+- Auto-discover tools or specify specific ones
+- Alias system for friendly names
+
+✅ **Light type hints**
+- Minimal type hints for validation only
+- Focus on runtime validation against schemas
+- Keep code simple and Pythonic
+
+### Benefits
+
+1. **Extensible**: Add any MCP server via config
+2. **Flexible**: Use pre-wrapped tools or call arbitrary ones
+3. **Type-safe**: Wrappers provide validation, generic uses schema
+4. **Simple**: No need to write code for new tools
+5. **Future-proof**: Works with any MCP-compliant server
 
 ## Benefits of Python Approach
 
