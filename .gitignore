@@ -9,6 +9,7 @@ venv/
 .venv
 .env
 database.db
+memory.db
 
 .python_history
 .sqlite_history
