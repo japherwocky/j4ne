@@ -5,6 +5,7 @@
 keys.py
 twitterconf.json
 env/
+venv/
 .venv
 .env
 database.db
