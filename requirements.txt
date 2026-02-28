@@ -4,6 +4,8 @@ openai
 pathspec
 rich
 peewee
+peewee-async
+aiosqlite
 python-dotenv
 starlette
 uvicorn
@@ -13,6 +15,7 @@ irc3
 typer
 slack-bolt[async]
 aiohttp
+sentence-transformers
 # LSP dependencies
 pygls>=1.3.0
 python-lsp-jsonrpc>=1.1.0
