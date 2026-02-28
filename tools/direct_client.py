@@ -35,6 +35,14 @@ from tools.github_tool import GitHubToolProvider
 # Import the command handler from the new location
 from commands import command_handler
 
+# Import memory system
+try:
+    import memory as memory_module
+    MEMORY_AVAILABLE = True
+except ImportError:
+    MEMORY_AVAILABLE = False
+    logging.warning("Memory system not available - install dependencies: peewee-async aiosqlite sentence-transformers")
+
 # Load environment variables
 load_dotenv()
 
@@ -160,6 +168,17 @@ class DirectClient:
         # Set up OpenCode Zen client
         self._setup_opencode_zen_client()
 
+        # Initialize memory system
+        self.memory_enabled = False
+        self.conversation_id = None
+        if MEMORY_AVAILABLE:
+            try:
+                memory_module.init_db()
+                self.memory_enabled = True
+                logger.info("Memory system initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize memory system: {e}")
+
         # Log available tools
         all_tools = self.multiplexer.get_available_tools()
         if self.allowed_tools is not None:
@@ -213,12 +232,25 @@ class DirectClient:
         """Process a query using available tools"""
         logger.info("Processing query")
 
+        # Inject memories into system prompt
+        memory_context = ""
+        if self.memory_enabled:
+            try:
+                memory_context = memory_module.inject_memories()
+                logger.debug(f"Injected memory context: {memory_context[:100]}..." if memory_context else "No memories found")
+            except Exception as e:
+                logger.warning(f"Failed to inject memories: {e}")
+
         # Add system prompt if not present
         if not history or history[0].get("role") != "system":
             if self.context == "slack":
                 system_content = "You are j4ne, a helpful AI assistant. You communicate through Slack and your name is j4ne. When users ask about your identity or name, you should confidently identify yourself as j4ne. You're here to help with various tasks and conversations."
             else:  # cli context
                 system_content = "You are j4ne, a helpful AI assistant. Your name is j4ne. When users ask about your identity or name, you should confidently identify yourself as j4ne. You're here to help with various tasks and conversations through this command-line interface."
+            
+            # Append memory context if available
+            if memory_context:
+                system_content += f"\n\n{memory_context}"
             
             system_prompt = {
                 "role": "system",
@@ -255,7 +287,32 @@ class DirectClient:
                 out_messages, out_reason = await self._handle_response(r, out_messages)
 
             # Return the final response
-            return "\n".join([x['content'] for x in out_messages[-1:]])
+            final_response = "\n".join([x['content'] for x in out_messages[-1:]])
+            
+            # Archive messages to memory if enabled
+            if self.memory_enabled and self.conversation_id:
+                try:
+                    conv_id = self.conversation_id.id if hasattr(self.conversation_id, 'id') else self.conversation_id
+                    # Archive user message (last user message in history)
+                    for msg in reversed(history):
+                        if msg.get('role') == 'user':
+                            memory_module.store_message(
+                                conv_id, 
+                                msg['role'], 
+                                msg['content']
+                            )
+                            break
+                    # Archive assistant response
+                    if final_response:
+                        memory_module.store_message(
+                            conv_id,
+                            'assistant',
+                            final_response
+                        )
+                except Exception as e:
+                    logger.warning(f"Failed to archive messages: {e}")
+            
+            return final_response
 
         except Exception as e:
             logger.error(f"Error processing query: {str(e)}")
@@ -319,6 +376,17 @@ class DirectClient:
         # Initialize history if not already done
         if not hasattr(self, 'history'):
             self.history = deque(maxlen=8)
+
+        # Start a new conversation in memory if enabled
+        if self.memory_enabled:
+            try:
+                self.conversation_id = memory_module.start_conversation(
+                    user="cli_user", 
+                    platform="cli"
+                )
+                logger.info(f"Started conversation {self.conversation_id.id}")
+            except Exception as e:
+                logger.warning(f"Failed to start conversation: {e}")
 
         while True:
             try:
