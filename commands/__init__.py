@@ -10,6 +10,10 @@ from commands.handler import command_handler
 # Rich console for pretty output
 console = Console()
 
+# Session-wide display toggles (default OFF - can be toggled with /thinking and /tools)
+SHOW_THINKING = False
+SHOW_TOOLS = False
+
 def handle_message(message: str) -> str:
     """
     Handle incoming messages - both for chat commands and traditional messages
@@ -75,6 +79,36 @@ def handle_slash_command(command: str) -> str:
         asyncio.run(handle_enhanced_chat_command(message, show_thinking=thinking, show_tool_calls=tools, verbose=verbose))
         return "__HANDLED__"  # Special signal to skip processing
 
+    elif cmd == '/thinking':
+        # Toggle session-wide thinking display
+        global SHOW_THINKING
+        SHOW_THINKING = not SHOW_THINKING
+        
+        # Also update the client if it exists
+        from tools.direct_client import DirectClient
+        client = DirectClient.get_instance()
+        if client:
+            client.show_thinking = SHOW_THINKING
+        
+        status = "ON" if SHOW_THINKING else "OFF"
+        console.print(f"[bold cyan]Thinking display:[/bold cyan] {status}")
+        return "__HANDLED__"
+
+    elif cmd == '/tools':
+        # Toggle session-wide tool call display
+        global SHOW_TOOLS
+        SHOW_TOOLS = not SHOW_TOOLS
+        
+        # Also update the client if it exists
+        from tools.direct_client import DirectClient
+        client = DirectClient.get_instance()
+        if client:
+            client.show_tool_calls = SHOW_TOOLS
+        
+        status = "ON" if SHOW_TOOLS else "OFF"
+        console.print(f"[bold cyan]Tool visibility:[/bold cyan] {status}")
+        return "__HANDLED__"
+
     elif cmd == '/help':
         show_help()
         return "__HANDLED__"
@@ -89,7 +123,7 @@ def handle_slash_command(command: str) -> str:
         return "__HANDLED__"
 
     else:
-        return f"Unknown command: {cmd}\nAvailable commands: /chat, /commands, /help, /quit"
+        return f"Unknown command: {cmd}\nAvailable commands: /chat, /commands, /help, /quit, /thinking, /tools"
 
 def show_help():
     """Show available commands"""
@@ -101,15 +135,21 @@ def show_help():
 • [cyan]/commands[/cyan] - List all available commands
 • [cyan]/help[/cyan] - Show this help message
 • [cyan]/quit[/cyan] - Exit the chat
+• [cyan]/thinking[/cyan] - Toggle session-wide thinking display (shows raw LLM messages)
+• [cyan]/tools[/cyan] - Toggle session-wide tool call display (shows detailed tool execution)
 
-[bold yellow]Features (now ON by default):[/bold yellow]
+[bold yellow]Session Toggles:[/bold yellow]
+• [green]/thinking[/green] - Show/hide the raw LLM message back-and-forth
+• [green]/tools[/green] - Show/hide detailed tool execution (args, results, timing)
+
+[bold yellow]Per-Message Flags:[/bold yellow]
 • [green]--thinking[/green] - Shows thinking spinner and timing (enabled by default)
 • [green]--no-thinking[/green] - Disable thinking indicators
 • [green]--tools[/green] - Displays tool execution details (enabled by default) 
 • [green]--no-tools[/green] - Disable tool visibility
 • [green]--verbose[/green] - Show detailed tool information
 
-[dim]Tip: --thinking and --tools are now enabled automatically! Use --no-thinking or --no-tools to disable them.[/dim]
+[dim]Tip: Use /thinking and /tools to toggle session-wide visibility, or use --no-thinking/--no-tools per message.[/dim]
     """
     console.print(help_text)
 
@@ -127,6 +167,12 @@ async def enhanced_chat_loop(client):
     # Initialize history if not already done
     if not hasattr(client, 'history'):
         client.history = []
+    
+    # Initialize display toggles on client if not set
+    if not hasattr(client, 'show_thinking'):
+        client.show_thinking = False
+    if not hasattr(client, 'show_tool_calls'):
+        client.show_tool_calls = False
     
     while True:
         try:

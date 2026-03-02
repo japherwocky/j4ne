@@ -141,6 +141,10 @@ class DirectClient:
         # Initialize history
         self.history = deque(maxlen=8)
 
+        # Session-wide display toggles
+        self.show_thinking = False
+        self.show_tool_calls = False
+
         # Set up the multiplexer with tool providers
         self.multiplexer = DirectMultiplexer()
 
@@ -198,6 +202,26 @@ class DirectClient:
         filtered = [t for t in all_tools if t["function"]["name"] in self.allowed_tools]
         logger.debug(f"Filtered tools: {len(filtered)} allowed from {len(all_tools)} total")
         return filtered
+
+    def toggle_thinking(self) -> bool:
+        """Toggle session-wide thinking display (raw LLM messages)
+        
+        Returns:
+            The new state after toggling
+        """
+        self.show_thinking = not self.show_thinking
+        logger.info(f"Thinking display toggled: {'ON' if self.show_thinking else 'OFF'}")
+        return self.show_thinking
+
+    def toggle_tools(self) -> bool:
+        """Toggle session-wide tool call display (detailed tool execution)
+        
+        Returns:
+            The new state after toggling
+        """
+        self.show_tool_calls = not self.show_tool_calls
+        logger.info(f"Tool visibility toggled: {'ON' if self.show_tool_calls else 'OFF'}")
+        return self.show_tool_calls
 
     def _setup_opencode_zen_client(self):
         """Set up the OpenCode Zen client using environment variables"""
@@ -320,6 +344,7 @@ class DirectClient:
 
     async def _handle_response(self, response, messages):
         """Handle a response from the LLM"""
+        import time as time_module
         reason = response.choices[0].finish_reason
         content = response.choices[0]
 
@@ -327,10 +352,23 @@ class DirectClient:
             # Regular response
             messages.append({"role": "assistant", "content": content.message.content})
 
+            # Show thinking if enabled - print raw LLM message
+            if self.show_thinking:
+                raw_content = content.message.content
+                console.print(f"\n[bold magenta]💭 Raw LLM response:[/bold magenta]")
+                console.print(f"[dim]{raw_content}[/dim]\n")
+
         elif reason == 'tool_calls':
             # Tool call
             content = content.model_dump()
             tool_calls = content['message'].get('tool_calls', [])
+
+            # Show thinking if enabled - print the tool call request
+            if self.show_thinking:
+                console.print(f"\n[bold magenta]💭 LLM requested tool calls:[/bold magenta]")
+                for tc in tool_calls:
+                    console.print(f"[dim]  - {tc['function']['name']}: {tc['function']['arguments']}[/dim]")
+                console.print()
 
             if not tool_calls:
                 logger.warning("Tool calls indicated but none found")
@@ -345,6 +383,11 @@ class DirectClient:
 
             logger.info(f"Calling tool: {tool_name} with args: {tool_args}")
 
+            # Show tool call details if enabled
+            if self.show_tool_calls:
+                console.print(f"[bold cyan]🔧 Called tool:[/bold cyan] {tool_name}")
+                console.print(f"[bold cyan]📋 Args:[/bold cyan] {json.dumps(tool_args, indent=2)}")
+
             # Check if tool is allowed
             if self.allowed_tools is not None and tool_name not in self.allowed_tools:
                 logger.warning(f"Tool {tool_name} is not allowed, skipping")
@@ -354,8 +397,21 @@ class DirectClient:
                 })
                 return messages, 'stop'
 
-            # Execute tool directly through the multiplexer
+            # Execute tool directly through the multiplexer with timing
+            start_time = time_module.time()
             result = self.multiplexer.execute_tool(tool_name, tool_args)
+            tool_time = time_module.time() - start_time
+
+            # Show tool result details if enabled
+            if self.show_tool_calls:
+                if "error" in result:
+                    console.print(f"[bold red]❌ Tool error:[/bold red] {result['error']}")
+                else:
+                    result_summary = json.dumps(result, indent=2)
+                    if len(result_summary) > 500:
+                        result_summary = result_summary[:500] + "..."
+                    console.print(f"[bold green]✅ Tool result:[/bold green] {result_summary}")
+                console.print(f"[dim]💭 Tool executed in {tool_time:.3f}s[/dim]\n")
 
             # Format the result for the message history
             if "error" in result:
