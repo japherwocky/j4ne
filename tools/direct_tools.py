@@ -829,6 +829,68 @@ class GitDiffTool(DirectTool):
             "has_changes": bool(result["stdout"].strip())
         }
 
+# ---- Slack Tool Input Models ----
+
+class SlackSendMessage(BaseModel):
+    """Input model for sending a Slack message"""
+    channel: str = Field(description="Channel or user to send to (e.g., '#general', '#alerts', or 'U123456789' for DMs)")
+    message: str = Field(description="Message to send (supports markdown formatting)")
+    thread_ts: Optional[str] = Field(default=None, description="Optional thread timestamp to reply in a thread")
+
+# ---- Slack Tool Provider ----
+
+class SlackToolProvider(ToolProvider):
+    """Provider for Slack messaging tools"""
+    
+    def __init__(self):
+        super().__init__("slack")
+        self._register_tools()
+    
+    def _register_tools(self):
+        """Register all Slack tools"""
+        self.register_tool(SlackSendMessageTool(self))
+
+# ---- Slack Tools ----
+
+class SlackSendMessageTool(DirectTool):
+    """Tool for sending Slack messages"""
+    
+    def __init__(self, provider: SlackToolProvider):
+        super().__init__(
+            name="send-message",
+            description="Send a message to a Slack channel or user. Use this when you want to proactively communicate with users.",
+            input_model=SlackSendMessage
+        )
+        self.provider = provider
+    
+    def _execute(self, channel: str, message: str, thread_ts: Optional[str] = None) -> Dict[str, Any]:
+        """Send a message via Slack"""
+        # Get the global Slack client instance
+        from networks.slack import SlackClient
+        slack_client = SlackClient.get_global_instance()
+        
+        if not slack_client:
+            return {"error": "Slack client not available"}
+        
+        if not slack_client.connected:
+            return {"error": "Slack client not connected"}
+        
+        import asyncio
+        try:
+            # Run the async send_message in sync context
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(
+                    slack_client.send_message(channel=channel, message=message, thread_ts=thread_ts)
+                )
+            finally:
+                loop.close()
+            
+            return {"success": True, "sent_to": channel, "message_preview": message[:100]}
+        except Exception as e:
+            return {"error": f"Failed to send Slack message: {str(e)}"}
+
 # ---- Direct Multiplexer ----
 
 class DirectMultiplexer:

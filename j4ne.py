@@ -176,13 +176,11 @@ async def start_web_server_with_networks():
         logger.info("Slack HTTP webhook routes registered")
 
     # Initialize and start proactive agent
-    proactive_agent = None
-    if slack_client and slack_client.connected:
-        proactive_agent = ProactiveAgent(slack_client=slack_client)
-        if proactive_agent.enabled:
-            proactive_agent.start()
-        else:
-            logger.info("Proactive agent disabled (set PROACTIVE_INTERVAL_SECONDS > 0 to enable)")
+    proactive_agent = ProactiveAgent()
+    if proactive_agent.enabled:
+        proactive_agent.start()
+    else:
+        logger.info("Proactive agent disabled (set PROACTIVE_INTERVAL_SECONDS > 0 to enable)")
 
     # Create Starlette app
     app = Starlette(debug=True, routes=app_routes)

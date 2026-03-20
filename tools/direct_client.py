@@ -29,6 +29,7 @@ from tools.direct_tools import (
     FilesystemToolProvider,
     SQLiteToolProvider,
     GitToolProvider,
+    SlackToolProvider,
 )
 from tools.web_search_tool import WebSearchToolProvider
 from tools.github_tool import GitHubToolProvider
@@ -168,6 +169,11 @@ class DirectClient:
         # Add GitHub tools (Slack-safe - public repos only)
         github_provider = GitHubToolProvider()
         self.multiplexer.add_provider(github_provider)
+
+        # Add Slack tools (proactive mode - can send messages)
+        # Only for CLI and proactive contexts (not for Slack user queries)
+        slack_provider = SlackToolProvider()
+        self.multiplexer.add_provider(slack_provider)
 
         # Set up OpenCode Zen client
         self._setup_opencode_zen_client()
