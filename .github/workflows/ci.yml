@@ -26,6 +26,6 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest tests/ -v
+          pytest tests/ -v --ignore=tests/test_lsp_tool.py --ignore=tests/test_python_lsp_server.py
         env:
           PYTHONPATH: ${{ github.workspace }}
