@@ -33,7 +33,11 @@ class ProactiveAgent:
         # Configuration from environment
         self.interval = int(os.getenv('PROACTIVE_INTERVAL_SECONDS', '0'))
         self.channel = os.getenv('PROACTIVE_CHANNEL', '#general')
+        self.guardian_user = os.getenv('SLACK_GUARDIAN_USER', '')
         self.soul_path = Path(os.getenv('SOUL_PATH', 'SOUL.md'))
+
+        # Determine target: guardian user takes priority for DMs
+        self.target = self.guardian_user if self.guardian_user else self.channel
 
         # Check if proactive mode is enabled
         self.enabled = self.interval > 0
@@ -41,7 +45,8 @@ class ProactiveAgent:
         if not self.enabled:
             logger.info("Proactive agent disabled (PROACTIVE_INTERVAL_SECONDS=0)")
         else:
-            logger.info(f"Proactive agent enabled: interval={self.interval}s, channel={self.channel}")
+            target_type = "DM" if self.guardian_user else "channel"
+            logger.info(f"Proactive agent enabled: interval={self.interval}s, target={self.target} ({target_type})")
 
     def _load_soul(self) -> str:
         """
@@ -116,10 +121,10 @@ Be concise - people don't want walls of text in proactive messages."""
             # Send the message to Slack
             if self.slack_client and self.slack_client.connected:
                 await self.slack_client.send_message(
-                    channel=self.channel,
+                    channel=self.target,
                     message=response
                 )
-                logger.info(f"Sent proactive message to {self.channel}")
+                logger.info(f"Sent proactive message to {self.target}")
                 return True
             else:
                 logger.warning("Slack client not available, skipping proactive message")
