@@ -65,6 +65,8 @@ from networks import IRCClient, SlackClient
 from networks.slack_http import get_slack_routes
 # --- Import DirectClient with tool filtering ---
 from tools.direct_client import DirectClient, SAFE_TOOLS, SLACK_TOOLS
+# --- Import Proactive Agent ---
+from proactive import ProactiveAgent
 
 def home(request):
     # Simple home page response
@@ -173,6 +175,15 @@ async def start_web_server_with_networks():
         app_routes.extend(get_slack_routes())
         logger.info("Slack HTTP webhook routes registered")
 
+    # Initialize and start proactive agent
+    proactive_agent = None
+    if slack_client and slack_client.connected:
+        proactive_agent = ProactiveAgent(slack_client=slack_client)
+        if proactive_agent.enabled:
+            proactive_agent.start()
+        else:
+            logger.info("Proactive agent disabled (set PROACTIVE_INTERVAL_SECONDS > 0 to enable)")
+
     # Create Starlette app
     app = Starlette(debug=True, routes=app_routes)
     
@@ -184,6 +195,10 @@ async def start_web_server_with_networks():
     try:
         await server.serve()
     finally:
+        # Cleanup proactive agent
+        if proactive_agent:
+            await proactive_agent.stop()
+        
         # Cleanup network clients
         if irc_client and irc_client.connected:
             await irc_client.disconnect()
