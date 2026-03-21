@@ -11,6 +11,9 @@ import logging
 from typing import Optional
 from pathlib import Path
 
+# Get the directory where j4ne is installed (parent of proactive.py)
+J4NE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 from tools.direct_client import DirectClient
 
 logger = logging.getLogger(__name__)
@@ -30,7 +33,7 @@ class ProactiveAgent:
         self.interval = int(os.getenv('PROACTIVE_INTERVAL_SECONDS', '0'))
         self.channel = os.getenv('PROACTIVE_CHANNEL', '#general')
         self.guardian_user = os.getenv('SLACK_GUARDIAN_USER', '')
-        self.soul_path = Path(os.getenv('SOUL_PATH', 'SOUL.md'))
+        self.soul_path = Path(os.getenv('SOUL_PATH', os.path.join(J4NE_DIR, 'SOUL.md')))
 
         # Determine target: guardian user takes priority for DMs
         self.target = self.guardian_user if self.guardian_user else self.channel
@@ -82,7 +85,13 @@ class ProactiveAgent:
 
             # Create a fresh DirectClient for this run
             # Use all tools since this is a controlled environment
-            client = DirectClient(allowed_tools=None, context="proactive")
+            # Set root_path to j4ne directory so filesystem tools work correctly
+            client = DirectClient(
+                allowed_tools=None,
+                context="proactive",
+                root_path=J4NE_DIR,
+                db_path=os.path.join(J4NE_DIR, "database.db")
+            )
 
             # Build the prompt with default target info
             target_info = f"Default target: {self.target}"
