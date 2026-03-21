@@ -13,6 +13,7 @@ import os
 import json
 import asyncio
 import logging
+from logging.handlers import RotatingFileHandler
 from collections import deque
 from typing import List, Dict, Any, Optional, Set
 
@@ -49,6 +50,21 @@ load_dotenv()
 
 # Configure logging
 logger = logging.getLogger('direct_client')
+
+# Agent thought logging - separate log for thinking and tool calls
+agent_logger = logging.getLogger('agent_thoughts')
+agent_logger.setLevel(logging.DEBUG)
+# Create agent log file handler
+agent_log_path = os.path.join(os.path.dirname(__file__), '..', 'logs', 'agent_thoughts.log')
+os.makedirs(os.path.dirname(agent_log_path), exist_ok=True)
+agent_file_handler = RotatingFileHandler(
+    agent_log_path, maxBytes=10*1024*1024, backupCount=5  # 10MB, 5 files
+)
+agent_file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s | %(levelname)s | %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+))
+agent_logger.addHandler(agent_file_handler)
 
 # Rich console for pretty output
 console = Console()
@@ -243,17 +259,30 @@ class DirectClient:
                     "Get your API key from: https://opencode.ai/auth"
                 )
 
+            # Determine which endpoint to use (Go vs Zen)
+            use_go = os.getenv('OPENCODE_USE_GO', 'false').lower() == 'true'
+            if use_go:
+                base_url = "https://opencode.ai/zen/go/v1"
+                default_model = os.getenv('OPENCODE_ZEN_MODEL', 'opencode-go/minimax-m2.5')
+                followup_model = os.getenv('OPENCODE_ZEN_FOLLOWUP_MODEL', 'opencode-go/minimax-m2.5')
+                plan_name = "OpenCode Go"
+            else:
+                base_url = "https://opencode.ai/zen/v1"
+                default_model = os.getenv('OPENCODE_ZEN_MODEL', 'gpt-5.1-codex')
+                followup_model = os.getenv('OPENCODE_ZEN_FOLLOWUP_MODEL', 'gpt-5.1-codex-mini')
+                plan_name = "OpenCode Zen"
+
             # Set up the OpenAI client to use OpenCode Zen's endpoint
             self.client = OpenAI(
                 api_key=api_key,
-                base_url="https://opencode.ai/zen/v1"
+                base_url=base_url
             )
 
             # Store model configuration from environment variables
-            self.default_model = os.getenv('OPENCODE_ZEN_MODEL', 'gpt-5.1-codex')
-            self.followup_model = os.getenv('OPENCODE_ZEN_FOLLOWUP_MODEL', 'gpt-5.1-codex-mini')
+            self.default_model = default_model
+            self.followup_model = followup_model
 
-            logger.info(f"OpenCode Zen client initialized successfully with model: {self.default_model}")
+            logger.info(f"{plan_name} client initialized with base URL: {base_url}, model: {self.default_model}")
         except Exception as e:
             logger.error(f"Failed to initialize OpenCode Zen client: {str(e)}")
             raise
@@ -358,9 +387,12 @@ class DirectClient:
             # Regular response
             messages.append({"role": "assistant", "content": content.message.content})
 
+            # Log to agent thoughts file
+            raw_content = content.message.content
+            agent_logger.info(f"THINKING:\n{raw_content}")
+
             # Show thinking if enabled - print raw LLM message
             if self.show_thinking:
-                raw_content = content.message.content
                 console.print(f"\n[bold magenta]💭 Raw LLM response:[/bold magenta]")
                 console.print(f"[dim]{raw_content}[/dim]\n")
 
@@ -368,6 +400,11 @@ class DirectClient:
             # Tool call
             content = content.model_dump()
             tool_calls = content['message'].get('tool_calls', [])
+
+            # Log tool calls to agent thoughts file
+            agent_logger.info("TOOL_CALLS:")
+            for tc in tool_calls:
+                agent_logger.info(f"  - {tc['function']['name']}: {tc['function']['arguments']}")
 
             # Show thinking if enabled - print the tool call request
             if self.show_thinking:
@@ -397,6 +434,7 @@ class DirectClient:
             # Check if tool is allowed
             if self.allowed_tools is not None and tool_name not in self.allowed_tools:
                 logger.warning(f"Tool {tool_name} is not allowed, skipping")
+                agent_logger.warning(f"Tool {tool_name} is not allowed, skipping")
                 messages.append({
                     "role": "assistant",
                     "content": f"Tool {tool_name} is not available. Only read-only operations are permitted."
@@ -407,6 +445,12 @@ class DirectClient:
             start_time = time_module.time()
             result = self.multiplexer.execute_tool(tool_name, tool_args)
             tool_time = time_module.time() - start_time
+
+            # Log tool result to agent thoughts file
+            if "error" in result:
+                agent_logger.info(f"TOOL_RESULT ({tool_name}): ERROR - {result['error']}")
+            else:
+                agent_logger.info(f"TOOL_RESULT ({tool_name}): {json.dumps(result)[:500]}")
 
             # Show tool result details if enabled
             if self.show_tool_calls:
