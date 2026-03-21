@@ -14,6 +14,9 @@ import typer
 from typing import Optional
 import os
 
+# Get the directory where this script is located (for reliable paths in service mode)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 def setup_logging(verbose=False, to_file=True, console_output=False):
     """
     Setup logging with file rotation and optional console output.
@@ -34,12 +37,13 @@ def setup_logging(verbose=False, to_file=True, console_output=False):
     formatter = tornado.log.LogFormatter()
     
     if to_file:
-        # Create logs directory
-        os.makedirs('logs', exist_ok=True)
+        # Create logs directory using BASE_DIR for reliable paths
+        logs_dir = os.path.join(BASE_DIR, 'logs')
+        os.makedirs(logs_dir, exist_ok=True)
         
         # Rotating file handler (10MB per file, keep 5 files)
         file_handler = logging.handlers.RotatingFileHandler(
-            'logs/j4ne.log',
+            os.path.join(logs_dir, 'j4ne.log'),
             maxBytes=10*1024*1024,  # 10MB
             backupCount=5
         )
@@ -107,7 +111,11 @@ async def start_web_server_with_networks():
 
     # Initialize full chat client for IRC (trusted, gets all tools)
     try:
-        chat_client_full = DirectClient(allowed_tools=None)  # All tools
+        chat_client_full = DirectClient(
+            allowed_tools=None,
+            root_path=BASE_DIR,
+            db_path=os.path.join(BASE_DIR, "database.db")
+        )  # All tools
         await chat_client_full.connect_to_server()
         logger.info("Full chat client initialized for IRC")
     except Exception as e:
@@ -115,7 +123,12 @@ async def start_web_server_with_networks():
 
     # Initialize restricted chat client for Slack (no tools, conversational only)
     try:
-        chat_client_slack = DirectClient(allowed_tools=SLACK_TOOLS, context="slack")
+        chat_client_slack = DirectClient(
+            allowed_tools=SLACK_TOOLS,
+            context="slack",
+            root_path=BASE_DIR,
+            db_path=os.path.join(BASE_DIR, "database.db")
+        )
         logger.info("Chat client initialized for Slack (no tools)")
     except Exception as e:
         logger.warning(f"Failed to initialize Slack chat client: {e}")

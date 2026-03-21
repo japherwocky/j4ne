@@ -11,8 +11,9 @@ import logging
 from typing import Optional
 from pathlib import Path
 
-# Get the directory where j4ne is installed (parent of proactive.py)
-J4NE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Get the directory where j4ne is installed (directory containing this file)
+# Use the directory of this file as the base
+J4NE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 from tools.direct_client import DirectClient
 
