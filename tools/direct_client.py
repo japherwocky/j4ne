@@ -423,58 +423,60 @@ class DirectClient:
                 messages.append({"role": "assistant", "content": "No tool calls found"})
                 return messages, 'stop'
 
-            # Process the first tool call (or potentially multiple in the future)
-            tool_call = tool_calls[0]
+            # Process ALL tool calls in sequence
+            all_results = []
+            for tool_call in tool_calls:
+                tool_name = tool_call['function']['name']
+                tool_args = json.loads(tool_call['function']['arguments'])
 
-            tool_name = tool_call['function']['name']
-            tool_args = json.loads(tool_call['function']['arguments'])
+                logger.info(f"Calling tool: {tool_name} with args: {tool_args}")
 
-            logger.info(f"Calling tool: {tool_name} with args: {tool_args}")
+                # Show tool call details if enabled
+                if self.show_tool_calls:
+                    console.print(f"[bold cyan]🔧 Called tool:[/bold cyan] {tool_name}")
+                    console.print(f"[bold cyan]📋 Args:[/bold cyan] {json.dumps(tool_args, indent=2)}")
 
-            # Show tool call details if enabled
-            if self.show_tool_calls:
-                console.print(f"[bold cyan]🔧 Called tool:[/bold cyan] {tool_name}")
-                console.print(f"[bold cyan]📋 Args:[/bold cyan] {json.dumps(tool_args, indent=2)}")
+                # Check if tool is allowed
+                if self.allowed_tools is not None and tool_name not in self.allowed_tools:
+                    logger.warning(f"Tool {tool_name} is not allowed, skipping")
+                    agent_logger.warning(f"Tool {tool_name} is not allowed, skipping")
+                    messages.append({
+                        "role": "assistant",
+                        "content": f"Tool {tool_name} is not available. Only read-only operations are permitted."
+                    })
+                    return messages, 'stop'
 
-            # Check if tool is allowed
-            if self.allowed_tools is not None and tool_name not in self.allowed_tools:
-                logger.warning(f"Tool {tool_name} is not allowed, skipping")
-                agent_logger.warning(f"Tool {tool_name} is not allowed, skipping")
-                messages.append({
-                    "role": "assistant",
-                    "content": f"Tool {tool_name} is not available. Only read-only operations are permitted."
-                })
-                return messages, 'stop'
+                # Execute tool directly through the multiplexer with timing
+                start_time = time_module.time()
+                result = self.multiplexer.execute_tool(tool_name, tool_args)
+                tool_time = time_module.time() - start_time
 
-            # Execute tool directly through the multiplexer with timing
-            start_time = time_module.time()
-            result = self.multiplexer.execute_tool(tool_name, tool_args)
-            tool_time = time_module.time() - start_time
-
-            # Log tool result to agent thoughts file
-            if "error" in result:
-                agent_logger.info(f"TOOL_RESULT ({tool_name}): ERROR - {result['error']}")
-            else:
-                agent_logger.info(f"TOOL_RESULT ({tool_name}): {json.dumps(result)[:500]}")
-
-            # Show tool result details if enabled
-            if self.show_tool_calls:
+                # Log tool result to agent thoughts file
                 if "error" in result:
-                    console.print(f"[bold red]❌ Tool error:[/bold red] {result['error']}")
+                    agent_logger.info(f"TOOL_RESULT ({tool_name}): ERROR - {result['error']}")
                 else:
-                    result_summary = json.dumps(result, indent=2)
-                    if len(result_summary) > 500:
-                        result_summary = result_summary[:500] + "..."
-                    console.print(f"[bold green]✅ Tool result:[/bold green] {result_summary}")
-                console.print(f"[dim]💭 Tool executed in {tool_time:.3f}s[/dim]\n")
+                    agent_logger.info(f"TOOL_RESULT ({tool_name}): {json.dumps(result)[:500]}")
 
-            # Format the result for the message history
-            if "error" in result:
-                summary = f"""Called tool {tool_name} ({tool_args}), got ERROR: {result["error"]}\n"""
-            else:
-                summary = f"""Called tool {tool_name} ({tool_args}), got results: {result}\n"""
+                # Show tool result details if enabled
+                if self.show_tool_calls:
+                    if "error" in result:
+                        console.print(f"[bold red]❌ Tool error:[/bold red] {result['error']}")
+                    else:
+                        result_summary = json.dumps(result, indent=2)
+                        if len(result_summary) > 500:
+                            result_summary = result_summary[:500] + "..."
+                        console.print(f"[bold green]✅ Tool result:[/bold green] {result_summary}")
+                    console.print(f"[dim]💭 Tool executed in {tool_time:.3f}s[/dim]\n")
 
-            messages.append({"role": "assistant", "content": summary})
+                # Format the result for the message history
+                if "error" in result:
+                    summary = f"""Called tool {tool_name} ({tool_args}), got ERROR: {result["error"]}\n"""
+                else:
+                    summary = f"""Called tool {tool_name} ({tool_args}), got results: {result}\n"""
+                all_results.append(summary)
+
+            # Append all tool results as a single message
+            messages.append({"role": "assistant", "content": "\n".join(all_results)})
 
         return messages, reason
 
