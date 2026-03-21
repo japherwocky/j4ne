@@ -582,15 +582,26 @@ class GitToolProvider(ToolProvider):
         if not self.is_git_repository(cwd):
             return {"error": "Not a git repository"}
         
+        # Ensure PATH includes common git locations
+        env = os.environ.copy()
+        path = env.get('PATH', '')
+        # Add common git locations if not present
+        git_paths = ['/usr/bin', '/usr/local/bin', '/bin']
+        for git_path in git_paths:
+            if git_path not in path:
+                path = git_path + ':' + path
+        env['PATH'] = path
+        
         try:
-            # Execute the git command with timeout
+            # Execute the git command with timeout and proper PATH
             result = subprocess.run(
                 command,
                 cwd=cwd,
                 capture_output=True,
                 text=True,
                 timeout=30,  # 30 second timeout
-                check=False  # Don't raise exception on non-zero exit
+                check=False,  # Don't raise exception on non-zero exit
+                env=env
             )
             
             return {
@@ -877,17 +888,27 @@ class SlackSendMessageTool(DirectTool):
         
         import asyncio
         try:
-            # Run the async send_message in sync context
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            # Try to get the current event loop (we're already in async context)
             try:
-                loop.run_until_complete(
+                loop = asyncio.get_running_loop()
+                # We're in async context, create a task
+                # Since we can't await here, schedule it and return success
+                asyncio.create_task(
                     slack_client.send_message(channel=channel, message=message, thread_ts=thread_ts)
                 )
-            finally:
-                loop.close()
+                return {"success": True, "sent_to": channel, "message_preview": message[:100], "note": "Message queued for sending"}
+            except RuntimeError:
+                # No loop running, create one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(
+                        slack_client.send_message(channel=channel, message=message, thread_ts=thread_ts)
+                    )
+                finally:
+                    loop.close()
+                return {"success": True, "sent_to": channel, "message_preview": message[:100]}
             
-            return {"success": True, "sent_to": channel, "message_preview": message[:100]}
         except Exception as e:
             return {"error": f"Failed to send Slack message: {str(e)}"}
 
