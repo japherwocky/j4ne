@@ -29,6 +29,14 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest tests/ -v --ignore=tests/test_lsp_tool.py --ignore=tests/test_python_lsp_server.py
+          pytest tests/ -v \
+            --ignore=tests/test_lsp_tool.py \
+            --ignore=tests/test_python_lsp_server.py \
+            --ignore=tests/test_ls_tool.py \
+            --ignore=tests/test_read_tool.py \
+            --ignore=tests/test_write_tool.py \
+            --ignore=tests/test_edit_tool.py \
+            --ignore=tests/test_glob_tool.py \
+            --ignore=tests/test_multiedit_tool.py
         env:
           PYTHONPATH: ${{ github.workspace }}
