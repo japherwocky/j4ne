@@ -263,8 +263,13 @@ class DirectClient:
             use_go = os.getenv('OPENCODE_USE_GO', 'false').lower() == 'true'
             if use_go:
                 base_url = "https://opencode.ai/zen/go/v1"
-                default_model = os.getenv('OPENCODE_ZEN_MODEL', 'opencode-go/minimax-m2.5')
-                followup_model = os.getenv('OPENCODE_ZEN_FOLLOWUP_MODEL', 'opencode-go/minimax-m2.5')
+                # Go models use short names: glm-5, kimi-k2.5, minimax-m2.7, minimax-m2.5
+                go_model = os.getenv('OPENCODE_ZEN_MODEL', 'minimax-m2.5')
+                # Strip opencode-go/ prefix if user included it
+                if go_model.startswith('opencode-go/'):
+                    go_model = go_model.replace('opencode-go/', '')
+                default_model = go_model
+                followup_model = os.getenv('OPENCODE_ZEN_FOLLOWUP_MODEL', go_model)
                 plan_name = "OpenCode Go"
             else:
                 base_url = "https://opencode.ai/zen/v1"
