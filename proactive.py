@@ -103,13 +103,12 @@ Your SOUL.md contains the following instructions:
 
 Based on these directives, determine if there's anything proactive you should do right now. 
 
-If yes:
-1. Do it using your available tools
-2. If you want to notify someone, use the slack.send-message tool to send a message
-3. If nothing needs to be shared, just respond with "NOACTION" without sending any message
-
-If no:
-- Simply respond with "NOACTION" (nothing to do)
+IMPORTANT - Tool Usage:
+- You have access to tools. Use them by calling them.
+- If a tool returns results, you can use those results to inform your response.
+- You can call multiple tools in sequence if needed.
+- After you have all the information you need, use slack.send-message to notify if there's something worth sharing.
+- If nothing needs to be shared after using your tools, respond with "NOACTION" (just that word, nothing else).
 
 Be concise - people don't want walls of text in proactive messages."""
 
