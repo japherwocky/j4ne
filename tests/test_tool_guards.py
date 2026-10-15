@@ -40,7 +40,9 @@ class TestFilesystemRoot:
         fs = FilesystemToolProvider(str(root))
         assert run(fs, "filesystem.read-file", path="notes.txt") == {"content": "hello"}
 
-    @pytest.mark.parametrize("path", ["../j4ne-evil/secret.txt", "..\\j4ne-evil\\secret.txt", "../../etc/passwd"])
+    # On Linux a backslash is part of a file name, not a separator
+    @pytest.mark.parametrize("path", ["../j4ne-evil/secret.txt", "../../etc/passwd"]
+                             + (["..\\j4ne-evil\\secret.txt"] if os.name == "nt" else []))
     def test_sibling_and_parent_paths_are_outside(self, layout, path):
         root, _ = layout
         fs = FilesystemToolProvider(str(root))
