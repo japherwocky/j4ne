@@ -83,8 +83,9 @@ class WebSearchTool(DirectTool):
                 return {"error": f"Search API error {response.status_code}: {response.text}"}
                 
         except Exception as e:
+            # The key is set, so this is a network or API failure, not missing setup
             logger.error(f"Serper search error: {str(e)}")
-            return self._search_fallback(query, num_results)
+            return {"error": f"Web search failed: {str(e)}", "query": query}
     
     def _search_fallback(self, query: str, num_results: int) -> Dict[str, Any]:
         """Fallback search method when API is not available"""

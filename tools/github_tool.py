@@ -4,15 +4,43 @@ Simple implementation that follows existing tool patterns.
 """
 
 import os
+import re
 import json
 import logging
 import requests
 from typing import Dict, List, Any, Optional
+from urllib.parse import quote
 from pydantic import BaseModel, Field
 from tools.direct_tools import ToolProvider, DirectTool
 
 # Configure logging
 logger = logging.getLogger('github_tool')
+
+# The most of a file's content get-file returns
+MAX_FILE_CHARS = 10000
+
+# GitHub's own rules for owner and repository names
+_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+
+def repo_url(api_base: str, owner: str, repo: str, *segments: str) -> str:
+    """Build an api.github.com repo URL from untrusted parts.
+
+    The parts come from the LLM, which takes them from chat. Unencoded,
+    owner='x', repo='y', path='../../../../user' is sent as GET /user,
+    because the HTTP client collapses dot segments. Raises ValueError for
+    anything that is not a plain name or path.
+    """
+    for name in (owner, repo):
+        if not _NAME.match(name) or name in (".", ".."):
+            raise ValueError(f"Invalid GitHub owner or repository name: {name!r}")
+    parts = [quote(owner, safe=""), quote(repo, safe="")]
+    for segment in segments:
+        for piece in segment.strip("/").split("/"):
+            if piece in ("", ".", ".."):
+                raise ValueError(f"Invalid path in repository: {segment!r}")
+            parts.append(quote(piece, safe=""))
+    return f"{api_base}/repos/" + "/".join(parts)
 
 # ---- Tool Input Models ----
 
@@ -47,7 +75,7 @@ class GitHubExploreRepoTool(DirectTool):
         
         try:
             # Get repository info
-            repo_url = f"{self.api_base}/repos/{owner}/{repo}"
+            info_url = repo_url(self.api_base, owner, repo)
             headers = {
                 'Accept': 'application/vnd.github.v3+json',
                 'User-Agent': 'j4ne-slack-bot'
@@ -56,13 +84,13 @@ class GitHubExploreRepoTool(DirectTool):
             if self.github_token:
                 headers['Authorization'] = f'token {self.github_token}'
             
-            response = requests.get(repo_url, headers=headers, timeout=10)
-            
+            response = requests.get(info_url, headers=headers, timeout=10)
+
             if response.status_code == 200:
                 repo_data = response.json()
-                
+
                 # Get root contents
-                contents_url = f"{self.api_base}/repos/{owner}/{repo}/contents"
+                contents_url = repo_url(self.api_base, owner, repo, "contents")
                 contents_response = requests.get(contents_url, headers=headers, timeout=10)
                 
                 contents = []
@@ -172,7 +200,7 @@ class GitHubGetFileTool(DirectTool):
         """Get file contents from repository"""
         
         try:
-            file_url = f"{self.api_base}/repos/{owner}/{repo}/contents/{path}"
+            file_url = repo_url(self.api_base, owner, repo, "contents", path)
             headers = {
                 'Accept': 'application/vnd.github.v3+json',
                 'User-Agent': 'j4ne-slack-bot'
@@ -185,7 +213,18 @@ class GitHubGetFileTool(DirectTool):
             
             if response.status_code == 200:
                 file_data = response.json()
-                
+
+                if isinstance(file_data, list):
+                    # The path is a directory: GitHub answers with its listing
+                    return {
+                        "path": path,
+                        "type": "dir",
+                        "entries": [
+                            {"name": item.get('name', ''), "type": item.get('type', ''), "path": item.get('path', '')}
+                            for item in file_data[:100]
+                        ],
+                    }
+
                 if file_data.get('type') == 'file':
                     content = file_data.get('content', '')
                     if content:
@@ -201,10 +240,10 @@ class GitHubGetFileTool(DirectTool):
                         "name": file_data.get('name', ''),
                         "path": file_data.get('path', ''),
                         "size": file_data.get('size', 0),
-                        "content": decoded_content[:10000],  # Limit to 10k characters
+                        "content": decoded_content[:MAX_FILE_CHARS],
                         "encoding": file_data.get('encoding', ''),
                         "html_url": file_data.get('html_url', ''),
-                        "truncated": len(decoded_content) >= 10000
+                        "truncated": len(decoded_content) > MAX_FILE_CHARS
                     }
                 else:
                     return {"error": f"Path '{path}' is not a file (type: {file_data.get('type')})"}

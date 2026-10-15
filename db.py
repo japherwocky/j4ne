@@ -2,15 +2,18 @@
 Centralized db connection to avoid circular imports
 """
 import logging
+import os
 from peewee import SqliteDatabase
 from peewee import CharField, IntegerField, BooleanField
 from playhouse.migrate import SqliteMigrator, migrate
 
+# Next to this file, not wherever the process was started from
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Create database connections with check_same_thread=False to allow
 # access from different contexts within the Tornado event loop
-db = SqliteDatabase('database.db', check_same_thread=False)
-archive_db = SqliteDatabase('archive.db', check_same_thread=False)
+db = SqliteDatabase(os.path.join(BASE_DIR, 'database.db'), check_same_thread=False)
+archive_db = SqliteDatabase(os.path.join(BASE_DIR, 'archive.db'), check_same_thread=False)
 
 # Connect at import time - this is fine for a single-process Tornado application
 db.connect()
