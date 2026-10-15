@@ -32,6 +32,9 @@ git_pull() {
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
     echo "Current branch: $CURRENT_BRANCH"
 
+    # Where we were, so the dependency check covers every pulled commit
+    PREVIOUS_HEAD=$(git rev-parse HEAD)
+
     git fetch origin
     git pull origin $CURRENT_BRANCH
 
@@ -42,8 +45,8 @@ git_pull() {
 update_dependencies() {
     echo -e "${YELLOW}📦 Checking Python dependencies...${NC}"
 
-    # Check if requirements.txt changed
-    if git diff --name-only HEAD~1 HEAD | grep -q "requirements.txt"; then
+    # Check if requirements.txt changed in anything pulled, not just the last commit
+    if git diff --name-only "$PREVIOUS_HEAD" HEAD | grep -q "requirements.txt"; then
         echo "Requirements changed, updating..."
         $DEPLOY_DIR/venv/bin/pip install -r $DEPLOY_DIR/requirements.txt
     else
