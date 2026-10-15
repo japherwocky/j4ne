@@ -11,6 +11,7 @@ Tool Access Control:
 """
 
 import os
+import re
 import json
 import time
 import uuid
@@ -142,8 +143,11 @@ MAX_TOOL_RESULT_CHARS = 20000
 USER_AGENT = "j4ne/0.1"
 
 ZEN_BASE_URL = "https://opencode.ai/zen/v1"
-GO_BASE_URL = "https://opencode.ai/zen/go/v1"
-GO_DEFAULT_MODEL = "minimax-m2.5"
+# Go's documented chat-completions endpoint, for the GLM, Kimi and DeepSeek
+# models. Go's docs put MiniMax and Qwen on Anthropic Messages instead; through
+# this endpoint minimax-m2.7 is refused and minimax-m3 leaks <think> text.
+GO_BASE_URL = "https://opencode.ai/inference/go/openai/v1"
+GO_DEFAULT_MODEL = "glm-5.3"
 
 SYSTEM_PROMPTS = {
     "slack": "You are j4ne, a helpful AI assistant. You communicate through Slack and your name is j4ne. When users ask about your identity or name, you should confidently identify yourself as j4ne. You're here to help with various tasks and conversations.",
@@ -168,16 +172,16 @@ def opencode_settings() -> Dict[str, str]:
 
     use_go = os.getenv('OPENCODE_USE_GO', 'true').lower() == 'true'
     if use_go:
-        # OPENCODE_ZEN_MODEL used to carry Go models too, as opencode-go/<name>
-        legacy = os.getenv('OPENCODE_ZEN_MODEL', '')
-        legacy = legacy[len('opencode-go/'):] if legacy.startswith('opencode-go/') else ''
-        default_model = os.getenv('OPENCODE_GO_MODEL') or legacy or GO_DEFAULT_MODEL
-        followup_model = os.getenv('OPENCODE_GO_FOLLOWUP_MODEL') or default_model
+        # The OPENCODE_ZEN_* model settings name the model on either plan, as
+        # they always have. OpenCode itself spells Go models opencode-go/<name>;
+        # the API wants the bare name.
+        default_model = (os.getenv('OPENCODE_ZEN_MODEL') or GO_DEFAULT_MODEL).removeprefix('opencode-go/')
+        followup_model = (os.getenv('OPENCODE_ZEN_FOLLOWUP_MODEL') or default_model).removeprefix('opencode-go/')
         return {
             "api_key": api_key,
             "base_url": GO_BASE_URL,
-            "default_model": default_model.removeprefix('opencode-go/'),
-            "followup_model": followup_model.removeprefix('opencode-go/'),
+            "default_model": default_model,
+            "followup_model": followup_model,
             "plan_name": "OpenCode Go",
         }
 
@@ -197,6 +201,22 @@ def make_llm_client(api_key: str, base_url: str) -> AsyncOpenAI:
         base_url=base_url,
         default_headers={"User-Agent": USER_AGENT},
     )
+
+
+def api_tool_name(name: str) -> str:
+    """A tool's name as the API takes it. The OpenAI rule allows only letters,
+    digits, '_' and '-', and some of Go's upstreams enforce it: kimi-k2.6, and
+    glm-5.3 at times, refuse 'filesystem.read-file'."""
+    return re.sub(r"[^A-Za-z0-9_-]", "_", name)[:64]
+
+
+def api_tools(tools: List[Dict[str, Any]]) -> tuple:
+    """Tool definitions under their API names, and a map from those names back"""
+    names = {api_tool_name(t["function"]["name"]): t["function"]["name"] for t in tools}
+    if len(names) != len(tools):
+        raise ValueError(f"Two tools share an API name: {sorted(t['function']['name'] for t in tools)}")
+    renamed = [{**t, "function": {**t["function"], "name": api_tool_name(t["function"]["name"])}} for t in tools]
+    return renamed, names
 
 
 def session_id_for(key: str) -> str:
@@ -367,7 +387,7 @@ class DirectClient:
         if not messages or messages[0].get("role") != "system":
             messages = [self._system_prompt(memory_context)] + messages
 
-        available_tools = self.get_available_tools()
+        available_tools, tool_names = api_tools(self.get_available_tools())
         logger.debug(f"Available tools: {len(available_tools)}")
 
         headers = {"x-opencode-session": session_id_for(session_key) if session_key else self.session_id}
@@ -435,15 +455,16 @@ class DirectClient:
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
-                    "content": await self._run_tool_call(tool_call),
+                    "content": await self._run_tool_call(tool_call, tool_names),
                 })
 
         self._archive(history, final_response)
         return final_response
 
-    async def _run_tool_call(self, tool_call) -> str:
-        """Run one tool call and return its result as text for the model"""
-        tool_name = tool_call.function.name
+    async def _run_tool_call(self, tool_call, tool_names: Dict[str, str]) -> str:
+        """Run one tool call and return its result as text for the model.
+        tool_names maps the API's names for the tools back to ours."""
+        tool_name = tool_names.get(tool_call.function.name, tool_call.function.name)
 
         try:
             tool_args = json.loads(tool_call.function.arguments or "{}")
@@ -451,7 +472,7 @@ class DirectClient:
                 raise ValueError("arguments must be a JSON object")
         except ValueError as e:
             agent_logger.warning(f"Bad arguments for {tool_name}: {tool_call.function.arguments!r}")
-            return json.dumps({"error": f"Arguments were not valid JSON ({e}). Call {tool_name} again with valid JSON."})
+            return json.dumps({"error": f"Arguments were not valid JSON ({e}). Call {tool_call.function.name} again with valid JSON."})
 
         logger.info(f"Calling tool: {tool_name} with args: {tool_args}")
         if self.show_tool_calls:

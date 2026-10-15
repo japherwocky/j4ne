@@ -162,9 +162,14 @@ Errors raise; the caller decides what the user sees.
 # callers outside OpenCode. Every request carries a User-Agent and an
 # x-opencode-session (one per Slack thread, IRC channel or DM), which Go
 # requires: without them it answers 400 MissingSessionID.
+# OPENCODE_ZEN_MODEL names the model on either plan, despite its name. On Go,
+# j4ne calls the chat-completions endpoint, which serves the GLM, Kimi and
+# DeepSeek models; Go's docs put MiniMax and Qwen on Anthropic Messages.
+# Current list: https://opencode.ai/inference/go/v1/models
 OPENCODE_ZEN_API_KEY=...
-OPENCODE_USE_GO=true            # false for Zen, with OPENCODE_ZEN_MODEL
-OPENCODE_GO_MODEL=minimax-m2.5  # also minimax-m2.7, kimi-k2.5, glm-5
+OPENCODE_USE_GO=true                       # false for Zen
+OPENCODE_ZEN_MODEL=glm-5.3                 # the default on Go
+OPENCODE_ZEN_FOLLOWUP_MODEL=glm-5.3-flash  # rounds after a tool call; defaults to the model
 
 # Slack (Socket Mode)
 SLACK_BOT_TOKEN=xoxb-...
