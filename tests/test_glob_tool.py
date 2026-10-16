@@ -151,6 +151,15 @@ class TestGlobTool(unittest.TestCase):
 
 
 class TestGlobToolEdgeCases(unittest.TestCase):
+    def setUp(self):
+        # These tests chdir into a TemporaryDirectory that is gone when they
+        # finish; without this, every later test runs in a deleted cwd (Linux
+        # lets a process's cwd be removed, Windows does not)
+        self.original_cwd = os.getcwd()
+
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+
     def test_empty_directory(self):
         """Test glob in an empty directory."""
         import sys

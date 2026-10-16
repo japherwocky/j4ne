@@ -29,6 +29,7 @@ class ProactiveAgent:
         """
         self._running = False
         self._task: Optional[asyncio.Task] = None
+        self._client: Optional[DirectClient] = None
 
         # Configuration from environment
         self.interval = int(os.getenv('PROACTIVE_INTERVAL_SECONDS', '0'))
@@ -84,15 +85,17 @@ class ProactiveAgent:
                 logger.debug("SOUL.md has default template content, skipping run")
                 return False
 
-            # Create a fresh DirectClient for this run
-            # Use all tools since this is a controlled environment
+            # One client for every run; each run starts its own history.
+            # All tools: what the agent should be allowed is card #988.
             # Set root_path to j4ne directory so filesystem tools work correctly
-            client = DirectClient(
-                allowed_tools=None,
-                context="proactive",
-                root_path=J4NE_DIR,
-                db_path=os.path.join(J4NE_DIR, "database.db")
-            )
+            if self._client is None:
+                self._client = DirectClient(
+                    allowed_tools=None,
+                    context="proactive",
+                    root_path=J4NE_DIR,
+                    db_path=os.path.join(J4NE_DIR, "database.db")
+                )
+            client = self._client
 
             # Build the prompt with default target info
             target_info = f"Default target: {self.target}"
@@ -117,15 +120,16 @@ IMPORTANT - Tool Usage:
 - You have access to tools. Use them by calling them.
 - If a tool returns results, you can use those results to inform your response.
 - You can call multiple tools in sequence if needed.
-- After you have all the information you need, use slack.send-message to notify if there's something worth sharing.
+- After you have all the information you need, use slack_send_message to notify if there's something worth sharing.
 - If nothing needs to be shared after using your tools, respond with "NOACTION" (just that word, nothing else).
 
 Be concise - people don't want walls of text in proactive messages."""
 
             # Process the query (LLM will decide if/how to message)
-            response = await client.process_query([
-                {"role": "user", "content": prompt}
-            ])
+            response = await client.process_query(
+                [{"role": "user", "content": prompt}],
+                session_key="proactive",
+            )
 
             # Check if we should send a message (LLM decides via tool calls now)
             if response.strip() == "NOACTION":
@@ -196,6 +200,10 @@ Be concise - people don't want walls of text in proactive messages."""
             except asyncio.CancelledError:
                 pass
             self._task = None
+
+        if self._client is not None:
+            await self._client.cleanup()
+            self._client = None
 
         logger.info("Proactive agent stopped")
 

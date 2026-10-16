@@ -6,6 +6,14 @@ from typing import Optional
 # Import the enhanced chat command functions
 from commands.bot_commands import handle_enhanced_chat_command, greet_command, help_command, quit_command
 from commands.handler import command_handler
+from commands.core import register_core_commands
+from commands.context_command import register_context_command
+from commands.tools_command import register_tools_command
+
+# The registry behind /commands, and the commands this module does not handle itself
+register_core_commands()
+register_context_command()
+register_tools_command()
 
 # Rich console for pretty output
 console = Console()
@@ -14,20 +22,23 @@ console = Console()
 SHOW_THINKING = False
 SHOW_TOOLS = False
 
-def handle_message(message: str) -> str:
+async def handle_message(message: str) -> str:
     """
     Handle incoming messages - both for chat commands and traditional messages
     """
     if message.startswith('/'):
         # Handle slash commands
-        return handle_slash_command(message)
+        return await handle_slash_command(message)
     else:
         # Handle regular messages - just return empty to indicate it should be processed as chat
         return ""
 
-def handle_slash_command(command: str) -> str:
+async def handle_slash_command(command: str) -> str:
     """
     Handle slash commands like /chat, /help, etc.
+
+    Async because /chat runs a query, and the chat loop that calls this is
+    already running on the event loop.
     """
     parts = command.split()
     if not parts:
@@ -75,8 +86,7 @@ def handle_slash_command(command: str) -> str:
             return "No active chat client found"
         
         # 🚀 NEW: Use defaults (thinking=True, tools=True) or override with flags
-        import asyncio
-        asyncio.run(handle_enhanced_chat_command(message, show_thinking=thinking, show_tool_calls=tools, verbose=verbose))
+        await handle_enhanced_chat_command(message, show_thinking=thinking, show_tool_calls=tools, verbose=verbose)
         return "__HANDLED__"  # Special signal to skip processing
 
     elif cmd == '/thinking':
@@ -117,12 +127,15 @@ def handle_slash_command(command: str) -> str:
         return "QUIT"
 
     elif cmd == '/commands':
-        from commands.handler import command_handler
         help_text = command_handler.get_help()
         console.print(help_text)
         return "__HANDLED__"
 
     else:
+        # The registered commands: /context, /version, /clear, /t ...
+        result = command_handler.handle_message(command)
+        if result is not None and not result.startswith("Unknown command"):
+            return result
         return f"Unknown command: {cmd}\nAvailable commands: /chat, /commands, /help, /quit, /thinking, /tools"
 
 def show_help():
@@ -180,7 +193,7 @@ async def enhanced_chat_loop(client):
             
             # Check if this is a command
             if query.startswith('/'):
-                result = handle_message(query)
+                result = await handle_message(query)
                 if result == "QUIT":
                     break
                 elif result:

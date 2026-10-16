@@ -15,46 +15,81 @@ from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 from .base import NetworkClient, NetworkMessage
 
 
+# Code blocks and inline code, which mrkdwn shows as they are, and Slack's own
+# <@U123>, <#C123>, <!here> and <https://...|text> tokens, which pass through
+_VERBATIM = re.compile(
+    r'```.*?```|`[^`\n]+`|<(?:[@#!]|https?://|mailto:)[^<>\s|]*(?:\|[^<>\n]*)?>',
+    re.DOTALL,
+)
+
+# Stands in for a bold '*' until italics are done, so bold is not read as italic
+_BOLD = '\x00'
+
+
+def _escape(text: str, keep_quotes: bool = False) -> str:
+    """Escape the three characters Slack reserves for links and mentions"""
+    text = text.replace('&', '&amp;').replace('<', '&lt;')
+    if keep_quotes:
+        # A '>' that starts a line is a block quote
+        return re.sub(r'(?<!^)>', '&gt;', text, flags=re.MULTILINE)
+    return text.replace('>', '&gt;')
+
+
+def _prose_to_mrkdwn(text: str) -> str:
+    text = _escape(text, keep_quotes=True)
+
+    # Links ([text](url) → <url|text>)
+    text = re.sub(r'\[([^\]]+)\]\(([^)\s]+)\)', r'<\2|\1>', text)
+
+    # Bullets (* item, - item, + item → • item), before italics claim the '*'
+    text = re.sub(r'^([ \t]*)[*+-][ \t]+', r'\1• ', text, flags=re.MULTILINE)
+
+    # Headings, which mrkdwn does not have, as bold lines
+    text = re.sub(r'^#{1,6}[ \t]+(.+?)[ \t]*#*$', _BOLD + r'\1' + _BOLD, text, flags=re.MULTILINE)
+
+    # Bold (**...**)
+    text = re.sub(r'\*\*(.+?)\*\*', _BOLD + r'\1' + _BOLD, text)
+
+    # Italic (*...* → _..._): no space just inside the asterisks, so '2 * 3 * 4' stays
+    text = re.sub(r'(?<![*\w])\*(?![\s*])([^*\n]+?)(?<![\s*])\*(?![*\w])', r'_\1_', text)
+
+    # Strikethrough (~~...~~ → ~...~)
+    text = re.sub(r'~~(.+?)~~', r'~\1~', text)
+
+    return text.replace(_BOLD, '*')
+
+
 def markdown_to_mrkdwn(text: str) -> str:
     """
     Convert markdown formatting to Slack's mrkdwn format.
 
     Markdown → Slack mrkdwn:
-    - **bold** → *bold*
+    - **bold** and # headings → *bold*
     - *italic* → _italic_
-    - `code` → `code`
-    - ```code block``` → ```code block```
+    - * item / - item → • item
     - ~~strike~~ → ~strike~
-    - > quote → > quote
     - [text](url) → <url|text>
+    - `code` and ```code blocks``` are left as they are, minus a block's language
+    - &, < and > are escaped, as Slack requires, except in Slack's own
+      <@user>, <#channel> and <url|text> tokens
     """
     if not text:
         return text
 
-    # Code blocks (```...```) - do this first to protect them
-    text = re.sub(r'```(\w*)\n([\s\S]*?)```', r'```\2```', text)
-
-    # Inline code (`...`) - do before other formatting
-    text = re.sub(r'`([^`]+)`', r'`\1`', text)
-
-    # Links ([text](url) → <url|text>) - do before other formatting to avoid interference
-    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<\2|\1>', text)
-
-    # Bold (**...** → *...*) - use a pattern that won't interfere with italic
-    text = re.sub(r'\*\*([^*]+)\*\*', r'*\1*', text)
-
-    # Italic (*...* → _..._) - must be done AFTER bold, and only match single asterisks
-    # Pattern: single * followed by non-*, non-space chars, followed by single *
-    # Must not be preceded or followed by another *
-    text = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'_\1_', text)
-
-    # Strikethrough (~~...~~ → ~...~)
-    text = re.sub(r'~~(.+?)~~', r'~\1~', text)
-
-    # Block quotes (> text)
-    text = re.sub(r'^>\s*(.+)$', r'>\1', text, flags=re.MULTILINE)
-
-    return text
+    parts = []
+    last = 0
+    for match in _VERBATIM.finditer(text):
+        parts.append(_prose_to_mrkdwn(text[last:match.start()]))
+        token = match.group(0)
+        if token.startswith('```'):
+            # mrkdwn has no syntax highlighting; a language tag would show as text
+            token = re.sub(r'^```[\w+.-]*\n', '```\n', token)
+        if token.startswith('`'):
+            token = _escape(token)
+        parts.append(token)
+        last = match.end()
+    parts.append(_prose_to_mrkdwn(text[last:]))
+    return ''.join(parts)
 
 
 class SlackClient(NetworkClient):
@@ -108,6 +143,9 @@ class SlackClient(NetworkClient):
         # Bot user ID (will be set after connection)
         self.bot_user_id = None
 
+        # The event loop this client runs on, for tools that send from a worker thread
+        self.loop = None
+
         # Validate required tokens based on mode
         if self.mode == "socket":
             if not self.bot_token or not self.app_token:
@@ -158,6 +196,8 @@ class SlackClient(NetworkClient):
             return False
 
         try:
+            self.loop = asyncio.get_running_loop()
+
             # Initialize Slack Bolt app
             self.app = AsyncApp(token=self.bot_token)
 
@@ -217,11 +257,14 @@ class SlackClient(NetworkClient):
         self.connected = False
         self.logger.info("Disconnected from Slack")
 
-    async def send_message(self, channel: str, message: str, thread_ts: Optional[str] = None):
-        """Send a message to a Slack channel, converting markdown to mrkdwn format."""
+    async def send_message(self, channel: str, message: str, thread_ts: Optional[str] = None) -> bool:
+        """Send a message to a Slack channel, converting markdown to mrkdwn format.
+
+        Returns True if Slack accepted it.
+        """
         if not self.connected or not self.app:
             self.logger.warning("Not connected to Slack")
-            return
+            return False
 
         # Convert markdown to Slack's mrkdwn format
         mrkdwn_message = markdown_to_mrkdwn(message)
@@ -234,8 +277,10 @@ class SlackClient(NetworkClient):
                 thread_ts=thread_ts
             )
             self.logger.info(f"Successfully sent message to channel={channel}, thread_ts={thread_ts}")
+            return True
         except Exception as e:
             self.logger.error(f"Failed to send Slack message: {e}")
+            return False
 
     async def add_reaction(self, channel_id: str, timestamp: str, emoji: str) -> bool:
         """
@@ -331,13 +376,6 @@ class SlackClient(NetworkClient):
 
     def _setup_handlers(self):
         """Set up Slack event handlers."""
-
-        # Debug: Log ALL events received
-        @self.app.event("*")
-        async def handle_all_events(event, **kwargs):
-            """Debug handler to log all events."""
-            self.logger.debug(f"Received event: {event.get('type', 'unknown')}")
-            self.logger.debug(f"Event data: {event}")
 
         @self.app.event("app_mention")
         async def handle_app_mention(event, say, client):
@@ -498,10 +536,21 @@ class SlackClient(NetworkClient):
                             {"role": "user", "content": f"{username}: {message_text}"}
                         ]
 
-                    # Get AI response
-                    response = await self.chat_client.process_query(history)
+                    # One OpenCode session per conversation: the thread for a
+                    # mention (its replies go there), the channel for a DM
+                    if thread_ts or is_mention:
+                        session_key = f"slack:{channel_id}:{thread_ts or message_ts}"
+                    else:
+                        session_key = f"slack:{channel_id}"
 
-                    if response and response.strip():
+                    # Get AI response
+                    response = await self.chat_client.process_query(history, session_key=session_key)
+
+                    if not (response and response.strip()):
+                        self.logger.warning("Empty response from the model; nothing sent")
+                        if message_ts:
+                            await self.remove_reaction(channel_id, message_ts, self.REACTION_THINKING)
+                    else:
                         # Send response in thread if original message was in a thread or if it was a mention
                         reply_ts = thread_ts or (event.get("ts") if is_mention else None)
 

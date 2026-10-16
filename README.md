@@ -11,8 +11,9 @@ A modern chat bot with CLI and web interfaces for IRC and Slack platforms.
 
 ## Requirements
 
-- Python 3.7 or later
+- Python 3.10 or later
 - Dependencies listed in `requirements.txt`
+- An OpenCode Go API key (`OPENCODE_ZEN_API_KEY` in `.env`; see `.env.example`)
 
 ## Installation
 
@@ -66,7 +67,7 @@ To enable Slack integration:
 
 ## Using Slack Integration
 
-1. **Start the web server** (this starts both IRC and Slack clients):
+1. **Start the web server** (this starts the Slack client, and IRC too if `IRC_SERVER` is set):
    ```bash
    python j4ne.py web
    ```

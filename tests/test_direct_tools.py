@@ -54,7 +54,7 @@ class TestDirectTools(unittest.TestCase):
         """Test filesystem tools"""
         # Write a test file
         result = self.multiplexer.execute_tool(
-            "filesystem.write-file",
+            "filesystem_write_file",
             {
                 "path": "test_file.txt",
                 "content": "This is a test file.",
@@ -69,7 +69,7 @@ class TestDirectTools(unittest.TestCase):
         
         # List files
         result = self.multiplexer.execute_tool(
-            "filesystem.list-files",
+            "filesystem_list_files",
             {"directory": "."}
         )
         self.assertIn("files", result)
@@ -77,7 +77,7 @@ class TestDirectTools(unittest.TestCase):
         
         # Read the test file
         result = self.multiplexer.execute_tool(
-            "filesystem.read-file",
+            "filesystem_read_file",
             {"path": "test_file.txt"}
         )
         self.assertIn("content", result)
@@ -85,7 +85,7 @@ class TestDirectTools(unittest.TestCase):
         
         # Delete the test file
         result = self.multiplexer.execute_tool(
-            "filesystem.delete-file",
+            "filesystem_delete_file",
             {"path": "test_file.txt", "recursive": False}
         )
         self.assertTrue(result.get("success", False))
@@ -95,13 +95,13 @@ class TestDirectTools(unittest.TestCase):
         """Test SQLite tools"""
         # Drop the table if it exists to ensure clean state
         self.multiplexer.execute_tool(
-            "sqlite.write-query",
+            "sqlite_write_query",
             {"query": "DROP TABLE IF EXISTS test_table"}
         )
 
         # Create a test table
         result = self.multiplexer.execute_tool(
-            "sqlite.create-table",
+            "sqlite_create_table",
             {
                 "query": """
                 CREATE TABLE test_table (
@@ -116,7 +116,7 @@ class TestDirectTools(unittest.TestCase):
         
         # List tables
         result = self.multiplexer.execute_tool(
-            "sqlite.list-tables",
+            "sqlite_list_tables",
             {}
         )
         self.assertIn("tables", result)
@@ -124,14 +124,14 @@ class TestDirectTools(unittest.TestCase):
         
         # Describe the test table
         result = self.multiplexer.execute_tool(
-            "sqlite.describe-table",
+            "sqlite_describe_table",
             {"table_name": "test_table"}
         )
         self.assertIn("schema", result)
         
         # Insert data
         result = self.multiplexer.execute_tool(
-            "sqlite.write-query",
+            "sqlite_write_query",
             {
                 "query": """
                 INSERT INTO test_table (name, value) VALUES
@@ -145,7 +145,7 @@ class TestDirectTools(unittest.TestCase):
         
         # Query data
         result = self.multiplexer.execute_tool(
-            "sqlite.read-query",
+            "sqlite_read_query",
             {"query": "SELECT * FROM test_table"}
         )
         self.assertIn("results", result)
@@ -153,7 +153,7 @@ class TestDirectTools(unittest.TestCase):
         
         # Add an insight
         result = self.multiplexer.execute_tool(
-            "sqlite.append-insight",
+            "sqlite_append_insight",
             {"insight": "Test insight from data analysis"}
         )
         self.assertTrue(result.get("success", False))

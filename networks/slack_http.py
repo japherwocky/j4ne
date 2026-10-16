@@ -3,6 +3,7 @@ Slack HTTP webhook receiver for production mode.
 Handles Events API requests via HTTPS POST from Slack.
 """
 
+import asyncio
 import hmac
 import hashlib
 import os
@@ -19,6 +20,17 @@ logger = logging.getLogger(__name__)
 processed_events: dict = {}
 # TTL for duplicate tracking (10 minutes)
 PROCESSED_EVENT_TTL = 600
+
+# Replies being worked on. The loop holds tasks only weakly, so a task nobody
+# references can be collected before it finishes.
+_background_tasks: set = set()
+
+
+def _run_in_background(coro) -> asyncio.Task:
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return task
 
 
 def get_event_key(event_data: dict) -> str:
@@ -158,22 +170,24 @@ async def slack_events_handler(request: Request) -> PlainTextResponse:
 
             logger.info(f"Received Slack event: type={event_type}, channel={event_data.get('channel')}, user={event_data.get('user')}, thread_ts={event_data.get('thread_ts')}, ts={event_data.get('ts')}")
 
+            # Slack wants its 200 within 3 seconds and retries otherwise, and
+            # an answer takes longer than that. Acknowledge now, answer after.
             if event_type == 'app_mention':
                 # Handle @mentions of the bot
-                await slack_client._handle_message_event(
+                _run_in_background(slack_client._handle_message_event(
                     event_data,
                     slack_client.app.client,
                     is_mention=True
-                )
+                ))
             elif event_type == 'message':
                 # Handle direct messages
                 channel_type = event_data.get('channel_type')
                 if channel_type == 'im':
-                    await slack_client._handle_message_event(
+                    _run_in_background(slack_client._handle_message_event(
                         event_data,
                         slack_client.app.client,
                         is_mention=False
-                    )
+                    ))
                 else:
                     logger.debug(f"Ignoring channel message: {channel_type}")
             else:
@@ -200,7 +214,7 @@ async def slack_interactive_endpoint(request: Request) -> PlainTextResponse:
     """
     try:
         # Verify the request is from Slack
-        if not verify_slack_signature(request):
+        if not await verify_slack_signature(request):
             logger.warning("Rejected interactive request with invalid signature")
             return PlainTextResponse("Invalid signature", status_code=403)
 
@@ -235,7 +249,7 @@ async def slack_command_endpoint(request: Request) -> PlainTextResponse:
     """
     try:
         # Verify the request is from Slack
-        if not verify_slack_signature(request):
+        if not await verify_slack_signature(request):
             logger.warning("Rejected command request with invalid signature")
             return PlainTextResponse("Invalid signature", status_code=403)
 

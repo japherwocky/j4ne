@@ -68,7 +68,7 @@ from networks import IRCClient, SlackClient
 # --- Import Slack HTTP routes for production mode ---
 from networks.slack_http import get_slack_routes
 # --- Import DirectClient with tool filtering ---
-from tools.direct_client import DirectClient, SAFE_TOOLS, SLACK_TOOLS
+from tools.direct_client import DirectClient, PUBLIC_TOOLS
 # --- Import Proactive Agent ---
 from proactive import ProactiveAgent
 
@@ -86,9 +86,10 @@ async def start_web_server_with_networks():
     Starts the Starlette web server with IRC and Slack clients.
     Supports both Socket Mode (development) and HTTP mode (production).
     """
-    chat_client = None
-    chat_client_full = None  # For IRC (trusted environment)
+    chat_client_irc = None
+    chat_client_slack = None
     slack_client = None
+    irc_client = None
 
     # Determine Slack mode from environment or auto-detect
     slack_mode = os.getenv('SLACK_MODE', 'auto').lower()
@@ -109,50 +110,33 @@ async def start_web_server_with_networks():
 
     logger.info(f"Using Slack mode: {slack_mode}")
 
-    # Initialize full chat client for IRC (trusted, gets all tools)
-    try:
-        chat_client_full = DirectClient(
-            allowed_tools=None,
-            root_path=BASE_DIR,
-            db_path=os.path.join(BASE_DIR, "database.db")
-        )  # All tools
-        await chat_client_full.connect_to_server()
-        logger.info("Full chat client initialized for IRC")
-    except Exception as e:
-        logger.warning(f"Failed to initialize full chat client: {e}")
+    # IRC is opt-in: anyone in the channel can talk to the bot, so it gets
+    # the same public tools as Slack, never the filesystem, git or SQLite
+    if os.getenv('IRC_SERVER'):
+        try:
+            chat_client_irc = DirectClient(allowed_tools=PUBLIC_TOOLS, context="irc")
+            logger.info("Chat client initialized for IRC (public tools only)")
+        except Exception as e:
+            logger.warning(f"Failed to initialize IRC chat client: {e}")
 
-    # Initialize restricted chat client for Slack (no tools, conversational only)
-    try:
-        chat_client_slack = DirectClient(
-            allowed_tools=SLACK_TOOLS,
-            context="slack",
-            root_path=BASE_DIR,
-            db_path=os.path.join(BASE_DIR, "database.db")
-        )
-        logger.info("Chat client initialized for Slack (no tools)")
-    except Exception as e:
-        logger.warning(f"Failed to initialize Slack chat client: {e}")
-        chat_client_slack = None
-
-    # Use the restricted client for Slack
-    chat_client = chat_client_slack
-
-    # Initialize IRC client (uses full client for all tools)
-    irc_client = IRCClient(chat_client=chat_client_full)
-
-    # Start IRC client in background
-    if irc_client.server:  # Only start if IRC is configured
+        irc_client = IRCClient(chat_client=chat_client_irc)
         logger.info("Starting IRC client...")
-        success = await irc_client.connect()
-        if success:
-            logger.info(f"IRC client connected to {irc_client.server}")
+        if await irc_client.connect():
+            logger.info(f"IRC client connecting to {irc_client.server}")
         else:
             logger.warning("Failed to connect to IRC")
     else:
-        logger.info("IRC not configured, skipping IRC client startup")
+        logger.info("IRC_SERVER not set, skipping IRC client startup")
+
+    # Initialize restricted chat client for Slack (public tools only)
+    try:
+        chat_client_slack = DirectClient(allowed_tools=PUBLIC_TOOLS, context="slack")
+        logger.info("Chat client initialized for Slack (public tools only)")
+    except Exception as e:
+        logger.warning(f"Failed to initialize Slack chat client: {e}")
 
     # Initialize Slack client with appropriate mode
-    slack_client = SlackClient(chat_client=chat_client, mode=slack_mode)
+    slack_client = SlackClient(chat_client=chat_client_slack, mode=slack_mode)
 
     # Start Slack client based on mode
     if slack_mode == 'socket':
@@ -195,28 +179,33 @@ async def start_web_server_with_networks():
     else:
         logger.info("Proactive agent disabled (set PROACTIVE_INTERVAL_SECONDS > 0 to enable)")
 
-    # Create Starlette app
-    app = Starlette(debug=True, routes=app_routes)
-    
-    # Start web server
-    logger.info("Starting Starlette web server...")
-    config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info")
+    # Create Starlette app. Not debug: that serves tracebacks to whoever
+    # reaches the server, and in production nginx proxies the internet to it.
+    app = Starlette(debug=False, routes=app_routes)
+
+    # Start web server. nginx proxies to 127.0.0.1:8000, so that is the
+    # default; set J4NE_HOST=0.0.0.0 to listen on every interface.
+    host = os.getenv('J4NE_HOST', '127.0.0.1')
+    port = int(os.getenv('J4NE_PORT', '8000'))
+    logger.info(f"Starting Starlette web server on {host}:{port}...")
+    config = uvicorn.Config(app, host=host, port=port, log_level="info")
     server = uvicorn.Server(config)
-    
+
     try:
         await server.serve()
     finally:
         # Cleanup proactive agent
         if proactive_agent:
             await proactive_agent.stop()
-        
+
         # Cleanup network clients
-        if irc_client and irc_client.connected:
+        if irc_client:
             await irc_client.disconnect()
         if slack_client and slack_client.connected:
             await slack_client.disconnect()
-        if chat_client:
-            await chat_client.cleanup()
+        for chat_client in (chat_client_irc, chat_client_slack):
+            if chat_client:
+                await chat_client.cleanup()
 
 def start_web_server():
     """
@@ -304,6 +293,8 @@ def handle_greet(name):
     """
     Handle the 'greet' command.
     """
+    # Printed, not only logged: the log has no console handler in this mode
+    typer.echo(f"Hello {name}!")
     logger.info(f"Greeting {name}!")  # Log message styled by Tornado LogFormatter
 
 

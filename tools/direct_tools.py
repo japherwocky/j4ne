@@ -7,19 +7,48 @@ subprocess communication, eliminating the overhead of the MCP protocol over stdi
 
 from typing import Dict, List, Any, Optional, Union, Type
 import os
+import re
 import sqlite3
 import json
 import logging
+import threading
 import pathspec
 import subprocess
 import shlex
 from pydantic import BaseModel, Field
 
-# Import the global database connection
-from db import db
-
 # Configure logging
 logger = logging.getLogger('direct_tools')
+
+# Paths the filesystem tools never read, write or delete, whatever .gitignore says
+ALWAYS_IGNORED = [".git/", ".env"]
+
+# The most a read-file returns, so one big file cannot fill the model's context
+MAX_READ_CHARS = 100_000
+
+# The most rows a query returns
+MAX_QUERY_ROWS = 500
+
+
+def resolve_under_root(root: str, path: str) -> Optional[str]:
+    """Resolve path against root, following symlinks and junctions.
+
+    Returns the real path, or None when it lands outside root. root must
+    already be a realpath. A prefix test is not enough: '/opt/j4ne-old'
+    starts with '/opt/j4ne'.
+    """
+    if os.name == "nt" and ":" in os.path.splitdrive(path)[1]:
+        # NTFS alternate data streams ('.env::$DATA') name a file's content
+        # without matching its name
+        return None
+    candidate = os.path.realpath(os.path.join(root, path))
+    try:
+        if os.path.commonpath([root, candidate]) != root:
+            return None
+    except ValueError:
+        # Different drives on Windows
+        return None
+    return candidate
 
 # ---- Tool Input Models ----
 
@@ -145,6 +174,9 @@ class DirectTool:
         """Tool-specific implementation to be overridden by subclasses"""
         raise NotImplementedError("Subclasses must implement _execute()")
 
+TOOL_NAME = re.compile(r"[a-z][a-z0-9_]{0,63}")
+
+
 class ToolProvider:
     """Base class for tool providers"""
     
@@ -153,11 +185,15 @@ class ToolProvider:
         self.tools: Dict[str, DirectTool] = {}
     
     def register_tool(self, tool: DirectTool) -> None:
-        """Register a tool with this provider"""
-        # Ensure the tool name has the provider prefix
-        if not tool.name.startswith(f"{self.prefix}."):
-            tool.name = f"{self.prefix}.{tool.name}"
-        
+        """Register a tool as <prefix>_<name>, the name the model calls it by"""
+        if not tool.name.startswith(f"{self.prefix}_"):
+            tool.name = f"{self.prefix}_{tool.name}"
+        # The API takes [A-Za-z0-9_-]{1,64}, and some of OpenCode's upstreams
+        # refuse anything else (kimi-k2.6 refused 'filesystem.read-file').
+        # snake_case is the narrower house style.
+        if not TOOL_NAME.fullmatch(tool.name):
+            raise ValueError(f"Tool name {tool.name!r} is not snake_case of at most 64 characters")
+
         self.tools[tool.name] = tool
         logger.debug(f"Registered tool: {tool.name}")
     
@@ -172,7 +208,7 @@ class FilesystemToolProvider(ToolProvider):
     
     def __init__(self, root_path: str):
         super().__init__("filesystem")
-        self.root_path = os.path.abspath(root_path)
+        self.root_path = os.path.realpath(root_path)
         logger.info(f"Initializing FilesystemToolProvider with root path: {self.root_path}")
         
         # Setup gitignore patterns
@@ -197,8 +233,8 @@ class FilesystemToolProvider(ToolProvider):
         else:
             patterns = default_patterns
             logger.debug(f"Using {len(patterns)} default ignore patterns")
-        
-        self.ignore_patterns = pathspec.PathSpec.from_lines("gitwildmatch", patterns)
+
+        self.ignore_patterns = pathspec.GitIgnoreSpec.from_lines(ALWAYS_IGNORED + patterns)
     
     def _register_tools(self) -> None:
         """Register all filesystem tools"""
@@ -207,14 +243,22 @@ class FilesystemToolProvider(ToolProvider):
         self.register_tool(ListFilesTool(self))
         self.register_tool(DeleteFileTool(self))
     
+    def resolve(self, path: str) -> Optional[str]:
+        """The real path for path under the root, or None if it is outside"""
+        return resolve_under_root(self.root_path, path)
+
     def is_safe_path(self, path: str) -> bool:
         """Check if a path is within the root directory"""
-        abs_path = os.path.abspath(os.path.join(self.root_path, path))
-        return abs_path.startswith(self.root_path)
-    
+        return self.resolve(path) is not None
+
     def is_ignored(self, path: str) -> bool:
-        """Check if a path matches ignore patterns"""
+        """Check if a resolved path matches ignore patterns"""
         rel = os.path.relpath(path, self.root_path)
+        if rel == ".":
+            return False
+        if os.path.isdir(path):
+            # Directory patterns like 'logs/' only match with the slash
+            rel = rel + os.sep
         return self.ignore_patterns.match_file(rel)
 
 # ---- Filesystem Tools ----
@@ -224,7 +268,7 @@ class ReadFileTool(DirectTool):
     
     def __init__(self, provider: FilesystemToolProvider):
         super().__init__(
-            name="read-file",
+            name="read_file",
             description="Read the entire contents of a file",
             input_model=FileRead
         )
@@ -232,20 +276,21 @@ class ReadFileTool(DirectTool):
     
     def _execute(self, path: str) -> Dict[str, Any]:
         """Read a file and return its contents"""
-        if not self.provider.is_safe_path(path):
+        full_path = self.provider.resolve(path)
+        if full_path is None:
             return {"error": "Path is outside root directory"}
-        
-        full_path = os.path.join(self.provider.root_path, path)
-        
+
         if not os.path.isfile(full_path):
             return {"error": f"File not found: {path}"}
-        
+
         if self.provider.is_ignored(full_path):
             return {"error": f"File is ignored: {path}"}
-        
+
         try:
             with open(full_path, "r", encoding="utf-8") as f:
-                content = f.read()
+                content = f.read(MAX_READ_CHARS + 1)
+            if len(content) > MAX_READ_CHARS:
+                return {"content": content[:MAX_READ_CHARS], "truncated": True}
             return {"content": content}
         except UnicodeDecodeError:
             return {"error": f"File is not text-based: {path}"}
@@ -257,7 +302,7 @@ class WriteFileTool(DirectTool):
     
     def __init__(self, provider: FilesystemToolProvider):
         super().__init__(
-            name="write-file",
+            name="write_file",
             description="Write content to a file",
             input_model=FileWrite
         )
@@ -265,11 +310,13 @@ class WriteFileTool(DirectTool):
     
     def _execute(self, path: str, content: str, create_dirs: bool) -> Dict[str, Any]:
         """Write content to a file"""
-        if not self.provider.is_safe_path(path):
+        full_path = self.provider.resolve(path)
+        if full_path is None or full_path == self.provider.root_path:
             return {"error": "Path is outside root directory"}
-        
-        full_path = os.path.join(self.provider.root_path, path)
-        
+
+        if self.provider.is_ignored(full_path):
+            return {"error": f"File is ignored and cannot be written: {path}"}
+
         try:
             if create_dirs:
                 os.makedirs(os.path.dirname(full_path), exist_ok=True)
@@ -286,7 +333,7 @@ class ListFilesTool(DirectTool):
     
     def __init__(self, provider: FilesystemToolProvider):
         super().__init__(
-            name="list-files",
+            name="list_files",
             description="List files and directories in a given directory",
             input_model=ListFiles
         )
@@ -294,13 +341,15 @@ class ListFilesTool(DirectTool):
     
     def _execute(self, directory: str) -> Dict[str, Any]:
         """List files in a directory"""
-        if not self.provider.is_safe_path(directory):
+        abs_dir = self.provider.resolve(directory)
+        if abs_dir is None:
             return {"error": "Directory is outside root path"}
-        
-        abs_dir = os.path.abspath(os.path.join(self.provider.root_path, directory))
-        
-        if not os.path.exists(abs_dir) or not os.path.isdir(abs_dir):
+
+        if not os.path.isdir(abs_dir):
             return {"error": f"Directory not found: {directory}"}
+
+        if self.provider.is_ignored(abs_dir):
+            return {"error": f"Directory is ignored: {directory}"}
         
         files = []
         directories = []
@@ -327,7 +376,7 @@ class DeleteFileTool(DirectTool):
     
     def __init__(self, provider: FilesystemToolProvider):
         super().__init__(
-            name="delete-file",
+            name="delete_file",
             description="Delete a file or directory",
             input_model=FileDelete
         )
@@ -335,14 +384,19 @@ class DeleteFileTool(DirectTool):
     
     def _execute(self, path: str, recursive: bool) -> Dict[str, Any]:
         """Delete a file or directory"""
-        if not self.provider.is_safe_path(path):
+        full_path = self.provider.resolve(path)
+        if full_path is None:
             return {"error": "Path is outside root directory"}
-        
-        full_path = os.path.join(self.provider.root_path, path)
-        
-        if not os.path.exists(full_path):
+
+        if full_path == self.provider.root_path:
+            return {"error": "Refusing to delete the root directory"}
+
+        if not os.path.lexists(full_path):
             return {"error": f"Path not found: {path}"}
-        
+
+        if self.provider.is_ignored(full_path):
+            return {"error": f"File is ignored and cannot be deleted: {path}"}
+
         try:
             if os.path.isdir(full_path):
                 if recursive:
@@ -364,24 +418,28 @@ class SQLiteToolProvider(ToolProvider):
     
     def __init__(self, db_path: str):
         super().__init__("sqlite")
-        self.db_path = os.path.abspath(db_path)
+        self.db_path = db_path if db_path == ":memory:" else os.path.abspath(db_path)
         logger.info(f"Initializing SQLiteToolProvider with database: {self.db_path}")
-        
+
         # Initialize database
         self._init_database()
-        
+
         # Register tools
         self._register_tools()
-        
+
         # Storage for business insights
         self.insights = []
-    
+
     def _init_database(self) -> None:
-        """Initialize the SQLite database"""
-        # We don't need to initialize the database here anymore
-        # since we're using the global database connection from db.py
-        # The database is already initialized and connected in db.py
-        pass
+        """Open this provider's own connection to db_path"""
+        # Tools run in worker threads, so the connection is shared across
+        # threads and guarded by a lock. Autocommit, so a write lands at once.
+        self._conn = sqlite3.connect(self.db_path, check_same_thread=False, isolation_level=None)
+        self._lock = threading.Lock()
+
+    async def cleanup(self) -> None:
+        """Close the database connection"""
+        self._conn.close()
     
     def _register_tools(self) -> None:
         """Register all SQLite tools"""
@@ -392,30 +450,47 @@ class SQLiteToolProvider(ToolProvider):
         self.register_tool(DescribeTableTool(self))
         self.register_tool(AppendInsightTool(self))
     
-    def _execute_query(self, query: str, params=None) -> List[Dict[str, Any]]:
+    def _execute_query(self, query: str, params=None, read_only: bool = False) -> List[Dict[str, Any]]:
         """Execute a SQL query and return results"""
-        try:
-            # Use the global database connection
-            # Convert the query to work with peewee's SqliteDatabase
-            cursor = db.execute_sql(query, params)
-            
-            if query.strip().upper().startswith(('INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER')):
-                affected = cursor.rowcount
-                return [{"affected_rows": affected}]
-            
-            # Fetch results
-            results = []
-            for row in cursor.fetchall():
-                # Convert sqlite3.Row to dict
-                row_dict = {}
-                for idx, col in enumerate(cursor.description):
-                    row_dict[col[0]] = row[idx]
-                results.append(row_dict)
-            
-            return results
-        except Exception as e:
-            logger.error(f"Database error executing query: {str(e)}")
-            raise
+        authorizer = _read_only_authorizer if read_only else _write_authorizer
+        if not read_only and query.strip().upper().startswith("VACUUM"):
+            # VACUUM INTO writes a copy of the database to any path
+            raise sqlite3.DatabaseError("VACUUM is not allowed")
+        with self._lock:
+            self._conn.set_authorizer(authorizer)
+            try:
+                cursor = self._conn.execute(query, params or ())
+                if cursor.description is None:
+                    return [{"affected_rows": cursor.rowcount}]
+                columns = [col[0] for col in cursor.description]
+                return [dict(zip(columns, row)) for row in cursor.fetchmany(MAX_QUERY_ROWS)]
+            except Exception as e:
+                logger.error(f"Database error executing query: {str(e)}")
+                raise
+            finally:
+                self._conn.set_authorizer(None)
+
+
+# SQLite authorizer callbacks: (action, arg1, arg2, db_name, trigger) -> verdict
+
+_READ_ACTIONS = {
+    sqlite3.SQLITE_SELECT,
+    sqlite3.SQLITE_READ,
+    sqlite3.SQLITE_FUNCTION,
+    getattr(sqlite3, "SQLITE_RECURSIVE", 33),
+}
+
+
+def _read_only_authorizer(action, *args):
+    """Allow reading and nothing else, whatever the statement claims to be"""
+    return sqlite3.SQLITE_OK if action in _READ_ACTIONS else sqlite3.SQLITE_DENY
+
+
+def _write_authorizer(action, *args):
+    """Allow writes to this database, but no ATTACH of another file"""
+    if action in (sqlite3.SQLITE_ATTACH, sqlite3.SQLITE_DETACH):
+        return sqlite3.SQLITE_DENY
+    return sqlite3.SQLITE_OK
 
 # ---- SQLite Tools ----
 
@@ -424,7 +499,7 @@ class ReadQueryTool(DirectTool):
     
     def __init__(self, provider: SQLiteToolProvider):
         super().__init__(
-            name="read-query",
+            name="read_query",
             description="Execute a SELECT query on the SQLite database",
             input_model=SqlQuery
         )
@@ -432,11 +507,11 @@ class ReadQueryTool(DirectTool):
     
     def _execute(self, query: str) -> Dict[str, Any]:
         """Execute a SELECT query"""
-        if not query.strip().upper().startswith("SELECT"):
+        if not query.strip().upper().startswith(("SELECT", "WITH")):
             return {"error": "Only SELECT queries are allowed for read-query"}
-        
+
         try:
-            results = self.provider._execute_query(query)
+            results = self.provider._execute_query(query, read_only=True)
             return {"results": results}
         except Exception as e:
             return {"error": f"Database error: {str(e)}"}
@@ -446,7 +521,7 @@ class WriteQueryTool(DirectTool):
     
     def __init__(self, provider: SQLiteToolProvider):
         super().__init__(
-            name="write-query",
+            name="write_query",
             description="Execute an INSERT, UPDATE, or DELETE query on the SQLite database",
             input_model=SqlQuery
         )
@@ -468,7 +543,7 @@ class CreateTableTool(DirectTool):
     
     def __init__(self, provider: SQLiteToolProvider):
         super().__init__(
-            name="create-table",
+            name="create_table",
             description="Create a new table in the SQLite database",
             input_model=SqlCreateTable
         )
@@ -490,7 +565,7 @@ class ListTablesTool(DirectTool):
     
     def __init__(self, provider: SQLiteToolProvider):
         super().__init__(
-            name="list-tables",
+            name="list_tables",
             description="List all tables in the SQLite database",
             input_model=EmptyModel
         )
@@ -512,7 +587,7 @@ class DescribeTableTool(DirectTool):
     
     def __init__(self, provider: SQLiteToolProvider):
         super().__init__(
-            name="describe-table",
+            name="describe_table",
             description="Get the schema information for a specific table",
             input_model=SqlDescribeTable
         )
@@ -521,7 +596,9 @@ class DescribeTableTool(DirectTool):
     def _execute(self, table_name: str) -> Dict[str, Any]:
         """Describe a table"""
         try:
-            results = self.provider._execute_query(f"PRAGMA table_info({table_name})")
+            results = self.provider._execute_query(
+                "SELECT * FROM pragma_table_info(?)", (table_name,)
+            )
             return {"schema": results}
         except Exception as e:
             return {"error": f"Database error: {str(e)}"}
@@ -531,7 +608,7 @@ class AppendInsightTool(DirectTool):
     
     def __init__(self, provider: SQLiteToolProvider):
         super().__init__(
-            name="append-insight",
+            name="append_insight",
             description="Add a business insight to the memo",
             input_model=AppendInsight
         )
@@ -549,7 +626,7 @@ class GitToolProvider(ToolProvider):
     
     def __init__(self, root_path: str = "."):
         super().__init__("git")
-        self.root_path = os.path.abspath(root_path)
+        self.root_path = os.path.realpath(root_path)
         logger.info(f"Initializing GitToolProvider with root path: {self.root_path}")
         
         # Register tools
@@ -571,26 +648,26 @@ class GitToolProvider(ToolProvider):
     
     def is_safe_path(self, path: str) -> bool:
         """Check if a path is within the root directory"""
-        abs_path = os.path.abspath(path)
-        return abs_path.startswith(self.root_path)
-    
+        return resolve_under_root(self.root_path, path) is not None
+
     def execute_git_command(self, command: List[str], cwd: str) -> Dict[str, Any]:
         """Execute a git command safely"""
-        if not self.is_safe_path(cwd):
+        # Relative paths are relative to the root, not the process's cwd
+        cwd = resolve_under_root(self.root_path, cwd)
+        if cwd is None:
             return {"error": "Path is outside root directory"}
-        
+
         if not self.is_git_repository(cwd):
             return {"error": "Not a git repository"}
-        
-        # Ensure PATH includes common git locations
+
+        # The systemd unit used to set PATH to the venv alone, which hides git
         env = os.environ.copy()
-        path = env.get('PATH', '')
-        # Add common git locations if not present
-        git_paths = ['/usr/bin', '/usr/local/bin', '/bin']
-        for git_path in git_paths:
-            if git_path not in path:
-                path = git_path + ':' + path
-        env['PATH'] = path
+        path_dirs = env.get('PATH', '').split(os.pathsep)
+        if os.name != 'nt':
+            for git_path in ['/usr/local/bin', '/usr/bin', '/bin']:
+                if git_path not in path_dirs:
+                    path_dirs.append(git_path)
+        env['PATH'] = os.pathsep.join(path_dirs)
         
         try:
             # Execute the git command with timeout and proper PATH
@@ -607,7 +684,8 @@ class GitToolProvider(ToolProvider):
             return {
                 "success": result.returncode == 0,
                 "returncode": result.returncode,
-                "stdout": result.stdout.strip(),
+                # Not strip(): porcelain status starts with a space (' M f.txt')
+                "stdout": result.stdout.rstrip(),
                 "stderr": result.stderr.strip()
             }
         
@@ -676,8 +754,9 @@ class GitAddTool(DirectTool):
         else:
             # Split files by spaces and validate each one
             git_files = shlex.split(files)
-        
-        command = ["git", "add"] + git_files
+
+        # '--' so a file named like an option is taken as a path
+        command = ["git", "add", "--"] + git_files
         result = self.provider.execute_git_command(command, repository_path)
         
         if "error" in result:
@@ -745,6 +824,9 @@ class GitBranchTool(DirectTool):
     
     def _execute(self, repository_path: str, action: str = "list", branch_name: str = "") -> Dict[str, Any]:
         """Execute git branch operations"""
+        if branch_name.startswith("-"):
+            return {"error": f"Invalid branch name: {branch_name}"}
+
         if action == "list":
             command = ["git", "branch", "-a"]
         elif action == "create":
@@ -754,7 +836,9 @@ class GitBranchTool(DirectTool):
         elif action == "switch":
             if not branch_name:
                 return {"error": "Branch name required for switch action"}
-            command = ["git", "checkout", branch_name]
+            # switch, not checkout: 'git checkout name' discards a file's
+            # changes when no branch has that name
+            command = ["git", "switch", branch_name]
         elif action == "delete":
             if not branch_name:
                 return {"error": "Branch name required for delete action"}
@@ -789,6 +873,7 @@ class GitLogTool(DirectTool):
     
     def _execute(self, repository_path: str, max_count: int = 10, oneline: bool = True) -> Dict[str, Any]:
         """Execute git log"""
+        max_count = max(1, min(100, max_count))
         command = ["git", "log", f"--max-count={max_count}"]
         if oneline:
             command.append("--oneline")
@@ -824,7 +909,8 @@ class GitDiffTool(DirectTool):
         if staged:
             command.append("--cached")
         if file_path:
-            command.append(file_path)
+            # '--' so '--output=...' is a path, not an option that writes a file
+            command.extend(["--", file_path])
         
         result = self.provider.execute_git_command(command, repository_path)
         
@@ -868,7 +954,7 @@ class SlackSendMessageTool(DirectTool):
     
     def __init__(self, provider: SlackToolProvider):
         super().__init__(
-            name="send-message",
+            name="send_message",
             description="Send a message to a Slack channel or user. Use this when you want to proactively communicate with users.",
             input_model=SlackSendMessage
         )
@@ -883,34 +969,32 @@ class SlackSendMessageTool(DirectTool):
         if not slack_client:
             return {"error": "Slack client not available"}
         
-        if not slack_client.connected:
+        if not slack_client.connected or slack_client.loop is None:
             return {"error": "Slack client not connected"}
-        
+
         import asyncio
         try:
-            # Try to get the current event loop (we're already in async context)
-            try:
-                loop = asyncio.get_running_loop()
-                # We're in async context, create a task
-                # Since we can't await here, schedule it and return success
-                asyncio.create_task(
-                    slack_client.send_message(channel=channel, message=message, thread_ts=thread_ts)
-                )
-                return {"success": True, "sent_to": channel, "message_preview": message[:100], "note": "Message queued for sending"}
-            except RuntimeError:
-                # No loop running, create one
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    loop.run_until_complete(
-                        slack_client.send_message(channel=channel, message=message, thread_ts=thread_ts)
-                    )
-                finally:
-                    loop.close()
-                return {"success": True, "sent_to": channel, "message_preview": message[:100]}
-            
+            running = asyncio.get_running_loop()
+        except RuntimeError:
+            running = None
+        if running is slack_client.loop:
+            # Waiting below would deadlock the loop that has to do the sending
+            return {"error": "slack_send_message must run off the event loop (use asyncio.to_thread)"}
+
+        try:
+            # Tools run in a worker thread; the Slack client lives on the
+            # server's loop, so hand the send to that loop and wait for it
+            future = asyncio.run_coroutine_threadsafe(
+                slack_client.send_message(channel=channel, message=message, thread_ts=thread_ts),
+                slack_client.loop,
+            )
+            sent = future.result(timeout=30)
         except Exception as e:
             return {"error": f"Failed to send Slack message: {str(e)}"}
+
+        if not sent:
+            return {"error": f"Slack did not accept the message for {channel}; see the log for why"}
+        return {"success": True, "sent_to": channel, "message_preview": message[:100]}
 
 # ---- Direct Multiplexer ----
 
