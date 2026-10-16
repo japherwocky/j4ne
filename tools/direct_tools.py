@@ -7,6 +7,7 @@ subprocess communication, eliminating the overhead of the MCP protocol over stdi
 
 from typing import Dict, List, Any, Optional, Union, Type
 import os
+import re
 import sqlite3
 import json
 import logging
@@ -173,6 +174,9 @@ class DirectTool:
         """Tool-specific implementation to be overridden by subclasses"""
         raise NotImplementedError("Subclasses must implement _execute()")
 
+TOOL_NAME = re.compile(r"[a-z][a-z0-9_]{0,63}")
+
+
 class ToolProvider:
     """Base class for tool providers"""
     
@@ -181,11 +185,15 @@ class ToolProvider:
         self.tools: Dict[str, DirectTool] = {}
     
     def register_tool(self, tool: DirectTool) -> None:
-        """Register a tool with this provider"""
-        # Ensure the tool name has the provider prefix
-        if not tool.name.startswith(f"{self.prefix}."):
-            tool.name = f"{self.prefix}.{tool.name}"
-        
+        """Register a tool as <prefix>_<name>, the name the model calls it by"""
+        if not tool.name.startswith(f"{self.prefix}_"):
+            tool.name = f"{self.prefix}_{tool.name}"
+        # The API takes [A-Za-z0-9_-]{1,64}, and some of OpenCode's upstreams
+        # refuse anything else (kimi-k2.6 refused 'filesystem.read-file').
+        # snake_case is the narrower house style.
+        if not TOOL_NAME.fullmatch(tool.name):
+            raise ValueError(f"Tool name {tool.name!r} is not snake_case of at most 64 characters")
+
         self.tools[tool.name] = tool
         logger.debug(f"Registered tool: {tool.name}")
     
@@ -260,7 +268,7 @@ class ReadFileTool(DirectTool):
     
     def __init__(self, provider: FilesystemToolProvider):
         super().__init__(
-            name="read-file",
+            name="read_file",
             description="Read the entire contents of a file",
             input_model=FileRead
         )
@@ -294,7 +302,7 @@ class WriteFileTool(DirectTool):
     
     def __init__(self, provider: FilesystemToolProvider):
         super().__init__(
-            name="write-file",
+            name="write_file",
             description="Write content to a file",
             input_model=FileWrite
         )
@@ -325,7 +333,7 @@ class ListFilesTool(DirectTool):
     
     def __init__(self, provider: FilesystemToolProvider):
         super().__init__(
-            name="list-files",
+            name="list_files",
             description="List files and directories in a given directory",
             input_model=ListFiles
         )
@@ -368,7 +376,7 @@ class DeleteFileTool(DirectTool):
     
     def __init__(self, provider: FilesystemToolProvider):
         super().__init__(
-            name="delete-file",
+            name="delete_file",
             description="Delete a file or directory",
             input_model=FileDelete
         )
@@ -491,7 +499,7 @@ class ReadQueryTool(DirectTool):
     
     def __init__(self, provider: SQLiteToolProvider):
         super().__init__(
-            name="read-query",
+            name="read_query",
             description="Execute a SELECT query on the SQLite database",
             input_model=SqlQuery
         )
@@ -513,7 +521,7 @@ class WriteQueryTool(DirectTool):
     
     def __init__(self, provider: SQLiteToolProvider):
         super().__init__(
-            name="write-query",
+            name="write_query",
             description="Execute an INSERT, UPDATE, or DELETE query on the SQLite database",
             input_model=SqlQuery
         )
@@ -535,7 +543,7 @@ class CreateTableTool(DirectTool):
     
     def __init__(self, provider: SQLiteToolProvider):
         super().__init__(
-            name="create-table",
+            name="create_table",
             description="Create a new table in the SQLite database",
             input_model=SqlCreateTable
         )
@@ -557,7 +565,7 @@ class ListTablesTool(DirectTool):
     
     def __init__(self, provider: SQLiteToolProvider):
         super().__init__(
-            name="list-tables",
+            name="list_tables",
             description="List all tables in the SQLite database",
             input_model=EmptyModel
         )
@@ -579,7 +587,7 @@ class DescribeTableTool(DirectTool):
     
     def __init__(self, provider: SQLiteToolProvider):
         super().__init__(
-            name="describe-table",
+            name="describe_table",
             description="Get the schema information for a specific table",
             input_model=SqlDescribeTable
         )
@@ -600,7 +608,7 @@ class AppendInsightTool(DirectTool):
     
     def __init__(self, provider: SQLiteToolProvider):
         super().__init__(
-            name="append-insight",
+            name="append_insight",
             description="Add a business insight to the memo",
             input_model=AppendInsight
         )
@@ -946,7 +954,7 @@ class SlackSendMessageTool(DirectTool):
     
     def __init__(self, provider: SlackToolProvider):
         super().__init__(
-            name="send-message",
+            name="send_message",
             description="Send a message to a Slack channel or user. Use this when you want to proactively communicate with users.",
             input_model=SlackSendMessage
         )
@@ -971,7 +979,7 @@ class SlackSendMessageTool(DirectTool):
             running = None
         if running is slack_client.loop:
             # Waiting below would deadlock the loop that has to do the sending
-            return {"error": "slack.send-message must run off the event loop (use asyncio.to_thread)"}
+            return {"error": "slack_send_message must run off the event loop (use asyncio.to_thread)"}
 
         try:
             # Tools run in a worker thread; the Slack client lives on the

@@ -83,9 +83,9 @@ python j4ne.py chat --verbose
 │
 ├── tools/
 │   ├── direct_client.py # The LLM loop, tool access per context, OpenCode settings
-│   ├── direct_tools.py  # Live tools: filesystem, SQLite, git, slack.send-message
-│   ├── web_search_tool.py # Live: web.search (Serper)
-│   ├── github_tool.py   # Live: github.* (public repos)
+│   ├── direct_tools.py  # Live tools: filesystem, SQLite, git, slack_send_message
+│   ├── web_search_tool.py # Live: web_search (Serper)
+│   ├── github_tool.py   # Live: github_* (public repos)
 │   │
 │   │   # Not wired in: nothing registers these (card #987)
 │   ├── read_tool.py, write_tool.py, edit_tool.py, multiedit_tool.py,
@@ -127,21 +127,25 @@ and which ones depends on the context the client was made for:
 
 Public contexts never register the local providers, whatever `allowed_tools` says.
 
+Tool names are snake_case, `<provider>_<tool>`: `ToolProvider.register_tool` adds
+the prefix and raises on any other shape. The API allows no dots, and some of
+OpenCode's upstreams refuse them.
+
 **Local** (`direct_tools.py`, `cli` and `proactive` only):
-- `filesystem.read-file`, `list-files`, `write-file`, `delete-file`. Every path goes
+- `filesystem_read_file`, `_list_files`, `_write_file`, `_delete_file`. Every path goes
   through `resolve_under_root` (realpath and commonpath, so symlinks and sibling
   directories cannot escape). Ignored paths, `.git` and `.env` included, are never
   written or deleted, and the root itself is never deleted.
-- `sqlite.read-query` (a read-only SQLite authorizer, not a SELECT prefix check),
-  `write-query` (ATTACH and VACUUM denied), `create-table`, `list-tables`,
-  `describe-table`, `append-insight`. The provider uses its own `db_path`.
-- `git.status`, `log`, `diff`, `add`, `commit`, `branch`. Paths resolve against the
+- `sqlite_read_query` (a read-only SQLite authorizer, not a SELECT prefix check),
+  `_write_query` (ATTACH and VACUUM denied), `_create_table`, `_list_tables`,
+  `_describe_table`, `_append_insight`. The provider uses its own `db_path`.
+- `git_status`, `_log`, `_diff`, `_add`, `_commit`, `_branch`. Paths resolve against the
   root, not the process cwd, and pathspecs follow `--`.
-- `slack.send-message`, which waits for Slack's answer on the server's loop.
+- `slack_send_message`, which waits for Slack's answer on the server's loop.
 
 **Public** (every context):
-- `web.search` (Serper, `web_search_tool.py`)
-- `github.explore-repo`, `search-repos`, `get-file` (`github_tool.py`; names and
+- `web_search` (Serper, `web_search_tool.py`)
+- `github_explore_repo`, `_search_repos`, `_get_file` (`github_tool.py`; names and
   paths are validated and URL-encoded)
 
 The other modules in `tools/` (the OpenCode-port file tools, LSP, MCP/Exa) are not
@@ -199,9 +203,11 @@ MCP server configuration for external tools (Exa, custom servers).
 
 ### Adding a New Tool
 
-1. Subclass `DirectTool` (`tools/direct_tools.py`) with a pydantic input model
-   and an `_execute(**args)` that returns a dict (`{"error": ...}` on failure)
-2. Register it with a `ToolProvider`, and add the provider in `DirectClient.__init__`
+1. Subclass `DirectTool` (`tools/direct_tools.py`) with a snake_case name, a
+   pydantic input model, and an `_execute(**args)` that returns a dict
+   (`{"error": ...}` on failure)
+2. Register it with a `ToolProvider` (whose prefix makes `<provider>_<name>`),
+   and add the provider in `DirectClient.__init__`
 3. Decide who gets it: anything that touches this machine stays inside the
    `LOCAL_CONTEXTS` branch; only tools safe for strangers go in `PUBLIC_TOOLS`
 4. Resolve any path with `resolve_under_root`

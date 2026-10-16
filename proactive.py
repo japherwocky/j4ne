@@ -120,7 +120,7 @@ IMPORTANT - Tool Usage:
 - You have access to tools. Use them by calling them.
 - If a tool returns results, you can use those results to inform your response.
 - You can call multiple tools in sequence if needed.
-- After you have all the information you need, use slack.send-message to notify if there's something worth sharing.
+- After you have all the information you need, use slack_send_message to notify if there's something worth sharing.
 - If nothing needs to be shared after using your tools, respond with "NOACTION" (just that word, nothing else).
 
 Be concise - people don't want walls of text in proactive messages."""

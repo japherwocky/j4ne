@@ -11,7 +11,6 @@ Tool Access Control:
 """
 
 import os
-import re
 import json
 import time
 import uuid
@@ -71,58 +70,20 @@ console = Console()
 J4NE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-# ---- Safe Tools Configuration ----
+# ---- Tool access ----
 
-# ---- CLI-LOCAL TOOLS (NEVER expose to Slack or IRC) ----
-# Tools that access local filesystem and require trusted environment
-CLI_LOCAL_TOOLS: Set[str] = {
-    "filesystem.read-file",
-    "filesystem.list-files",
-    "filesystem.write-file",
-    "filesystem.delete-file",
-    "sqlite.read-query",
-    "sqlite.list-tables",
-    "sqlite.describe-table",
-    "sqlite.write-query",
-    "sqlite.create-table",
-    "sqlite.append-insight",
-    "git.status",
-    "git.log",
-    "git.diff",
-    "git.add",
-    "git.commit",
-    "git.branch",
-    "slack.send-message",
-}
-
-# ---- PUBLIC TOOLS (Slack, IRC) ----
-# Tools that are safe to expose to anyone who can message the bot.
-# These tools only access public APIs and don't touch local filesystem
-PUBLIC_TOOLS: Set[str] = {
-    "web.search",
-    "github.explore-repo",
-    "github.search-repos",
-    "github.get-file",
-}
-SLACK_TOOLS = PUBLIC_TOOLS
-
-# Contexts that run on the owner's own machine and get the local tools
+# Contexts that run on the owner's own machine. They get every tool,
+# including the local ones (filesystem, SQLite, git, slack_send_message).
 LOCAL_CONTEXTS = {"cli", "proactive"}
 
-# ---- Legacy compatibility ----
-SAFE_TOOLS: Set[str] = CLI_LOCAL_TOOLS.copy()
-
-# Tools that require write access (potentially dangerous) - for CLI only
-WRITE_TOOLS: Set[str] = {
-    "filesystem.write-file",
-    "filesystem.delete-file",
-    "sqlite.write-query",
-    "sqlite.create-table",
-    "sqlite.append-insight",
-    "git.add",
-    "git.commit",
-    "git.branch",
-    "slack.send-message",
+# Every other context (Slack, IRC) gets only these: tools that are safe for
+# anyone who can message the bot, because they call public APIs and never
+# touch this machine
+PUBLIC_TOOLS: Set[str] = {
+    "web_search",
+    "github_explore_repo",
+    "github_search_repos",
+    "github_get_file",
 }
 
 # ---- LLM settings ----
@@ -201,22 +162,6 @@ def make_llm_client(api_key: str, base_url: str) -> AsyncOpenAI:
         base_url=base_url,
         default_headers={"User-Agent": USER_AGENT},
     )
-
-
-def api_tool_name(name: str) -> str:
-    """A tool's name as the API takes it. The OpenAI rule allows only letters,
-    digits, '_' and '-', and some of Go's upstreams enforce it: kimi-k2.6, and
-    glm-5.3 at times, refuse 'filesystem.read-file'."""
-    return re.sub(r"[^A-Za-z0-9_-]", "_", name)[:64]
-
-
-def api_tools(tools: List[Dict[str, Any]]) -> tuple:
-    """Tool definitions under their API names, and a map from those names back"""
-    names = {api_tool_name(t["function"]["name"]): t["function"]["name"] for t in tools}
-    if len(names) != len(tools):
-        raise ValueError(f"Two tools share an API name: {sorted(t['function']['name'] for t in tools)}")
-    renamed = [{**t, "function": {**t["function"], "name": api_tool_name(t["function"]["name"])}} for t in tools]
-    return renamed, names
 
 
 def session_id_for(key: str) -> str:
@@ -387,7 +332,7 @@ class DirectClient:
         if not messages or messages[0].get("role") != "system":
             messages = [self._system_prompt(memory_context)] + messages
 
-        available_tools, tool_names = api_tools(self.get_available_tools())
+        available_tools = self.get_available_tools()
         logger.debug(f"Available tools: {len(available_tools)}")
 
         headers = {"x-opencode-session": session_id_for(session_key) if session_key else self.session_id}
@@ -455,16 +400,15 @@ class DirectClient:
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
-                    "content": await self._run_tool_call(tool_call, tool_names),
+                    "content": await self._run_tool_call(tool_call),
                 })
 
         self._archive(history, final_response)
         return final_response
 
-    async def _run_tool_call(self, tool_call, tool_names: Dict[str, str]) -> str:
-        """Run one tool call and return its result as text for the model.
-        tool_names maps the API's names for the tools back to ours."""
-        tool_name = tool_names.get(tool_call.function.name, tool_call.function.name)
+    async def _run_tool_call(self, tool_call) -> str:
+        """Run one tool call and return its result as text for the model"""
+        tool_name = tool_call.function.name
 
         try:
             tool_args = json.loads(tool_call.function.arguments or "{}")
@@ -472,7 +416,7 @@ class DirectClient:
                 raise ValueError("arguments must be a JSON object")
         except ValueError as e:
             agent_logger.warning(f"Bad arguments for {tool_name}: {tool_call.function.arguments!r}")
-            return json.dumps({"error": f"Arguments were not valid JSON ({e}). Call {tool_call.function.name} again with valid JSON."})
+            return json.dumps({"error": f"Arguments were not valid JSON ({e}). Call {tool_name} again with valid JSON."})
 
         logger.info(f"Calling tool: {tool_name} with args: {tool_args}")
         if self.show_tool_calls:

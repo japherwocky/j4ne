@@ -7,9 +7,10 @@ here calls OpenCode.
 import re
 
 import pytest
+from pydantic import BaseModel
 
-from tools.direct_client import (GO_BASE_URL, ZEN_BASE_URL, DirectClient, api_tool_name, api_tools,
-                                 opencode_settings)
+from tools.direct_client import GO_BASE_URL, ZEN_BASE_URL, DirectClient, opencode_settings
+from tools.direct_tools import DirectTool, ToolProvider
 
 
 @pytest.fixture
@@ -62,19 +63,29 @@ def test_missing_key(env, monkeypatch):
         opencode_settings()
 
 
-@pytest.mark.parametrize("context", ["cli", "slack"])
-def test_every_tool_name_is_one_the_api_accepts(env, tmp_path, monkeypatch, context):
+@pytest.mark.parametrize("context,count", [("cli", 21), ("slack", 4)])
+def test_every_tool_name_is_one_the_api_accepts(env, tmp_path, monkeypatch, context, count):
+    # OpenAI's rule, which kimi-k2.6 enforces: it refused 'filesystem.read-file'
     import tools.direct_client as direct_client
     monkeypatch.setattr(direct_client, "MEMORY_AVAILABLE", False)
     client = DirectClient(root_path=str(tmp_path), db_path=str(tmp_path / "test.db"), context=context)
-    renamed, names = api_tools(client.get_available_tools())
-    assert renamed
-    for tool in renamed:
-        assert re.fullmatch(r"[A-Za-z0-9_-]{1,64}", tool["function"]["name"])
-    # and each maps back to the tool it came from
-    assert sorted(names.values()) == sorted(t["function"]["name"] for t in client.get_available_tools())
+    names = [tool["function"]["name"] for tool in client.get_available_tools()]
+    assert len(names) == count
+    for name in names:
+        assert re.fullmatch(r"[A-Za-z0-9_-]{1,64}", name)
 
 
-def test_api_names(env):
-    assert api_tool_name("filesystem.read-file") == "filesystem_read-file"
-    assert api_tool_name("web.search") == "web_search"
+class NoArgs(BaseModel):
+    pass
+
+
+@pytest.mark.parametrize("name", ["read-file", "read.file", "ReadFile", "x" * 64])
+def test_tools_with_other_names_are_refused(name):
+    with pytest.raises(ValueError, match="snake_case"):
+        ToolProvider("demo").register_tool(DirectTool(name, "", NoArgs))
+
+
+def test_the_provider_prefixes_the_name():
+    provider = ToolProvider("demo")
+    provider.register_tool(DirectTool("read_file", "", NoArgs))
+    assert list(provider.tools) == ["demo_read_file"]

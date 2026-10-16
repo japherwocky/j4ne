@@ -1,6 +1,6 @@
 """
 Slack delivery (card #986): mrkdwn conversion, signature checks on every
-route, acknowledging events before answering them, and slack.send-message
+route, acknowledging events before answering them, and slack_send_message
 reporting what actually happened.
 """
 
@@ -152,7 +152,7 @@ class FakeSlack:
 class TestSendMessageTool:
     @pytest.fixture
     def tool(self):
-        return SlackToolProvider().tools["slack.send-message"]
+        return SlackToolProvider().tools["slack_send_message"]
 
     def test_reports_success_once_slack_accepts(self, tool, monkeypatch):
         slack = FakeSlack(accept=True)

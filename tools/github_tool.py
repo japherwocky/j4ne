@@ -66,7 +66,7 @@ class GitHubExploreRepoTool(DirectTool):
     """Tool for exploring GitHub repositories"""
     
     def __init__(self):
-        super().__init__("explore-repo", "Explore a GitHub repository structure and metadata", GitHubExploreRepo)
+        super().__init__("explore_repo", "Explore a GitHub repository structure and metadata", GitHubExploreRepo)
         self.github_token = os.getenv('GITHUB_TOKEN')
         self.api_base = "https://api.github.com"
         
@@ -132,7 +132,7 @@ class GitHubSearchReposTool(DirectTool):
     """Tool for searching GitHub repositories"""
     
     def __init__(self):
-        super().__init__("search-repos", "Search for GitHub repositories", GitHubSearchRepos)
+        super().__init__("search_repos", "Search for GitHub repositories", GitHubSearchRepos)
         self.github_token = os.getenv('GITHUB_TOKEN')
         self.api_base = "https://api.github.com"
         
@@ -192,7 +192,7 @@ class GitHubGetFileTool(DirectTool):
     """Tool for getting files from GitHub repositories"""
     
     def __init__(self):
-        super().__init__("get-file", "Get the contents of a file from a GitHub repository", GitHubGetFile)
+        super().__init__("get_file", "Get the contents of a file from a GitHub repository", GitHubGetFile)
         self.github_token = os.getenv('GITHUB_TOKEN')
         self.api_base = "https://api.github.com"
         
